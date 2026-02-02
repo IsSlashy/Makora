@@ -2,6 +2,33 @@
   "name": "@makora/adapters-jupiter",
   "version": "0.1.0",
   "private": true,
+  "description": "Jupiter DEX aggregator adapter for Makora",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts"
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@makora/types": "workspace:*",
+    "@jup-ag/api": "^6.0.48",
+    "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.0"
+  }
 }
