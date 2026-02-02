@@ -1,0 +1,27 @@
+[toolchain]
+anchor_version = "0.30.1"
+solana_version = "1.18.17"
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+makora_vault = "MKRvau1tPKsZY7B8fZQGpuvqbVwEML3RCrgBJ4sSXkP"
+
+[programs.devnet]
+makora_vault = "MKRvau1tPKsZY7B8fZQGpuvqbVwEML3RCrgBJ4sSXkP"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "pnpm run test:programs"
+
+[test]
+startup_wait = 5000
+shutdown_wait = 2000

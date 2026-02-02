@@ -1,0 +1,10 @@
+[build]
+# Use Solana's platform-tools for BPF compilation
+# This is handled by `anchor build` but we set defaults for cargo check
+
+[env]
+# Ensure consistent builds
+CARGO_INCREMENTAL = "0"
+
+[net]
+retry = 3

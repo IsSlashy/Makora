@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@makora/types": ["packages/types/src"],
+      "@makora/data-feed": ["packages/data-feed/src"],
+      "@makora/adapters-jupiter": ["packages/adapters/jupiter/src"],
+      "@makora/agent-core": ["packages/agent-core/src"],
+      "@makora/risk-manager": ["packages/risk-manager/src"],
+      "@makora/execution-engine": ["packages/execution-engine/src"],
+      "@makora/protocol-router": ["packages/protocol-router/src"],
+      "@makora/privacy": ["packages/privacy/src"],
+      "@makora/strategy-engine": ["packages/strategy-engine/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", "target", "programs"]
+}

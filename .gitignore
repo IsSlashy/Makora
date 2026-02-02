@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+target/
+.anchor/
+
+# Turbo
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Solana
+test-ledger/
+*.so
+
+# ZK artifacts (large binary files)
+circuits/build/*.wasm
+circuits/build/*.zkey
+circuits/build/*.ptau
+
+# Logs
+*.log
+npm-debug.log*
+
+# GSD installer
+.gsd-install/
