@@ -1,16 +1,16 @@
 [toolchain]
 anchor_version = "0.30.1"
-solana_version = "1.18.17"
+solana_version = "1.18.22"
 
 [features]
 seeds = false
 skip-lint = false
 
 [programs.localnet]
-makora_vault = "MKRvau1tPKsZY7B8fZQGpuvqbVwEML3RCrgBJ4sSXkP"
+makora_vault = "BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw"
 
 [programs.devnet]
-makora_vault = "MKRvau1tPKsZY7B8fZQGpuvqbVwEML3RCrgBJ4sSXkP"
+makora_vault = "BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw"
 
 [registry]
 url = "https://api.apr.dev"

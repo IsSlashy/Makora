@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("MKRvau1tPKsZY7B8fZQGpuvqbVwEML3RCrgBJ4sSXkP");
+declare_id!("BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw");
 
 #[program]
 pub mod makora_vault {
