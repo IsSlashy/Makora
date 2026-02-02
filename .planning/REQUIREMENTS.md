@@ -1,4 +1,4 @@
-# MAHORAGA — Requirements
+# MAKORA — Requirements
 
 > v1 scope for Solana Agent Hackathon (deadline: Feb 12, 2026)
 
@@ -46,13 +46,13 @@
 - [ ] **PROG-04**: All programs use Anchor constraints (`has_one`, `seeds`, `bump`, `constraint`) on every account
 
 ### CLI Interface (CLI)
-- [ ] **CLI-01**: `mahoraga status` — shows wallet balance, active positions, portfolio allocation
-- [ ] **CLI-02**: `mahoraga swap <amount> <from> <to>` — executes or suggests swap
-- [ ] **CLI-03**: `mahoraga stake <amount>` — stakes SOL via Marinade
-- [ ] **CLI-04**: `mahoraga strategy` — shows current strategy, adaptation state, yield opportunities
-- [ ] **CLI-05**: `mahoraga auto [on|off]` — toggles auto mode with risk parameter configuration
-- [ ] **CLI-06**: `mahoraga shield <amount>` — executes shielded transfer via privacy layer
-- [ ] **CLI-07**: `mahoraga agent "natural language command"` — freeform natural language interface
+- [ ] **CLI-01**: `makora status` — shows wallet balance, active positions, portfolio allocation
+- [ ] **CLI-02**: `makora swap <amount> <from> <to>` — executes or suggests swap
+- [ ] **CLI-03**: `makora stake <amount>` — stakes SOL via Marinade
+- [ ] **CLI-04**: `makora strategy` — shows current strategy, adaptation state, yield opportunities
+- [ ] **CLI-05**: `makora auto [on|off]` — toggles auto mode with risk parameter configuration
+- [ ] **CLI-06**: `makora shield <amount>` — executes shielded transfer via privacy layer
+- [ ] **CLI-07**: `makora agent "natural language command"` — freeform natural language interface
 
 ### Web Dashboard (DASH)
 - [ ] **DASH-01**: Portfolio overview — total value, allocation pie chart, per-token balances with USD values
@@ -60,7 +60,7 @@
 - [ ] **DASH-03**: Strategy panel — active strategy details, suggested actions, performance history
 - [ ] **DASH-04**: Transaction history — human-readable log of all agent actions with timestamps and outcomes
 - [ ] **DASH-05**: Wallet connection — Phantom, Solflare, Backpack via @solana/wallet-adapter
-- [ ] **DASH-06**: Mahoraga branding — dark theme, deep purples, electric accents, Mahoraga-inspired visual identity
+- [ ] **DASH-06**: Makora branding — dark theme, deep purples, electric accents, Makora-inspired visual identity
 - [ ] **DASH-07**: Risk controls panel — configure risk parameters, view circuit breaker status, override controls
 
 ### Infrastructure (INFRA)
@@ -115,7 +115,7 @@
 | INFRA-02 | Toolchain locked | Phase 1: Foundation | 1-2 |
 | INFRA-04 | Helius RPC with fallback | Phase 1: Foundation | 1-2 |
 | DEFI-01 | Jupiter swaps with optimal routing | Phase 1: Foundation | 1-2 |
-| CLI-01 | `mahoraga status` | Phase 1: Foundation | 1-2 |
+| CLI-01 | `makora status` | Phase 1: Foundation | 1-2 |
 | PROG-01 | Vault program | Phase 1: Foundation | 1-2 |
 | DEFI-02 | Marinade staking (SOL/mSOL) | Phase 2: Core DeFi | 3-4 |
 | DEFI-03 | Raydium LP management | Phase 2: Core DeFi | 3-4 |
@@ -141,18 +141,18 @@
 | PRIV-04 | Two-phase commit (ZK + DeFi) | Phase 4: Privacy Layer | 5-7 |
 | PRIV-05 | Privacy is additive | Phase 4: Privacy Layer | 5-7 |
 | PROG-03 | Privacy program (ZK pool) | Phase 4: Privacy Layer | 5-7 |
-| CLI-02 | `mahoraga swap` | Phase 5: CLI Interface | 6-7 |
-| CLI-03 | `mahoraga stake` | Phase 5: CLI Interface | 6-7 |
-| CLI-04 | `mahoraga strategy` | Phase 5: CLI Interface | 6-7 |
-| CLI-05 | `mahoraga auto` | Phase 5: CLI Interface | 6-7 |
-| CLI-06 | `mahoraga shield` | Phase 5: CLI Interface | 6-7 |
-| CLI-07 | `mahoraga agent` (NL interface) | Phase 5: CLI Interface | 6-7 |
+| CLI-02 | `makora swap` | Phase 5: CLI Interface | 6-7 |
+| CLI-03 | `makora stake` | Phase 5: CLI Interface | 6-7 |
+| CLI-04 | `makora strategy` | Phase 5: CLI Interface | 6-7 |
+| CLI-05 | `makora auto` | Phase 5: CLI Interface | 6-7 |
+| CLI-06 | `makora shield` | Phase 5: CLI Interface | 6-7 |
+| CLI-07 | `makora agent` (NL interface) | Phase 5: CLI Interface | 6-7 |
 | DASH-01 | Portfolio overview | Phase 6: Dashboard | 7-8 |
 | DASH-02 | The Wheel visualization | Phase 6: Dashboard | 7-8 |
 | DASH-03 | Strategy panel | Phase 6: Dashboard | 7-8 |
 | DASH-04 | Transaction history | Phase 6: Dashboard | 7-8 |
 | DASH-05 | Wallet connection | Phase 6: Dashboard | 7-8 |
-| DASH-06 | Mahoraga branding | Phase 6: Dashboard | 7-8 |
+| DASH-06 | Makora branding | Phase 6: Dashboard | 7-8 |
 | DASH-07 | Risk controls panel | Phase 6: Dashboard | 7-8 |
 | STRAT-04 | The Wheel visualization | Phase 6: Dashboard | 7-8 |
 | INFRA-03 | Devnet deployment | Phase 7: Submission | 9-10 |

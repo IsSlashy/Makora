@@ -1,4 +1,4 @@
-# MAHORAGA -- Roadmap
+# MAKORA -- Roadmap
 
 ## Overview
 
@@ -22,16 +22,16 @@
 | Task | Package | Output |
 |------|---------|--------|
 | Monorepo scaffolding | root | pnpm workspaces + Turborepo config, all packages compile |
-| Shared types package | `@mahoraga/types` | All TypeScript interfaces: `ProtocolAdapter`, `Strategy`, `RiskParams`, `AgentAction`, `Portfolio`, `StealthAddress` |
-| Solana connection + data feed | `@mahoraga/data-feed` | Connect to Helius RPC, read wallet balances, token prices |
-| Jupiter adapter (swaps) | `@mahoraga/adapters/jupiter` | Execute a token swap on devnet via `@jup-ag/api` |
-| Vault program stub | `programs/mahoraga_vault` | Anchor program skeleton: deposit/withdraw instructions, builds and deploys to localnet |
-| CLI skeleton | `apps/cli` | `mahoraga status` shows wallet balance and token holdings |
+| Shared types package | `@makora/types` | All TypeScript interfaces: `ProtocolAdapter`, `Strategy`, `RiskParams`, `AgentAction`, `Portfolio`, `StealthAddress` |
+| Solana connection + data feed | `@makora/data-feed` | Connect to Helius RPC, read wallet balances, token prices |
+| Jupiter adapter (swaps) | `@makora/adapters/jupiter` | Execute a token swap on devnet via `@jup-ag/api` |
+| Vault program stub | `programs/makora_vault` | Anchor program skeleton: deposit/withdraw instructions, builds and deploys to localnet |
+| CLI skeleton | `apps/cli` | `makora status` shows wallet balance and token holdings |
 | Toolchain lockdown | root | `rust-toolchain.toml`, `.nvmrc`, pinned versions in `package.json`, `Cargo.toml` overflow-checks |
 
 **Success Criteria**:
 1. `pnpm build` compiles all packages without errors from the monorepo root
-2. `mahoraga status` connects to Helius devnet RPC and prints wallet SOL balance + token balances with USD values
+2. `makora status` connects to Helius devnet RPC and prints wallet SOL balance + token balances with USD values
 3. Jupiter adapter executes a SOL->USDC swap on devnet and returns a confirmed transaction signature
 4. Vault program builds with `anchor build` and deploys to localnet via `anchor deploy`
 5. All toolchain versions are locked: Rust 1.75 (`rust-toolchain.toml`), Solana 1.18.17, Anchor 0.30.1, Node 20+ (`.nvmrc`), TypeScript 5.3+
@@ -48,12 +48,12 @@
 **Deliverables**:
 | Task | Package | Output |
 |------|---------|--------|
-| Marinade adapter (stake/unstake) | `@mahoraga/adapters/marinade` | SOL -> mSOL and reverse via Marinade SDK |
-| Raydium adapter (LP) | `@mahoraga/adapters/raydium` | Provide/remove liquidity on Raydium AMM |
-| Kamino adapter (vaults) | `@mahoraga/adapters/kamino` | Deposit/withdraw from Kamino vaults |
-| Protocol router | `@mahoraga/protocol-router` | Routes `AgentAction` to correct adapter based on action type + protocol |
-| Execution engine | `@mahoraga/execution-engine` | Builds versioned transactions, handles retries, confirms on-chain |
-| Risk manager | `@mahoraga/risk-manager` | Validates all actions against risk parameters, VETO power enforced |
+| Marinade adapter (stake/unstake) | `@makora/adapters/marinade` | SOL -> mSOL and reverse via Marinade SDK |
+| Raydium adapter (LP) | `@makora/adapters/raydium` | Provide/remove liquidity on Raydium AMM |
+| Kamino adapter (vaults) | `@makora/adapters/kamino` | Deposit/withdraw from Kamino vaults |
+| Protocol router | `@makora/protocol-router` | Routes `AgentAction` to correct adapter based on action type + protocol |
+| Execution engine | `@makora/execution-engine` | Builds versioned transactions, handles retries, confirms on-chain |
+| Risk manager | `@makora/risk-manager` | Validates all actions against risk parameters, VETO power enforced |
 | Anchor constraints audit | `programs/*` | All accounts use `has_one`, `seeds`, `bump`, `constraint` |
 
 **Success Criteria**:
@@ -68,21 +68,21 @@
 ## Phase 3: Agent Intelligence
 **Days**: 4-5 (Feb 5-6)
 **Branch**: `gsd/phase-3-agent-intelligence`
-**Goal**: Build the strategy engine, agent core OODA loop, and advisory mode -- making Mahoraga an intelligent agent that observes, decides, and suggests DeFi actions.
+**Goal**: Build the strategy engine, agent core OODA loop, and advisory mode -- making Makora an intelligent agent that observes, decides, and suggests DeFi actions.
 
 **Requirements**: AGENT-01, AGENT-02, AGENT-03, AGENT-04, AGENT-05, STRAT-01, STRAT-02, STRAT-03, PROG-02
 
 **Deliverables**:
 | Task | Package | Output |
 |------|---------|--------|
-| Strategy engine | `@mahoraga/strategy-engine` | Evaluates market conditions, selects optimal allocation |
-| Yield optimizer | `@mahoraga/strategy-engine` | Finds highest risk-adjusted yield across Jupiter, Marinade, Raydium, Kamino |
-| Rebalancing logic | `@mahoraga/strategy-engine` | Computes rebalancing actions to match target allocation ratios |
-| Agent core (OODA loop) | `@mahoraga/agent-core` | Continuous Observe -> Orient -> Decide -> Act cycle |
-| Advisory mode | `@mahoraga/agent-core` | Agent suggests actions with explanations, waits for user confirmation |
-| Auto mode | `@mahoraga/agent-core` | Agent executes within risk parameters, logs all decisions |
-| Natural language parser | `@mahoraga/agent-core` | Parses "swap 10 SOL to USDC", "stake 50% of my SOL", "show my portfolio" |
-| Strategy program | `programs/mahoraga_strategy` | Stores strategy params, agent permissions, audit trail on-chain |
+| Strategy engine | `@makora/strategy-engine` | Evaluates market conditions, selects optimal allocation |
+| Yield optimizer | `@makora/strategy-engine` | Finds highest risk-adjusted yield across Jupiter, Marinade, Raydium, Kamino |
+| Rebalancing logic | `@makora/strategy-engine` | Computes rebalancing actions to match target allocation ratios |
+| Agent core (OODA loop) | `@makora/agent-core` | Continuous Observe -> Orient -> Decide -> Act cycle |
+| Advisory mode | `@makora/agent-core` | Agent suggests actions with explanations, waits for user confirmation |
+| Auto mode | `@makora/agent-core` | Agent executes within risk parameters, logs all decisions |
+| Natural language parser | `@makora/agent-core` | Parses "swap 10 SOL to USDC", "stake 50% of my SOL", "show my portfolio" |
+| Strategy program | `programs/makora_strategy` | Stores strategy params, agent permissions, audit trail on-chain |
 
 **Success Criteria**:
 1. Strategy engine evaluates a portfolio and returns a ranked list of suggested actions with expected yield and risk scores
@@ -96,7 +96,7 @@
 ## Phase 4: Privacy Layer
 **Days**: 5-7 (Feb 6-8)
 **Branch**: `gsd/phase-4-privacy`
-**Goal**: Port P01's ZK circuits and privacy program to Mahoraga, integrate stealth addresses and shielded transfers into the execution engine via two-phase commit.
+**Goal**: Port P01's ZK circuits and privacy program to Makora, integrate stealth addresses and shielded transfers into the execution engine via two-phase commit.
 
 **Note**: This track can start in parallel from Day 3 (circuit porting), but merges with the execution engine here.
 
@@ -106,12 +106,12 @@
 | Task | Package | Output |
 |------|---------|--------|
 | Port Circom circuits from P01 | `circuits/` | Compiled WASM + zkey files for shielded transfer circuit |
-| Stealth address module | `@mahoraga/privacy` | Generate stealth meta-addresses, derive one-time stealth addresses |
-| Shielded transfer module | `@mahoraga/privacy` | Generate Groth16 proofs for shielded transfers (amount + destination hidden) |
-| Privacy Anchor program | `programs/mahoraga_privacy` | On-chain ZK verification: shield, transfer, unshield instructions |
-| Privacy adapter | `@mahoraga/adapters/privacy` | Integrated into protocol router, uniform adapter interface |
-| Two-phase commit pipeline | `@mahoraga/execution-engine` | TX1: verify ZK proof + store in PDA. TX2: DeFi operation referencing verified proof |
-| Privacy additive check | `@mahoraga/agent-core` | Agent core functions fully with privacy disabled (feature flag) |
+| Stealth address module | `@makora/privacy` | Generate stealth meta-addresses, derive one-time stealth addresses |
+| Shielded transfer module | `@makora/privacy` | Generate Groth16 proofs for shielded transfers (amount + destination hidden) |
+| Privacy Anchor program | `programs/makora_privacy` | On-chain ZK verification: shield, transfer, unshield instructions |
+| Privacy adapter | `@makora/adapters/privacy` | Integrated into protocol router, uniform adapter interface |
+| Two-phase commit pipeline | `@makora/execution-engine` | TX1: verify ZK proof + store in PDA. TX2: DeFi operation referencing verified proof |
+| Privacy additive check | `@makora/agent-core` | Agent core functions fully with privacy disabled (feature flag) |
 
 **Success Criteria**:
 1. Stealth address generation produces a valid stealth meta-address, and a sender can derive a one-time address that only the recipient can detect and spend from
@@ -134,41 +134,41 @@
 **Deliverables**:
 | Task | Package | Output |
 |------|---------|--------|
-| `mahoraga swap <amount> <from> <to>` | `apps/cli` | Executes or suggests swap via Jupiter |
-| `mahoraga stake <amount>` | `apps/cli` | Stakes SOL via Marinade |
-| `mahoraga strategy` | `apps/cli` | Shows current strategy, adaptation state, yield opportunities |
-| `mahoraga auto [on\|off]` | `apps/cli` | Toggles auto mode, prompts for risk parameter configuration |
-| `mahoraga shield <amount>` | `apps/cli` | Executes shielded transfer via privacy layer |
-| `mahoraga agent "..."` | `apps/cli` | Freeform natural language command interface |
+| `makora swap <amount> <from> <to>` | `apps/cli` | Executes or suggests swap via Jupiter |
+| `makora stake <amount>` | `apps/cli` | Stakes SOL via Marinade |
+| `makora strategy` | `apps/cli` | Shows current strategy, adaptation state, yield opportunities |
+| `makora auto [on\|off]` | `apps/cli` | Toggles auto mode, prompts for risk parameter configuration |
+| `makora shield <amount>` | `apps/cli` | Executes shielded transfer via privacy layer |
+| `makora agent "..."` | `apps/cli` | Freeform natural language command interface |
 | Output formatting | `apps/cli` | Colored output, tables, confirmation prompts, risk warnings |
 
 **Success Criteria**:
-1. `mahoraga swap 1 SOL USDC` triggers an advisory flow: shows quote (amount, route, slippage, price impact), asks for confirmation, executes swap, shows transaction signature and final balances
-2. `mahoraga strategy` prints current portfolio allocation, active strategy name, OODA cycle state, and top 3 yield opportunities with APY and risk rating
-3. `mahoraga auto on` prompts user to set risk parameters (max position %, max slippage %, daily loss limit), confirms configuration, and activates auto mode
-4. `mahoraga shield 5` generates a ZK proof, executes two-phase commit, and confirms shielded transfer completion with transaction signatures for both phases
-5. `mahoraga agent "move 30% of portfolio to yield"` parses the intent, breaks it into multi-step actions (swap + stake + deposit), shows the plan, and executes after confirmation
+1. `makora swap 1 SOL USDC` triggers an advisory flow: shows quote (amount, route, slippage, price impact), asks for confirmation, executes swap, shows transaction signature and final balances
+2. `makora strategy` prints current portfolio allocation, active strategy name, OODA cycle state, and top 3 yield opportunities with APY and risk rating
+3. `makora auto on` prompts user to set risk parameters (max position %, max slippage %, daily loss limit), confirms configuration, and activates auto mode
+4. `makora shield 5` generates a ZK proof, executes two-phase commit, and confirms shielded transfer completion with transaction signatures for both phases
+5. `makora agent "move 30% of portfolio to yield"` parses the intent, breaks it into multi-step actions (swap + stake + deposit), shows the plan, and executes after confirmation
 
 ---
 
 ## Phase 6: Web Dashboard
 **Days**: 7-8 (Feb 8-9)
 **Branch**: `gsd/phase-6-dashboard`
-**Goal**: Build the Next.js dashboard with Mahoraga branding -- portfolio view, The Wheel visualization, strategy panel, transaction history, and wallet connection.
+**Goal**: Build the Next.js dashboard with Makora branding -- portfolio view, The Wheel visualization, strategy panel, transaction history, and wallet connection.
 
 **Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06, DASH-07, STRAT-04
 
 **Deliverables**:
 | Task | Package | Output |
 |------|---------|--------|
-| Next.js app scaffold | `apps/dashboard` | Next.js 15 + Tailwind + Radix UI, Mahoraga dark theme |
+| Next.js app scaffold | `apps/dashboard` | Next.js 15 + Tailwind + Radix UI, Makora dark theme |
 | Portfolio overview | `apps/dashboard` | Total value, allocation pie chart, per-token balances with USD values |
 | The Wheel visualization | `apps/dashboard` | Central animation showing OODA cycle state, adaptation history, strategy evolution |
 | Strategy panel | `apps/dashboard` | Active strategy details, suggested actions queue, performance history chart |
 | Transaction history | `apps/dashboard` | Human-readable log of all agent actions with timestamps, outcomes, and TX links |
 | Wallet connection | `apps/dashboard` | Phantom, Solflare, Backpack via `@solana/wallet-adapter` |
 | Risk controls panel | `apps/dashboard` | Configure risk parameters, view circuit breaker status, emergency stop button |
-| Mahoraga branding | `apps/dashboard` | Dark theme, deep purples (#1a0a2e, #2d1b4e), electric accents (#8b5cf6, #a78bfa), Mahoraga-inspired visual identity |
+| Makora branding | `apps/dashboard` | Dark theme, deep purples (#1a0a2e, #2d1b4e), electric accents (#8b5cf6, #a78bfa), Makora-inspired visual identity |
 
 **Success Criteria**:
 1. Dashboard loads at `localhost:3000`, connects a Phantom wallet, and displays the connected wallet's SOL balance and token holdings with USD values within 3 seconds
@@ -239,19 +239,19 @@
 | PROG-02 | Strategy program | Phase 3 | P1 |
 | PROG-03 | Privacy program (ZK pool) | Phase 4 | P1 |
 | PROG-04 | Anchor constraints on all accounts | Phase 2 | P0 |
-| CLI-01 | `mahoraga status` | Phase 1 | P0 |
-| CLI-02 | `mahoraga swap` | Phase 5 | P0 |
-| CLI-03 | `mahoraga stake` | Phase 5 | P0 |
-| CLI-04 | `mahoraga strategy` | Phase 5 | P1 |
-| CLI-05 | `mahoraga auto` | Phase 5 | P1 |
-| CLI-06 | `mahoraga shield` | Phase 5 | P1 |
-| CLI-07 | `mahoraga agent` (NL interface) | Phase 5 | P0 |
+| CLI-01 | `makora status` | Phase 1 | P0 |
+| CLI-02 | `makora swap` | Phase 5 | P0 |
+| CLI-03 | `makora stake` | Phase 5 | P0 |
+| CLI-04 | `makora strategy` | Phase 5 | P1 |
+| CLI-05 | `makora auto` | Phase 5 | P1 |
+| CLI-06 | `makora shield` | Phase 5 | P1 |
+| CLI-07 | `makora agent` (NL interface) | Phase 5 | P0 |
 | DASH-01 | Portfolio overview | Phase 6 | P0 |
 | DASH-02 | The Wheel visualization | Phase 6 | P1 |
 | DASH-03 | Strategy panel | Phase 6 | P1 |
 | DASH-04 | Transaction history | Phase 6 | P0 |
 | DASH-05 | Wallet connection | Phase 6 | P0 |
-| DASH-06 | Mahoraga branding | Phase 6 | P0 |
+| DASH-06 | Makora branding | Phase 6 | P0 |
 | DASH-07 | Risk controls panel | Phase 6 | P1 |
 | INFRA-01 | Monorepo (pnpm + Turborepo) | Phase 1 | P0 |
 | INFRA-02 | Toolchain locked | Phase 1 | P0 |

@@ -1,4 +1,4 @@
-# Mahoraga -- Project State
+# Makora -- Project State
 
 ## Current Position
 
@@ -28,7 +28,7 @@ Exit criteria: `pnpm build` compiles, `mahoraga status` shows balances, Jupiter 
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Mahoraga branding (JJK theme) | Memorable, maps to adaptive DeFi, strong visual identity with The Wheel | Confirmed |
+| Makora branding (JJK theme) | Memorable, maps to adaptive DeFi, strong visual identity with The Wheel | Confirmed |
 | Advisory + Auto modes | Advisory is safe for demos, auto showcases autonomy | Confirmed |
 | Both stealth + shielded privacy | Maximum differentiation, leverages full P01 expertise | Confirmed |
 | 4 protocol targets (Jupiter, Marinade, Raydium, Kamino) | Breadth for judges, but Jupiter + Marinade are P0, others are P1 | Confirmed |

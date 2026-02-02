@@ -1,8 +1,8 @@
-# MAHORAGA — The Adaptive DeFi Agent for Solana
+# MAKORA — The Adaptive DeFi Agent for Solana
 
 ## What This Is
 
-Mahoraga is an autonomous, adaptive DeFi agent for Solana that manages portfolio strategies across multiple protocols while preserving user privacy through zero-knowledge proofs. Named after the "Master of Adaptation" from Jujutsu Kaisen, the agent continuously adapts its strategies to market conditions — just as Mahoraga adapts to overcome any attack.
+Makora is an autonomous, adaptive DeFi agent for Solana that manages portfolio strategies across multiple protocols while preserving user privacy through zero-knowledge proofs. Named after the "Master of Adaptation" from Jujutsu Kaisen, the agent continuously adapts its strategies to market conditions — just as Makora adapts to overcome any attack.
 
 ## Core Value
 
@@ -16,14 +16,14 @@ DeFi on Solana is complex: users must manually monitor positions across multiple
 
 ## Solution
 
-Mahoraga solves both by combining:
+Makora solves both by combining:
 1. **Adaptive DeFi Agent** — autonomous portfolio management that adapts strategies to market conditions
 2. **Privacy Layer** — stealth addresses and shielded transfers inherited from P01 (our production privacy protocol for Solana)
 
 ## How It Works
 
 ### The Adaptation Cycle (The Wheel)
-Like Mahoraga's wheel that turns with each adaptation:
+Like Makora's wheel that turns with each adaptation:
 1. **Observe** — Monitor market conditions (volatility, liquidity depth, yield rates, token prices)
 2. **Analyze** — Evaluate current positions against market state
 3. **Adapt** — Adjust strategy (rebalance, exit, enter, shift yield sources)
@@ -69,21 +69,21 @@ Each cycle turns the wheel — visible on the dashboard as a real-time adaptatio
 - Relayer pattern for private transactions
 - Auth flow and wallet integration
 
-### New for Mahoraga
+### New for Makora
 - Adaptive strategy engine
 - Multi-protocol DeFi integrations (Jupiter, Raydium, Marinade, Kamino)
 - Portfolio risk management system
 - Real-time market analysis
 - CLI interface for power users
-- Dashboard with Mahoraga branding (The Wheel visualization)
+- Dashboard with Makora branding (The Wheel visualization)
 
 ## Branding
 
-**Theme**: Mahoraga from Jujutsu Kaisen — the Eight-Handled Sword Divergent Sila Divine General
+**Theme**: Makora from Jujutsu Kaisen — the Eight-Handled Sword Divergent Sila Divine General
 - **Visual Identity**: Dark, powerful aesthetic. The Wheel as central visual element.
 - **Tagline**: "Master of Adaptation" / "Adapt. Shield. Yield."
 - **The Wheel**: Dashboard centerpiece showing adaptation cycles, strategy shifts, portfolio health
-- **Color Palette**: Deep purples, dark grays, electric accents (inspired by Mahoraga's design)
+- **Color Palette**: Deep purples, dark grays, electric accents (inspired by Makora's design)
 
 ## Constraints
 
@@ -105,7 +105,7 @@ Each cycle turns the wheel — visible on the dashboard as a real-time adaptatio
 
 - **Hackathon**: Solana Agent Hackathon (Colosseum + Solana Foundation)
 - **Prize**: $50,000 USDC (1st place)
-- **Differentiators**: ZK privacy (unique in the field), adaptive strategies (not just a trading bot), Mahoraga branding (memorable)
+- **Differentiators**: ZK privacy (unique in the field), adaptive strategies (not just a trading bot), Makora branding (memorable)
 - **Targeting**: 1st place + "Most Agentic" ($5,000 bonus)
 
 ## Requirements
@@ -128,7 +128,7 @@ Each cycle turns the wheel — visible on the dashboard as a real-time adaptatio
 - [ ] Portfolio risk management (limits, circuit breakers)
 - [ ] Real-time market analysis
 - [ ] CLI interface
-- [ ] Web dashboard with Mahoraga branding
+- [ ] Web dashboard with Makora branding
 - [ ] The Wheel visualization
 
 ### Out of Scope
@@ -143,7 +143,7 @@ Each cycle turns the wheel — visible on the dashboard as a real-time adaptatio
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Mahoraga branding (JJK) | Memorable, maps perfectly to adaptive DeFi, strong visual identity | Confirmed |
+| Makora branding (JJK) | Memorable, maps perfectly to adaptive DeFi, strong visual identity | Confirmed |
 | Advisory + Auto modes | Lowers barrier (advisory) while showcasing autonomy (auto) | Confirmed |
 | Both stealth + shielded | Maximum differentiation, leverages full P01 expertise | Confirmed |
 | Multi-protocol (4 protocols) | Shows breadth, more strategies possible, impressive for judges | Confirmed |
