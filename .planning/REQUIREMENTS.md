@@ -107,12 +107,74 @@
 
 ## Traceability
 
-> Filled by roadmap — maps REQ-IDs to phases
+> Mapped from ROADMAP.md -- every v1 requirement assigned to exactly one phase.
 
-| REQ-ID | Phase |
-|--------|-------|
-| (to be filled) | |
+| REQ-ID | Requirement | Phase | Days |
+|--------|-------------|-------|------|
+| INFRA-01 | Monorepo (pnpm + Turborepo) | Phase 1: Foundation | 1-2 |
+| INFRA-02 | Toolchain locked | Phase 1: Foundation | 1-2 |
+| INFRA-04 | Helius RPC with fallback | Phase 1: Foundation | 1-2 |
+| DEFI-01 | Jupiter swaps with optimal routing | Phase 1: Foundation | 1-2 |
+| CLI-01 | `mahoraga status` | Phase 1: Foundation | 1-2 |
+| PROG-01 | Vault program | Phase 1: Foundation | 1-2 |
+| DEFI-02 | Marinade staking (SOL/mSOL) | Phase 2: Core DeFi | 3-4 |
+| DEFI-03 | Raydium LP management | Phase 2: Core DeFi | 3-4 |
+| DEFI-04 | Kamino vault deposits | Phase 2: Core DeFi | 3-4 |
+| DEFI-05 | Multi-step DeFi orchestration | Phase 2: Core DeFi | 3-4 |
+| RISK-01 | Risk manager VETO power | Phase 2: Core DeFi | 3-4 |
+| RISK-02 | Configurable risk parameters | Phase 2: Core DeFi | 3-4 |
+| RISK-03 | Circuit breaker | Phase 2: Core DeFi | 3-4 |
+| RISK-04 | Risk assessment display | Phase 2: Core DeFi | 3-4 |
+| PROG-04 | Anchor constraints on all accounts | Phase 2: Core DeFi | 3-4 |
+| AGENT-01 | Advisory mode (suggest + confirm) | Phase 3: Agent Intelligence | 4-5 |
+| AGENT-02 | Auto mode (risk-bounded execution) | Phase 3: Agent Intelligence | 4-5 |
+| AGENT-03 | Natural language commands | Phase 3: Agent Intelligence | 4-5 |
+| AGENT-04 | OODA decision loop | Phase 3: Agent Intelligence | 4-5 |
+| AGENT-05 | Clear explanations for suggestions | Phase 3: Agent Intelligence | 4-5 |
+| STRAT-01 | Adaptive strategy engine | Phase 3: Agent Intelligence | 4-5 |
+| STRAT-02 | Yield optimization | Phase 3: Agent Intelligence | 4-5 |
+| STRAT-03 | Portfolio rebalancing | Phase 3: Agent Intelligence | 4-5 |
+| PROG-02 | Strategy program | Phase 3: Agent Intelligence | 4-5 |
+| PRIV-01 | Stealth address generation | Phase 4: Privacy Layer | 5-7 |
+| PRIV-02 | Stealth address sending | Phase 4: Privacy Layer | 5-7 |
+| PRIV-03 | Shielded transfers (Groth16) | Phase 4: Privacy Layer | 5-7 |
+| PRIV-04 | Two-phase commit (ZK + DeFi) | Phase 4: Privacy Layer | 5-7 |
+| PRIV-05 | Privacy is additive | Phase 4: Privacy Layer | 5-7 |
+| PROG-03 | Privacy program (ZK pool) | Phase 4: Privacy Layer | 5-7 |
+| CLI-02 | `mahoraga swap` | Phase 5: CLI Interface | 6-7 |
+| CLI-03 | `mahoraga stake` | Phase 5: CLI Interface | 6-7 |
+| CLI-04 | `mahoraga strategy` | Phase 5: CLI Interface | 6-7 |
+| CLI-05 | `mahoraga auto` | Phase 5: CLI Interface | 6-7 |
+| CLI-06 | `mahoraga shield` | Phase 5: CLI Interface | 6-7 |
+| CLI-07 | `mahoraga agent` (NL interface) | Phase 5: CLI Interface | 6-7 |
+| DASH-01 | Portfolio overview | Phase 6: Dashboard | 7-8 |
+| DASH-02 | The Wheel visualization | Phase 6: Dashboard | 7-8 |
+| DASH-03 | Strategy panel | Phase 6: Dashboard | 7-8 |
+| DASH-04 | Transaction history | Phase 6: Dashboard | 7-8 |
+| DASH-05 | Wallet connection | Phase 6: Dashboard | 7-8 |
+| DASH-06 | Mahoraga branding | Phase 6: Dashboard | 7-8 |
+| DASH-07 | Risk controls panel | Phase 6: Dashboard | 7-8 |
+| STRAT-04 | The Wheel visualization | Phase 6: Dashboard | 7-8 |
+| INFRA-03 | Devnet deployment | Phase 7: Submission | 9-10 |
+| INFRA-05 | CI-ready test suite | Phase 7: Submission | 9-10 |
+| SUB-01 | README with screenshots | Phase 7: Submission | 9-10 |
+| SUB-02 | Pitch video (under 3 min) | Phase 7: Submission | 9-10 |
+| SUB-03 | Technical demo video | Phase 7: Submission | 9-10 |
+| SUB-04 | Live demo on devnet | Phase 7: Submission | 9-10 |
+
+### Phase Distribution
+
+| Phase | Requirement Count | Categories |
+|-------|------------------|------------|
+| Phase 1: Foundation | 6 | INFRA, DEFI, CLI, PROG |
+| Phase 2: Core DeFi | 9 | DEFI, RISK, PROG |
+| Phase 3: Agent Intelligence | 9 | AGENT, STRAT, PROG |
+| Phase 4: Privacy Layer | 6 | PRIV, PROG |
+| Phase 5: CLI Interface | 6 | CLI |
+| Phase 6: Dashboard | 8 | DASH, STRAT |
+| Phase 7: Submission | 6 | INFRA, SUB |
+| **Total** | **50 mappings (40 unique reqs)** | **9 categories** |
 
 ---
 
-*40 requirements across 9 categories. Deadline: Feb 12, 2026.*
+*40 requirements across 9 categories. 7 phases. Deadline: Feb 12, 2026.*
