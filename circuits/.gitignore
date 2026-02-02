@@ -1,0 +1,21 @@
+# Build outputs
+build/
+*.r1cs
+*.wasm
+*.sym
+*.zkey
+*.ptau
+
+# Verification keys
+verification_key.json
+verifier.sol
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
