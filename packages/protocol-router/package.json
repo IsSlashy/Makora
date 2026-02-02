@@ -2,6 +2,32 @@
   "name": "@makora/protocol-router",
   "version": "0.1.0",
   "private": true,
+  "description": "Protocol router for Makora - dispatches actions to the correct DeFi adapter",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts"
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@makora/types": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.0"
+  }
 }
