@@ -21,6 +21,13 @@ const TOKEN_REGISTRY: Record<SolanaCluster, TokenInfo[]> = {
       decimals: 6,
       coingeckoId: 'usd-coin',
     },
+    {
+      symbol: 'mSOL',
+      name: 'Marinade staked SOL',
+      mint: new PublicKey('mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So'),
+      decimals: 9,
+      coingeckoId: 'msol',
+    },
   ],
   'mainnet-beta': [
     {
