@@ -96,6 +96,95 @@
       "args": [
         { "name": "amount", "type": "u64" }
       ]
+    },
+    {
+      "name": "agent_withdraw",
+      "discriminator": [13, 149, 99, 245, 171, 171, 185, 53],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [118, 97, 117, 108, 116] },
+              { "kind": "account", "path": "vault.owner" }
+            ]
+          }
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "agent_deposit",
+      "discriminator": [128, 210, 13, 112, 229, 50, 130, 233],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [118, 97, 117, 108, 116] },
+              { "kind": "account", "path": "vault.owner" }
+            ]
+          }
+        },
+        {
+          "name": "source",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "set_mode",
+      "discriminator": [159, 47, 147, 247, 85, 53, 84, 230],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [118, 97, 117, 108, 116] },
+              { "kind": "account", "path": "owner" }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        { "name": "mode", "type": "u8" }
+      ]
     }
   ],
   "accounts": [
@@ -113,7 +202,11 @@
     { "code": 6005, "name": "InvalidRiskLimit", "msg": "Risk limit value out of range" },
     { "code": 6006, "name": "Unauthorized", "msg": "Unauthorized: signer is not the vault owner" },
     { "code": 6007, "name": "AlreadyInitialized", "msg": "Vault is already initialized for this owner" },
-    { "code": 6008, "name": "InsufficientReserve", "msg": "Must keep minimum SOL reserve for rent and gas" }
+    { "code": 6008, "name": "InsufficientReserve", "msg": "Must keep minimum SOL reserve for rent and gas" },
+    { "code": 6009, "name": "UnauthorizedAgent", "msg": "Unauthorized: signer is not the agent authority" },
+    { "code": 6010, "name": "NotAutoMode", "msg": "Vault must be in Auto mode for agent operations" },
+    { "code": 6011, "name": "ExceedsMaxPosition", "msg": "Agent withdraw exceeds max position size percentage" },
+    { "code": 6012, "name": "SessionAmountUnderflow", "msg": "In-session amount underflow" }
   ],
   "types": [
     {
@@ -130,7 +223,8 @@
           { "name": "created_at", "type": "i64" },
           { "name": "last_action_at", "type": "i64" },
           { "name": "bump", "type": "u8" },
-          { "name": "_padding", "type": { "array": ["u8", 32] } }
+          { "name": "in_session_amount", "type": "u64" },
+          { "name": "_padding", "type": { "array": ["u8", 24] } }
         ]
       }
     },
