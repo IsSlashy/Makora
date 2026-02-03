@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import * as readline from 'readline';
 import type { PortfolioState } from '@makora/types';
 
 // Makora brand colors
@@ -128,4 +129,67 @@ export function printWarning(message: string): void {
  */
 export function printError(message: string): void {
   console.log(BRAND.error('  x ') + message);
+}
+
+/**
+ * Print a formatted table with headers and rows.
+ */
+export function printTable(headers: string[], rows: string[][]): void {
+  const table = new Table({
+    head: headers.map(h => chalk.bold(h)),
+    style: {
+      head: [],
+      border: ['gray'],
+    },
+  });
+
+  for (const row of rows) {
+    table.push(row);
+  }
+
+  console.log(table.toString());
+}
+
+/**
+ * Print a numbered action plan.
+ */
+export function printActionPlan(steps: string[]): void {
+  console.log(chalk.hex('#8b5cf6').bold('  ACTION PLAN'));
+  console.log('');
+  steps.forEach((step, index) => {
+    console.log(`  ${BRAND.secondary((index + 1).toString() + '.')} ${chalk.gray(step)}`);
+  });
+}
+
+/**
+ * Print risk assessment results with pass/fail indicators.
+ */
+export function printRiskAssessment(checks: Array<{ name: string; passed: boolean }>): void {
+  console.log(chalk.hex('#8b5cf6').bold('  RISK ASSESSMENT'));
+  console.log('');
+
+  for (const check of checks) {
+    const icon = check.passed ? BRAND.success('✓') : BRAND.error('✗');
+    const status = check.passed ? chalk.green('PASS') : chalk.red('FAIL');
+    console.log(`  ${icon} ${chalk.white(check.name.padEnd(30))} ${status}`);
+  }
+}
+
+/**
+ * Print a confirmation prompt and wait for user input.
+ * Returns true if user confirms, false otherwise.
+ */
+export async function printConfirmation(message: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(BRAND.warning('  ? ') + message + chalk.gray(' (y/n): '), (answer) => {
+      rl.close();
+      const normalized = answer.toLowerCase().trim();
+      resolve(normalized === 'y' || normalized === 'yes');
+    });
+  });
 }
