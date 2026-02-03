@@ -51,9 +51,8 @@ export default function Home() {
               Built with ❤️ for Solana Agent Hackathon 2026
             </div>
             <div className="flex items-center gap-6">
-              <a href="https://github.com" className="hover:text-accent transition-colors">GitHub</a>
-              <a href="https://twitter.com" className="hover:text-accent transition-colors">Twitter</a>
-              <a href="https://docs.makora.xyz" className="hover:text-accent transition-colors">Docs</a>
+              <a href="https://github.com/IsSlashy/Makora" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">GitHub</a>
+              <a href="https://x.com/Protocol01_" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">Twitter</a>
             </div>
           </div>
         </div>
