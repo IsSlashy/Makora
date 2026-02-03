@@ -8,9 +8,11 @@ skip-lint = false
 
 [programs.localnet]
 makora_vault = "BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw"
+makora_strategy = "EH5sixTHAoLsdFox1bR3YUqgwf5VuX2BdXFew5wTE6dj"
 
 [programs.devnet]
 makora_vault = "BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw"
+makora_strategy = "EH5sixTHAoLsdFox1bR3YUqgwf5VuX2BdXFew5wTE6dj"
 
 [registry]
 url = "https://api.apr.dev"

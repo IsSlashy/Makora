@@ -1,0 +1,21 @@
+[package]
+name = "makora_strategy"
+version = "0.1.0"
+description = "Makora Strategy - On-chain strategy params, permissions, and audit trail"
+edition = "2021"
+rust-version = "1.75"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "makora_strategy"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }
+anchor-spl = "0.30.1"
