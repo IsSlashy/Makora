@@ -33,108 +33,103 @@ export const TheWheel = ({ oodaState: ooda }: TheWheelProps) => {
       {/* Kanji watermark */}
       <div className="kanji-watermark top-6 right-6">魔</div>
 
-      {/* ── The Wheel ── */}
-      <div className="relative w-72 h-72 lg:w-80 lg:h-80 mt-8">
-        {/* Outer glow ring */}
-        <div
-          className="absolute inset-[-20px] rounded-full transition-all duration-700"
+      {/* ── MAKORA title — pinned to top ── */}
+      <div className="text-center mb-1">
+        <h2
+          className="font-display text-3xl lg:text-4xl tracking-[0.3em] leading-none"
           style={{
-            background: `radial-gradient(circle, rgba(212, 168, 41, ${isAdapting ? 0.15 : 0.05}) 0%, transparent 70%)`,
-          }}
-        />
-
-        {/* The actual Mahoraga wheel image */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <img
-            src="/wheel.png"
-            alt="Wheel of Adaptation"
-            className={`w-full h-full object-contain ${isAdapting ? 'animate-wheel-spin animate-wheel-pulse' : ''}`}
-            style={{
-              filter: 'invert(1) sepia(1) saturate(2) hue-rotate(10deg) brightness(0.9)',
-            }}
-          />
-        </div>
-
-        {/* OODA Phase indicators around the wheel */}
-        {PHASES.map((phase, idx) => {
-          const isActive = idx === activePhase;
-          const angle = (idx * 90 - 90) * (Math.PI / 180);
-          const radius = 58;
-          const x = 50 + radius * Math.cos(angle);
-          const y = 50 + radius * Math.sin(angle);
-
-          return (
-            <div
-              key={phase.name}
-              className="absolute transition-all duration-500"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              <div
-                className={`flex flex-col items-center gap-1 transition-all duration-500 ${
-                  isActive ? 'scale-110' : 'scale-90 opacity-30'
-                }`}
-              >
-                <span
-                  className="text-2xl font-bold select-none"
-                  style={{
-                    color: isActive ? '#d4a829' : '#4a4740',
-                    textShadow: isActive ? '0 0 20px rgba(212, 168, 41, 0.6)' : 'none',
-                  }}
-                >
-                  {phase.kanji}
-                </span>
-                <span
-                  className="text-[9px] font-mono tracking-[0.2em] uppercase"
-                  style={{ color: isActive ? '#d4a829' : '#4a4740' }}
-                >
-                  {phase.name}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* ── MAKORA title — positioned below OBSERVE (top of wheel) ── */}
-        <div
-          className="absolute z-10 flex flex-col items-center pointer-events-none"
-          style={{
-            left: '50%',
-            top: '22%',
-            transform: 'translate(-50%, 0)',
+            background: 'linear-gradient(135deg, #a68520 0%, #d4a829 35%, #e8c44a 50%, #d4a829 65%, #a68520 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            filter: 'drop-shadow(0 0 20px rgba(212, 168, 41, 0.4))',
           }}
         >
-          <h2
-            className="font-display text-3xl lg:text-4xl tracking-[0.3em] leading-none"
-            style={{
-              background: 'linear-gradient(135deg, #a68520 0%, #d4a829 35%, #e8c44a 50%, #d4a829 65%, #a68520 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 20px rgba(212, 168, 41, 0.4))',
-            }}
-          >
-            MAKORA
-          </h2>
+          MAKORA
+        </h2>
+        <div
+          className="text-[8px] tracking-[0.4em] uppercase mt-0.5"
+          style={{
+            background: 'linear-gradient(90deg, #4a4740, #d4a829 40%, #e8c44a 50%, #d4a829 60%, #4a4740)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
+        </div>
+      </div>
+
+      {/* ── The Wheel — centered in remaining space ── */}
+      <div className="flex-1 flex items-center justify-center w-full">
+        <div className="relative w-72 h-72 lg:w-80 lg:h-80">
+          {/* Outer glow ring */}
           <div
-            className="text-[8px] tracking-[0.4em] uppercase mt-0.5"
+            className="absolute inset-[-20px] rounded-full transition-all duration-700"
             style={{
-              background: 'linear-gradient(90deg, #4a4740, #d4a829 40%, #e8c44a 50%, #d4a829 60%, #4a4740)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              background: `radial-gradient(circle, rgba(212, 168, 41, ${isAdapting ? 0.15 : 0.05}) 0%, transparent 70%)`,
             }}
-          >
-            {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
+          />
+
+          {/* The actual Mahoraga wheel image */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/wheel.png"
+              alt="Wheel of Adaptation"
+              className={`w-full h-full object-contain ${isAdapting ? 'animate-wheel-spin animate-wheel-pulse' : ''}`}
+              style={{
+                filter: 'invert(1) sepia(1) saturate(2) hue-rotate(10deg) brightness(0.9)',
+              }}
+            />
           </div>
+
+          {/* OODA Phase indicators around the wheel */}
+          {PHASES.map((phase, idx) => {
+            const isActive = idx === activePhase;
+            const angle = (idx * 90 - 90) * (Math.PI / 180);
+            const radius = 58;
+            const x = 50 + radius * Math.cos(angle);
+            const y = 50 + radius * Math.sin(angle);
+
+            return (
+              <div
+                key={phase.name}
+                className="absolute transition-all duration-500"
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div
+                  className={`flex flex-col items-center gap-1 transition-all duration-500 ${
+                    isActive ? 'scale-110' : 'scale-90 opacity-30'
+                  }`}
+                >
+                  <span
+                    className="text-2xl font-bold select-none"
+                    style={{
+                      color: isActive ? '#d4a829' : '#4a4740',
+                      textShadow: isActive ? '0 0 20px rgba(212, 168, 41, 0.6)' : 'none',
+                    }}
+                  >
+                    {phase.kanji}
+                  </span>
+                  <span
+                    className="text-[9px] font-mono tracking-[0.2em] uppercase"
+                    style={{ color: isActive ? '#d4a829' : '#4a4740' }}
+                  >
+                    {phase.name}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Stats bar ── */}
-      <div className="w-full max-w-md mt-auto">
+      <div className="w-full max-w-md">
         <div className="ink-divider mb-4" />
         <div className="flex items-center justify-between text-[11px] font-mono">
           <div>
