@@ -84,11 +84,21 @@ const AGGRESSIVE_TIER: TierSlot[] = [
   { tag: 'perps-lp', pct: 30 },
 ];
 
-function pickBestYield(yields: YieldOpportunity[], tag: StrategyTag): YieldOpportunity | null {
-  const candidates = yields.filter(y => y.strategyTag === tag);
+function pickBestYield(
+  yields: YieldOpportunity[],
+  tag: StrategyTag,
+  usedProtocols?: Set<string>,
+): YieldOpportunity | null {
+  const candidates = yields
+    .filter(y => y.strategyTag === tag && y.apy > 0)
+    .sort((a, b) => b.apy - a.apy);
   if (candidates.length === 0) return null;
-  // Pick highest APY among candidates for this tag
-  return candidates.reduce((best, c) => (c.apy > best.apy ? c : best), candidates[0]);
+  // Prefer a protocol not already used in the allocation
+  if (usedProtocols) {
+    const unused = candidates.find(c => !usedProtocols.has(c.protocol));
+    if (unused) return unused;
+  }
+  return candidates[0];
 }
 
 export function computeAllocation(
@@ -101,10 +111,13 @@ export function computeAllocation(
       ? BALANCED_TIER
       : CONSERVATIVE_TIER;
 
+  const usedProtocols = new Set<string>();
   const slots: AllocationSlot[] = [];
+
   for (const { tag, pct } of tier) {
-    const best = pickBestYield(yields, tag);
+    const best = pickBestYield(yields, tag, usedProtocols);
     if (best) {
+      usedProtocols.add(best.protocol);
       slots.push({
         protocol: best.protocol,
         symbol: best.symbol,
@@ -114,16 +127,19 @@ export function computeAllocation(
         risk: best.risk,
       });
     } else {
-      // Fallback: assign slot to best available stake yield
-      const fallback = pickBestYield(yields, 'stake') || yields[0];
-      if (fallback) {
+      // No yield for this tag — pick best unused yield from any tag
+      const anyBest = yields
+        .filter(y => y.apy > 0 && !usedProtocols.has(y.protocol))
+        .sort((a, b) => b.apy - a.apy)[0];
+      if (anyBest) {
+        usedProtocols.add(anyBest.protocol);
         slots.push({
-          protocol: fallback.protocol,
-          symbol: fallback.symbol,
+          protocol: anyBest.protocol,
+          symbol: anyBest.symbol,
           pct,
-          expectedApy: fallback.apy,
-          strategyTag: fallback.strategyTag,
-          risk: fallback.risk,
+          expectedApy: anyBest.apy,
+          strategyTag: tag,
+          risk: anyBest.risk,
         });
       }
     }

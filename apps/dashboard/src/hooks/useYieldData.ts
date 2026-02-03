@@ -156,6 +156,20 @@ export function useYieldData() {
       }
 
       if (results.length > 0) {
+        // Fill gaps: if any strategy tag is missing from live data (or only
+        // has 0% APY entries), inject fallback entries for that tag so the
+        // allocation engine always has diverse protocols to pick from.
+        const coveredTags = new Set(
+          results.filter(r => r.apy > 0).map(r => r.strategyTag)
+        );
+        for (const fb of FALLBACK_DATA) {
+          if (!coveredTags.has(fb.strategyTag)) {
+            results.push(fb);
+            coveredTags.add(fb.strategyTag);
+          }
+        }
+        // Re-sort after adding fallbacks
+        results.sort((a, b) => b.tvlRaw - a.tvlRaw);
         setOpportunities(results);
         setLastUpdated(new Date());
       } else {
