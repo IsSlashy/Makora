@@ -22,6 +22,7 @@ export interface VaultState {
   createdAt: BN;
   lastActionAt: BN;
   bump: number;
+  inSessionAmount: BN;
 }
 
 export function useVault() {
@@ -173,10 +174,19 @@ export function useVault() {
     ? (vaultState.totalDeposited.sub(vaultState.totalWithdrawn)).toNumber() / LAMPORTS_PER_SOL
     : 0;
 
+  const inSessionAmount = vaultState?.inSessionAmount
+    ? vaultState.inSessionAmount.toNumber() / LAMPORTS_PER_SOL
+    : 0;
+
+  // Available balance excludes SOL currently in stealth sessions
+  const availableBalance = Math.max(0, currentBalance - inSessionAmount);
+
   return {
     vaultState,
     vaultBalance,
     currentBalance,
+    availableBalance,
+    inSessionAmount,
     loading,
     error,
     lastTxSig,

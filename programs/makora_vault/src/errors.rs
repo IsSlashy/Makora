@@ -37,4 +37,20 @@ pub enum VaultError {
     /// Must keep minimum SOL reserve for rent and gas
     #[msg("Must keep minimum SOL reserve for rent and gas")]
     InsufficientReserve,
+
+    /// Signer is not the vault's agent authority
+    #[msg("Unauthorized: signer is not the agent authority")]
+    UnauthorizedAgent,
+
+    /// Vault must be in Auto mode for agent operations
+    #[msg("Vault must be in Auto mode for agent operations")]
+    NotAutoMode,
+
+    /// Agent withdraw exceeds max position size
+    #[msg("Agent withdraw exceeds max position size percentage")]
+    ExceedsMaxPosition,
+
+    /// In-session amount underflow (return exceeds tracked amount)
+    #[msg("In-session amount underflow")]
+    SessionAmountUnderflow,
 }

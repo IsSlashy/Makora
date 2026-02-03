@@ -28,6 +28,7 @@
     "@makora/risk-manager": "workspace:*",
     "@makora/execution-engine": "workspace:*",
     "@makora/protocol-router": "workspace:*",
+    "@makora/session-manager": "workspace:*",
     "@solana/web3.js": "^1.98.4"
   },
   "devDependencies": {

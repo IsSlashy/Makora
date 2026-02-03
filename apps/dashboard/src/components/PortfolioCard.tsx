@@ -16,7 +16,7 @@ interface TokenBalance {
 export const PortfolioCard = () => {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
-  const { vaultState, vaultBalance, currentBalance, loading, error, initializeVault, deposit, withdraw, lastTxSig } = useVault();
+  const { vaultState, vaultBalance, currentBalance, availableBalance, inSessionAmount, loading, error, initializeVault, deposit, withdraw, lastTxSig } = useVault();
   const { addActivity } = useActivityFeed();
 
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -44,7 +44,7 @@ export const PortfolioCard = () => {
     // No polling — OODA loop handles periodic updates to avoid 429 rate limits
   }, [fetchBalance]);
 
-  const totalValue = walletBalance + vaultBalance;
+  const totalValue = walletBalance + vaultBalance + inSessionAmount;
 
   // Build token list from real data
   const tokens: TokenBalance[] = [];
@@ -57,12 +57,20 @@ export const PortfolioCard = () => {
         percentage: Math.round((walletBalance / totalValue) * 100),
       });
     }
-    if (vaultBalance > 0) {
+    if (availableBalance > 0) {
       tokens.push({
         symbol: 'VAULT',
-        amount: vaultBalance,
-        value: vaultBalance,
-        percentage: Math.round((vaultBalance / totalValue) * 100),
+        amount: availableBalance,
+        value: availableBalance,
+        percentage: Math.round((availableBalance / totalValue) * 100),
+      });
+    }
+    if (inSessionAmount > 0) {
+      tokens.push({
+        symbol: 'SESSION',
+        amount: inSessionAmount,
+        value: inSessionAmount,
+        percentage: Math.round((inSessionAmount / totalValue) * 100),
       });
     }
   }
@@ -152,15 +160,23 @@ export const PortfolioCard = () => {
         <div className="text-3xl font-bold text-text-primary font-mono">
           {totalValue.toFixed(4)} SOL
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-text-muted text-[10px] font-mono">
             Wallet: {walletBalance.toFixed(4)}
           </span>
-          {vaultBalance > 0 && (
+          {availableBalance > 0 && (
             <>
               <span className="text-text-muted text-[10px]">&middot;</span>
               <span className="text-cursed text-[10px] font-mono">
-                Vault: {vaultBalance.toFixed(4)}
+                Vault: {availableBalance.toFixed(4)}
+              </span>
+            </>
+          )}
+          {inSessionAmount > 0 && (
+            <>
+              <span className="text-text-muted text-[10px]">&middot;</span>
+              <span className="text-positive text-[10px] font-mono">
+                Session: {inSessionAmount.toFixed(4)}
               </span>
             </>
           )}
@@ -189,10 +205,14 @@ export const PortfolioCard = () => {
                   width: `${token.percentage}%`,
                   background: token.symbol === 'VAULT'
                     ? 'linear-gradient(90deg, #6d28d9, #8b5cf6)'
-                    : 'linear-gradient(90deg, #a68520, #d4a829)',
+                    : token.symbol === 'SESSION'
+                      ? 'linear-gradient(90deg, #059669, #34d399)'
+                      : 'linear-gradient(90deg, #a68520, #d4a829)',
                   boxShadow: token.symbol === 'VAULT'
                     ? '0 0 8px rgba(109, 40, 217, 0.4)'
-                    : '0 0 8px rgba(212, 168, 41, 0.3)',
+                    : token.symbol === 'SESSION'
+                      ? '0 0 8px rgba(5, 150, 105, 0.4)'
+                      : '0 0 8px rgba(212, 168, 41, 0.3)',
                 }}
               />
             </div>

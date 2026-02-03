@@ -59,8 +59,9 @@ pub struct RiskLimits {
 ///   created_at: 8
 ///   last_action_at: 8
 ///   bump: 1
-///   _padding: 32 (reserved for future fields)
-///   TOTAL: 8 + 32 + 32 + 8 + 8 + 1 + 13 + 8 + 8 + 1 + 32 = 151
+///   in_session_amount: 8
+///   _padding: 24 (reserved for future fields)
+///   TOTAL: 8 + 32 + 32 + 8 + 8 + 1 + 13 + 8 + 8 + 1 + 8 + 24 = 151
 ///   Round up to 160 for safety
 #[account]
 pub struct Vault {
@@ -91,12 +92,17 @@ pub struct Vault {
     /// PDA bump seed
     pub bump: u8,
 
+    /// SOL currently out in active stealth sessions (lamports)
+    pub in_session_amount: u64,
+
     /// Reserved space for future upgrades (avoid realloc)
-    pub _padding: [u8; 32],
+    pub _padding: [u8; 24],
 }
 
 impl Vault {
     /// Account size for space allocation (includes discriminator)
+    /// in_session_amount uses 8 bytes from the former 32-byte _padding,
+    /// so total stays at 160 bytes.
     pub const SIZE: usize = 8 + // discriminator
         32 +  // owner
         32 +  // agent_authority
@@ -107,12 +113,14 @@ impl Vault {
         8 +   // created_at
         8 +   // last_action_at
         1 +   // bump
-        32;   // _padding
+        8 +   // in_session_amount
+        24;   // _padding (was 32, now 24 after in_session_amount)
 
-    /// Current vault balance (deposited minus withdrawn)
+    /// Current vault balance available for new operations.
+    /// Excludes SOL currently out in stealth sessions.
     pub fn current_balance(&self) -> u64 {
-        // Use saturating_sub because total_withdrawn should never exceed total_deposited
-        // but we protect against it anyway
-        self.total_deposited.saturating_sub(self.total_withdrawn)
+        self.total_deposited
+            .saturating_sub(self.total_withdrawn)
+            .saturating_sub(self.in_session_amount)
     }
 }

@@ -12,6 +12,7 @@ export default defineConfig({
     '@makora/risk-manager',
     '@makora/execution-engine',
     '@makora/protocol-router',
+    '@makora/session-manager',
     '@solana/web3.js',
     'crypto',
   ],

@@ -24,6 +24,7 @@ import { StrategyEngine, type StrategyEvaluation } from '@makora/strategy-engine
 import { RiskManager } from '@makora/risk-manager';
 import { ExecutionEngine } from '@makora/execution-engine';
 import { ProtocolRouter, type RouteRequest } from '@makora/protocol-router';
+import type { SessionManager, StealthSession } from '@makora/session-manager';
 
 import { ActionExplainer } from './explainer.js';
 import { DecisionLog } from './decision-log.js';
@@ -52,11 +53,13 @@ export class OODALoop {
   private router: ProtocolRouter;
   private explainer: ActionExplainer;
   private decisionLog: DecisionLog;
+  private sessionManager: SessionManager | null = null;
 
   // State
   private walletPublicKey: PublicKey;
   private signer: Keypair;
   private mode: AgentMode;
+  private vaultPDA: PublicKey | null = null;
   private currentPhase: OODAPhase = 'observe';
   private isRunning = false;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -187,8 +190,31 @@ export class OODALoop {
 
       if (approvedActions.length > 0) {
         if (this.mode === 'auto') {
-          // Auto mode: execute immediately
-          executionResults = await this.executeActions(approvedActions, portfolio);
+          // Auto mode with stealth sessions: route trades through ephemeral wallets
+          if (this.sessionManager) {
+            // Rotate expired sessions before trading
+            for (const expired of this.sessionManager.getExpiredSessions()) {
+              this.emit({ type: 'session_rotating' as any, sessionId: expired.id });
+              await this.sessionManager.rotateSession(expired.id);
+            }
+
+            // Start sessions if none active
+            if (!this.sessionManager.hasActiveSession()) {
+              const totalAmount = approvedActions.reduce((sum, a) => sum + (a.amount ?? 0), 0);
+              if (totalAmount > 0) {
+                const sessions = await this.sessionManager.startSession(totalAmount);
+                for (const s of sessions) {
+                  this.emit({ type: 'session_started' as any, session: s });
+                }
+              }
+            }
+
+            // Execute trades using session wallet as signer
+            executionResults = await this.executeActionsWithSessions(approvedActions, portfolio);
+          } else {
+            // No session manager — direct execution (fallback)
+            executionResults = await this.executeActions(approvedActions, portfolio);
+          }
         } else {
           // Advisory mode: present to user and wait for confirmation
           if (this.confirmationCallback) {
@@ -341,6 +367,28 @@ export class OODALoop {
     this.confirmationCallback = callback;
   }
 
+  /**
+   * Set the session manager for stealth trading.
+   * When set, auto-mode trades are routed through ephemeral session wallets.
+   */
+  setSessionManager(manager: SessionManager): void {
+    this.sessionManager = manager;
+  }
+
+  /**
+   * Get the session manager (if configured).
+   */
+  getSessionManager(): SessionManager | null {
+    return this.sessionManager;
+  }
+
+  /**
+   * Set the vault PDA for agent operations.
+   */
+  setVaultPDA(pda: PublicKey): void {
+    this.vaultPDA = pda;
+  }
+
   // ---- Private ----
 
   private setPhase(phase: OODAPhase): void {
@@ -425,6 +473,78 @@ export class OODALoop {
         // Emit execution event
         this.emit({ type: 'action_executed', action, result });
 
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const failResult: ExecutionResult = {
+          success: false,
+          error: errorMsg,
+          timestamp: Date.now(),
+        };
+        results.push(failResult);
+        this.emit({ type: 'action_executed', action, result: failResult });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Execute actions through stealth session wallets.
+   * Each trade is signed by an ephemeral keypair instead of the main signer.
+   */
+  private async executeActionsWithSessions(
+    actions: ValidatedAction[],
+    prePortfolio: PortfolioState,
+  ): Promise<ExecutionResult[]> {
+    const results: ExecutionResult[] = [];
+    if (!this.sessionManager) return results;
+
+    for (const action of actions) {
+      try {
+        const sessionKeypair = this.sessionManager.getSessionKeypairForTrade(action.amount ?? 0);
+        const signerToUse = sessionKeypair ?? this.signer;
+
+        const routeRequest: RouteRequest = {
+          actionType: action.type,
+          protocol: action.protocol,
+          params: this.buildRouteParams(action),
+        };
+
+        const routeResult = await this.router.route(routeRequest);
+
+        const result = await this.executionEngine.execute({
+          instructions: routeResult.instructions,
+          signer: signerToUse,
+          description: action.description,
+          action,
+        });
+
+        results.push(result);
+
+        // Record trade in session log
+        if (sessionKeypair) {
+          const session = this.sessionManager.findSessionByKeypair(sessionKeypair);
+          if (session) {
+            this.sessionManager.recordTrade(session.id, {
+              signature: result.signature,
+              action: action.type,
+              amount: action.amount ?? 0,
+              timestamp: Date.now(),
+              success: result.success,
+              error: result.error,
+            });
+          }
+        }
+
+        // Record execution in risk manager
+        const postPortfolio = await this.portfolioReader.getPortfolio(this.walletPublicKey);
+        this.riskManager.recordExecution(
+          result,
+          prePortfolio.totalValueUsd,
+          postPortfolio.totalValueUsd,
+        );
+
+        this.emit({ type: 'action_executed', action, result });
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         const failResult: ExecutionResult = {

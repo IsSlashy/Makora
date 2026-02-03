@@ -73,7 +73,8 @@ pub fn handler(
     vault.created_at = clock.unix_timestamp;
     vault.last_action_at = clock.unix_timestamp;
     vault.bump = ctx.bumps.vault;
-    vault._padding = [0u8; 32];
+    vault.in_session_amount = 0;
+    vault._padding = [0u8; 24];
 
     msg!(
         "Vault initialized for owner {} with mode {:?}",

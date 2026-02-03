@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { TheWheel } from '@/components/TheWheel';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { StrategyPanel } from '@/components/StrategyPanel';
+import { StealthSessionsPanel } from '@/components/StealthSessionsPanel';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { RiskControls } from '@/components/RiskControls';
 import { useOODALoop } from '@/hooks/useOODALoop';
@@ -41,6 +42,11 @@ export default function Home() {
               yieldError={yieldError}
             />
           </div>
+        </div>
+
+        {/* Middle: Stealth Sessions */}
+        <div className="mb-4">
+          <StealthSessionsPanel oodaState={ooda} />
         </div>
 
         {/* Bottom grid: Activity + Risk */}

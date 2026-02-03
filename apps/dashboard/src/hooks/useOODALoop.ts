@@ -10,6 +10,15 @@ import type { YieldOpportunity, StrategyTag } from './useYieldData';
 
 export type OODAPhase = 'IDLE' | 'OBSERVE' | 'ORIENT' | 'DECIDE' | 'ACT';
 
+export interface SessionInfo {
+  id: string;
+  walletAddress: string;
+  fundedAmount: number;
+  timeRemainingMs: number;
+  status: string;
+  tradeCount: number;
+}
+
 export interface OODAState {
   phase: OODAPhase;
   phaseIndex: number;
@@ -19,6 +28,9 @@ export interface OODAState {
   lastObservation: ObservationData | null;
   lastDecision: DecisionData | null;
   phaseDescription: string;
+  stealthSessions: SessionInfo[];
+  totalInSession: number;
+  stealthActive: boolean;
 }
 
 export interface ObservationData {
@@ -179,6 +191,9 @@ export function useOODALoop() {
     lastObservation: null,
     lastDecision: null,
     phaseDescription: PHASE_DESCRIPTIONS.IDLE,
+    stealthSessions: [],
+    totalInSession: 0,
+    stealthActive: false,
   });
 
   const runningRef = useRef(false);
@@ -365,9 +380,30 @@ export function useOODALoop() {
       });
     }
 
+    // Update stealth session state from vault's in_session_amount
+    const latestVault = depsRef.current.vaultState;
+    const isAutoMode = latestVault && 'auto' in latestVault.mode;
+    const inSessionLamports = (latestVault as any)?.inSessionAmount?.toNumber?.() ?? 0;
+    const inSessionSol = inSessionLamports / 1_000_000_000;
+
+    // Build session info from on-chain data
+    // The real session manager runs in the agent-core; the dashboard shows
+    // the aggregate in_session_amount from the vault state
+    const sessionInfos: SessionInfo[] = inSessionSol > 0 ? [{
+      id: 'vault-session',
+      walletAddress: 'ephemeral',
+      fundedAmount: inSessionSol,
+      timeRemainingMs: 0, // Not tracked on-chain
+      status: 'active',
+      tradeCount: 0,
+    }] : [];
+
     setState(prev => ({
       ...prev,
       adaptations: prev.adaptations + 1,
+      stealthSessions: sessionInfos,
+      totalInSession: inSessionSol,
+      stealthActive: isAutoMode === true && inSessionSol > 0,
     }));
   }, [setPhase]); // Only depends on setPhase which is stable
 

@@ -48,4 +48,16 @@ pub mod makora_vault {
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, amount)
     }
+
+    /// Agent withdraws SOL from the vault to a stealth session wallet.
+    /// Only callable by the vault's agent_authority when mode == Auto.
+    pub fn agent_withdraw(ctx: Context<AgentWithdraw>, amount: u64) -> Result<()> {
+        instructions::agent_withdraw::handler(ctx, amount)
+    }
+
+    /// Agent deposits SOL back into the vault from a session wallet.
+    /// Called during session sweep to return funds.
+    pub fn agent_deposit(ctx: Context<AgentDeposit>, amount: u64) -> Result<()> {
+        instructions::agent_deposit::handler(ctx, amount)
+    }
 }
