@@ -9,45 +9,27 @@ interface Activity {
   status: 'success' | 'adapt' | 'warning' | 'shield';
 }
 
+const INITIAL_ACTIVITIES: Omit<Activity, 'time'>[] = [
+  { id: '1', action: 'Swapped 10 SOL to 245.3 USDC via Jupiter', status: 'success' },
+  { id: '2', action: 'Risk check passed: position 15% < limit 20%', status: 'success' },
+  { id: '3', action: 'Wheel turned: adapted strategy Yield to Rebalance', status: 'adapt' },
+  { id: '4', action: 'Shielded 5 SOL into privacy pool (ZK verified)', status: 'shield' },
+  { id: '5', action: 'Staked 20 SOL to Marinade at 7.2% APY', status: 'success' },
+  { id: '6', action: 'Volatility spike detected: 32% — adjusting limits', status: 'warning' },
+];
+
 export const ActivityFeed = () => {
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: '1',
-      time: new Date(Date.now() - 5 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Swapped 10 SOL to 245.3 USDC via Jupiter',
-      status: 'success',
-    },
-    {
-      id: '2',
-      time: new Date(Date.now() - 10 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Risk check passed: position 15% < limit 20%',
-      status: 'success',
-    },
-    {
-      id: '3',
-      time: new Date(Date.now() - 12 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Wheel turned: adapted strategy Yield to Rebalance',
-      status: 'adapt',
-    },
-    {
-      id: '4',
-      time: new Date(Date.now() - 17 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Shielded 5 SOL into privacy pool (ZK verified)',
-      status: 'shield',
-    },
-    {
-      id: '5',
-      time: new Date(Date.now() - 23 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Staked 20 SOL to Marinade at 7.2% APY',
-      status: 'success',
-    },
-    {
-      id: '6',
-      time: new Date(Date.now() - 28 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Volatility spike detected: 32% — adjusting limits',
-      status: 'warning',
-    },
-  ]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const offsets = [5, 10, 12, 17, 23, 28];
+    setActivities(INITIAL_ACTIVITIES.map((a, i) => ({
+      ...a,
+      time: new Date(Date.now() - offsets[i] * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    })));
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {

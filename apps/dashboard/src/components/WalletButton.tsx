@@ -1,7 +1,12 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+
+const WalletMultiButtonDynamic = dynamic(
+  async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
+  { ssr: false }
+);
 
 export const WalletButton = () => {
   const { publicKey } = useWallet();
@@ -16,7 +21,7 @@ export const WalletButton = () => {
           </span>
         </div>
       )}
-      <WalletMultiButton
+      <WalletMultiButtonDynamic
         className="!bg-cursed/15 !border !border-cursed/30 hover:!bg-cursed/25 !transition-colors !rounded-none !text-cursed !font-mono !text-[10px] !tracking-wider !uppercase !h-8 !px-3"
       />
     </div>
