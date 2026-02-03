@@ -60,4 +60,10 @@ pub mod makora_vault {
     pub fn agent_deposit(ctx: Context<AgentDeposit>, amount: u64) -> Result<()> {
         instructions::agent_deposit::handler(ctx, amount)
     }
+
+    /// Set the vault's agent operating mode (Advisory or Auto).
+    /// Only the vault owner can change the mode.
+    pub fn set_mode(ctx: Context<SetMode>, mode: u8) -> Result<()> {
+        instructions::set_mode::handler(ctx, mode)
+    }
 }

@@ -7,8 +7,9 @@ import { useActivityFeed } from '@/hooks/useActivityFeed';
 
 export const RiskControls = () => {
   const { publicKey } = useWallet();
-  const { vaultState, initializeVault, loading: vaultLoading } = useVault();
+  const { vaultState, initializeVault, setMode, loading: vaultLoading } = useVault();
   const { addActivity } = useActivityFeed();
+  const [modeLoading, setModeLoading] = useState(false);
 
   // Local slider state — initialized from on-chain when available
   const [maxPosition, setMaxPosition] = useState(20);
@@ -36,6 +37,7 @@ export const RiskControls = () => {
 
   const riskLabel = parseFloat(riskScore) <= 3 ? 'Low' : parseFloat(riskScore) <= 6 ? 'Medium' : 'High';
   const riskColor = parseFloat(riskScore) <= 3 ? 'text-positive' : parseFloat(riskScore) <= 6 ? 'text-caution' : 'text-negative';
+  const isAutoMode = vaultState ? Object.keys(vaultState.mode)[0] !== 'advisory' : false;
 
   const handleEmergencyHalt = () => {
     setEmergencyHalt(true);
@@ -211,13 +213,44 @@ export const RiskControls = () => {
               <span className="text-text-muted">Vault</span>
               <span className="text-text-primary">{vaultState ? 'Active' : 'Not initialized'}</span>
             </div>
-            <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-text-muted">Mode</span>
-              <span className="text-cursed">
-                {vaultState
-                  ? (Object.keys(vaultState.mode)[0] === 'advisory' ? 'Advisory' : 'Auto')
-                  : 'Advisory'}
-              </span>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs font-mono font-bold text-text-primary mb-0.5">Agent Mode</div>
+                <div className="text-[9px] font-mono text-text-muted">
+                  {isAutoMode ? 'Agent can execute autonomously' : 'Agent suggests, you confirm'}
+                </div>
+              </div>
+              <button
+                disabled={!vaultState || modeLoading}
+                onClick={async () => {
+                  if (!vaultState) return;
+                  const nextMode = isAutoMode ? 'advisory' : 'auto';
+                  setModeLoading(true);
+                  try {
+                    await setMode(nextMode);
+                    addActivity({
+                      action: `Agent mode set to ${nextMode === 'auto' ? 'AUTO' : 'ADVISORY'}`,
+                      status: nextMode === 'auto' ? 'success' : 'adapt',
+                    });
+                  } catch (e: any) {
+                    addActivity({
+                      action: `Mode change failed: ${e.message?.slice(0, 60) || 'unknown error'}`,
+                      status: 'error',
+                    });
+                  } finally {
+                    setModeLoading(false);
+                  }
+                }}
+                className={`relative w-10 h-5 transition-colors ${
+                  isAutoMode ? 'bg-positive/30' : 'bg-bg-inner'
+                } border ${isAutoMode ? 'border-positive/40' : 'border-text-muted/20'} ${
+                  !vaultState || modeLoading ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 transition-transform ${
+                  isAutoMode ? 'left-5 bg-positive' : 'left-0.5 bg-text-muted'
+                }`} />
+              </button>
             </div>
           </div>
         </div>

@@ -170,6 +170,33 @@ export function useVault() {
     }
   }, [publicKey, vaultProgram, connection, fetchVaultState]);
 
+  const setMode = useCallback(async (mode: 'advisory' | 'auto') => {
+    if (!publicKey || !vaultProgram) throw new Error('Wallet not connected');
+
+    setLoading(true);
+    setError(null);
+    try {
+      const modeValue = mode === 'auto' ? 1 : 0;
+      const tx = await (vaultProgram.methods as any)
+        .setMode(modeValue)
+        .accounts({
+          owner: publicKey,
+        })
+        .rpc();
+
+      setLastTxSig(tx);
+      await connection.confirmTransaction(tx, 'confirmed');
+      await fetchVaultState();
+      return tx;
+    } catch (e: any) {
+      const msg = e.message || 'Failed to set mode';
+      setError(msg);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, vaultProgram, connection, fetchVaultState]);
+
   const currentBalance = vaultState
     ? (vaultState.totalDeposited.sub(vaultState.totalWithdrawn)).toNumber() / LAMPORTS_PER_SOL
     : 0;
@@ -193,6 +220,7 @@ export function useVault() {
     initializeVault,
     deposit,
     withdraw,
+    setMode,
     fetchVaultState,
   };
 }

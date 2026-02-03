@@ -24,9 +24,9 @@ export default function Home() {
     <div className="min-h-screen bg-bg-void">
       <Header />
 
-      <main className="max-w-[1400px] mx-auto px-6 py-8">
+      <main className="max-w-[1200px] mx-auto px-4 py-6">
         {/* Top grid: Wheel + Portfolio + Strategy */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
           <div className="lg:col-span-2 lg:row-span-2">
             <TheWheel oodaState={ooda} />
           </div>
@@ -44,13 +44,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Middle: Stealth Sessions */}
-        <div className="mb-4">
+        {/* Bottom grid: Sessions + Activity + Risk */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <StealthSessionsPanel oodaState={ooda} />
-        </div>
-
-        {/* Bottom grid: Activity + Risk */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ActivityFeed />
           <RiskControls />
         </div>
@@ -58,7 +54,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-cursed/8 mt-12">
-        <div className="max-w-[1400px] mx-auto px-6 py-6">
+        <div className="max-w-[1200px] mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="text-[10px] font-mono text-text-muted tracking-wider">
               MAKORA v0.1 — Built for Solana Agent Hackathon 2026
