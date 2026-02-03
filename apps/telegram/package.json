@@ -1,24 +1,21 @@
 {
-  "name": "@makora/cli",
+  "name": "@makora/telegram",
   "version": "0.1.0",
   "private": true,
-  "description": "Makora CLI - Command-line interface for the adaptive DeFi agent",
+  "description": "Makora Telegram Bot - conversational DeFi agent for Solana",
   "type": "module",
-  "bin": {
-    "makora": "dist/index.js"
-  },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsup",
-    "dev": "tsup src/index.ts --format esm --watch",
+    "dev": "tsup src/index.ts --format esm --watch --onSuccess 'node dist/index.js'",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@makora/types": "workspace:*",
-    "@makora/data-feed": "workspace:*",
     "@makora/agent-core": "workspace:*",
+    "@makora/data-feed": "workspace:*",
     "@makora/execution-engine": "workspace:*",
     "@makora/strategy-engine": "workspace:*",
     "@makora/risk-manager": "workspace:*",
@@ -28,11 +25,8 @@
     "@makora/adapters-marinade": "workspace:*",
     "@makora/adapters-privacy": "workspace:*",
     "@solana/web3.js": "^1.98.4",
-    "chalk": "^5.3.0",
-    "cli-table3": "^0.6.5",
-    "commander": "^14.0.0",
-    "dotenv": "^16.4.0",
-    "ora": "^8.0.0"
+    "grammy": "^1.30.0",
+    "dotenv": "^16.4.0"
   },
   "devDependencies": {
     "tsup": "^8.0.1",

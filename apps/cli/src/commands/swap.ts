@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
-import { createConnection, getRpcDisplayUrl, type ConnectionConfig } from '@makora/data-feed';
+import { createConnection, getRpcDisplayUrl, type ConnectionConfig, findTokenBySymbol, NATIVE_SOL_MINT } from '@makora/data-feed';
+import { JupiterAdapter } from '@makora/adapters-jupiter';
+import { ExecutionEngine } from '@makora/execution-engine';
 import { loadConfig } from '../utils/config.js';
 import { loadWalletFromFile } from '../utils/wallet.js';
 import {
@@ -15,61 +17,10 @@ import {
   formatUsd,
 } from '../utils/display.js';
 
-interface SwapQuote {
-  inputAmount: number;
-  inputToken: string;
-  outputAmount: number;
-  outputToken: string;
-  priceImpact: number;
-  route: string[];
-  estimatedFee: number;
-}
-
-/**
- * Generate a mock swap quote (for demo purposes).
- */
-function generateSwapQuote(amount: number, from: string, to: string, slippage: number): SwapQuote {
-  // Mock exchange rates
-  const rates: Record<string, number> = {
-    'SOL': 245.30,
-    'USDC': 1.0,
-    'USDT': 1.0,
-    'JUP': 1.15,
-    'BONK': 0.00003,
-    'RAY': 2.85,
-  };
-
-  const fromPrice = rates[from.toUpperCase()] || 1;
-  const toPrice = rates[to.toUpperCase()] || 1;
-
-  const baseOutput = (amount * fromPrice) / toPrice;
-  const priceImpact = amount > 100 ? 0.8 : amount > 10 ? 0.3 : 0.1;
-  const outputAmount = baseOutput * (1 - priceImpact / 100);
-
-  // Mock routes
-  const routes: Record<string, string[]> = {
-    'SOL-USDC': ['SOL', 'USDC'],
-    'SOL-USDT': ['SOL', 'USDC', 'USDT'],
-    'USDC-SOL': ['USDC', 'SOL'],
-    'USDC-USDT': ['USDC', 'USDT'],
-  };
-
-  const routeKey = `${from.toUpperCase()}-${to.toUpperCase()}`;
-  const route = routes[routeKey] || [from.toUpperCase(), to.toUpperCase()];
-
-  return {
-    inputAmount: amount,
-    inputToken: from.toUpperCase(),
-    outputAmount: outputAmount,
-    outputToken: to.toUpperCase(),
-    priceImpact,
-    route,
-    estimatedFee: 0.000005,
-  };
-}
-
 /**
  * Register the `makora swap` command.
+ *
+ * Wired to REAL Jupiter aggregator for optimal swap routing on devnet/mainnet.
  */
 export function registerSwapCommand(program: Command): void {
   program
@@ -124,8 +75,9 @@ export function registerSwapCommand(program: Command): void {
       const rpcDisplay = getRpcDisplayUrl(connectionConfig);
       const connectSpinner = ora({ text: `Connecting to ${config.cluster}...`, color: 'magenta' }).start();
 
+      let connection;
       try {
-        const connection = createConnection(connectionConfig);
+        connection = createConnection(connectionConfig);
         await connection.getSlot();
         connectSpinner.succeed(`Connected to ${config.cluster}`);
       } catch (err) {
@@ -134,38 +86,79 @@ export function registerSwapCommand(program: Command): void {
         process.exit(1);
       }
 
-      // Generate quote
+      // Resolve token mints
+      const fromToken = findTokenBySymbol(from.toUpperCase(), config.cluster);
+      const toToken = findTokenBySymbol(to.toUpperCase(), config.cluster);
+
+      if (!fromToken) {
+        printError(`Unknown token: ${from.toUpperCase()}. Supported: SOL, USDC, USDT, mSOL, JUP, BONK, RAY`);
+        process.exit(1);
+      }
+      if (!toToken) {
+        printError(`Unknown token: ${to.toUpperCase()}. Supported: SOL, USDC, USDT, mSOL, JUP, BONK, RAY`);
+        process.exit(1);
+      }
+
+      // Initialize Jupiter adapter
+      const jupiterSpinner = ora({ text: 'Initializing Jupiter aggregator...', color: 'magenta' }).start();
+      const jupiter = new JupiterAdapter();
+      try {
+        await jupiter.initialize({
+          rpcUrl: config.rpcUrl,
+          walletPublicKey: wallet.publicKey,
+        });
+        jupiterSpinner.succeed('Jupiter connected');
+      } catch (err) {
+        jupiterSpinner.fail('Failed to initialize Jupiter');
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      // Calculate raw amount (convert to smallest unit)
+      const rawAmount = BigInt(Math.floor(amount * 10 ** fromToken.decimals));
+
+      // Fetch real quote from Jupiter
       const quoteSpinner = ora({ text: 'Fetching best swap route from Jupiter...', color: 'magenta' }).start();
-      await new Promise(resolve => setTimeout(resolve, 800)); // Mock delay
-      const quote = generateSwapQuote(amount, from, to, slippage);
-      quoteSpinner.succeed('Quote received');
+      let quote;
+      try {
+        quote = await jupiter.getQuote({
+          inputToken: fromToken.mint,
+          outputToken: toToken.mint,
+          amount: rawAmount,
+          maxSlippageBps: slippage,
+        });
+        quoteSpinner.succeed('Quote received from Jupiter');
+      } catch (err) {
+        quoteSpinner.fail('Failed to get Jupiter quote');
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      // Display quote
+      const expectedOutput = Number(quote.expectedOutputAmount) / 10 ** toToken.decimals;
+      const minOutput = Number(quote.minimumOutputAmount) / 10 ** toToken.decimals;
 
       console.log('');
-      printInfo(`Swap ${chalk.white(quote.inputAmount)} ${chalk.cyan(quote.inputToken)} → ${chalk.white(`~${quote.outputAmount.toFixed(4)}`)} ${chalk.cyan(quote.outputToken)} via Jupiter`);
+      printInfo(`Swap ${chalk.white(amount)} ${chalk.cyan(fromToken.symbol)} -> ${chalk.white(`~${expectedOutput.toFixed(4)}`)} ${chalk.cyan(toToken.symbol)} via Jupiter`);
       console.log('');
 
-      // Display quote details
       const quoteTable = [
-        ['Input', `${quote.inputAmount} ${quote.inputToken}`],
-        ['Expected Output', `~${quote.outputAmount.toFixed(4)} ${quote.outputToken}`],
-        ['Price Impact', `${quote.priceImpact.toFixed(2)}%`],
-        ['Route', quote.route.join(' → ')],
-        ['Network Fee', `~${quote.estimatedFee} SOL`],
+        ['Input', `${amount} ${fromToken.symbol}`],
+        ['Expected Output', `~${expectedOutput.toFixed(4)} ${toToken.symbol}`],
+        ['Minimum Output', `${minOutput.toFixed(4)} ${toToken.symbol}`],
+        ['Price Impact', `${quote.priceImpactPct.toFixed(4)}%`],
+        ['Route', quote.routeDescription],
         ['Max Slippage', `${slippage / 100}%`],
       ];
 
-      printTable(
-        ['Detail', 'Value'],
-        quoteTable
-      );
-
+      printTable(['Detail', 'Value'], quoteTable);
       console.log('');
 
-      // Risk assessment
-      if (quote.priceImpact > 1) {
-        printWarning(`High price impact (${quote.priceImpact.toFixed(2)}%). Consider splitting the swap.`);
+      // Risk assessment based on real quote
+      if (quote.priceImpactPct > 1) {
+        printWarning(`High price impact (${quote.priceImpactPct.toFixed(2)}%). Consider splitting the swap.`);
       } else {
-        printSuccess(`Low price impact (${quote.priceImpact.toFixed(2)}%). Good swap conditions.`);
+        printSuccess(`Low price impact (${quote.priceImpactPct.toFixed(4)}%). Good swap conditions.`);
       }
 
       console.log('');
@@ -179,20 +172,43 @@ export function registerSwapCommand(program: Command): void {
         }
       }
 
-      // Execute
-      const execSpinner = ora({ text: 'Submitting transaction...', color: 'magenta' }).start();
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Mock execution time
+      // Execute via real Jupiter swap transaction + execution engine
+      const execSpinner = ora({ text: 'Building and submitting transaction...', color: 'magenta' }).start();
+      try {
+        const { transaction, quote: swapQuote } = await jupiter.getSwapTransaction({
+          inputToken: fromToken.mint,
+          outputToken: toToken.mint,
+          amount: rawAmount,
+          maxSlippageBps: slippage,
+          userPublicKey: wallet.publicKey,
+        });
 
-      // Mock transaction signature
-      const mockTxSig = `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      execSpinner.succeed('Transaction confirmed');
+        const engine = new ExecutionEngine(connection);
+        const result = await engine.execute({
+          instructions: [],
+          preBuiltTransaction: transaction,
+          signer: wallet,
+          description: `Swap ${amount} ${fromToken.symbol} -> ${toToken.symbol} via Jupiter`,
+        });
 
-      console.log('');
-      printSuccess(`Swap executed successfully!`);
-      printInfo(`Transaction: ${chalk.white(mockTxSig)}`);
-      printInfo(`Explorer: ${chalk.white(`https://explorer.solana.com/tx/${mockTxSig}?cluster=${config.cluster}`)}`);
-      console.log('');
-      printInfo(`New balance: ${chalk.white((quote.outputAmount).toFixed(4))} ${chalk.cyan(quote.outputToken)}`);
+        if (result.success && result.signature) {
+          execSpinner.succeed('Transaction confirmed');
+          console.log('');
+          printSuccess('Swap executed successfully!');
+          printInfo(`Transaction: ${chalk.white(result.signature)}`);
+          printInfo(`Explorer: ${chalk.white(`https://explorer.solana.com/tx/${result.signature}?cluster=${config.cluster}`)}`);
+          if (result.slot) {
+            printInfo(`Confirmed at slot: ${chalk.white(result.slot)}`);
+          }
+        } else {
+          execSpinner.fail('Transaction failed');
+          printError(result.error || 'Unknown error');
+        }
+      } catch (err) {
+        execSpinner.fail('Transaction failed');
+        printError(err instanceof Error ? err.message : String(err));
+      }
+
       console.log('');
     });
 }

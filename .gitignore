@@ -41,3 +41,10 @@ npm-debug.log*
 
 # GSD installer
 .gsd-install/
+.env.colosseum
+
+# Misc artifacts
+pnpm-install-output.txt
+con
+nul
+dev-log.txt

@@ -1,0 +1,252 @@
+{
+  "address": "EH5sixTHAoLsdFox1bR3YUqgwf5VuX2BdXFew5wTE6dj",
+  "metadata": {
+    "name": "makora_strategy",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Makora strategy program for OODA audit trail"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "strategy_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [115, 116, 114, 97, 116, 101, 103, 121] },
+              { "kind": "account", "path": "owner" }
+            ]
+          }
+        },
+        {
+          "name": "audit_trail",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [97, 117, 100, 105, 116] },
+              { "kind": "account", "path": "owner" }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        { "name": "agent_authority", "type": "pubkey" },
+        { "name": "strategy_type", "type": "u8" },
+        { "name": "mode", "type": "u8" },
+        { "name": "confidence_threshold", "type": "u8" },
+        { "name": "max_actions_per_cycle", "type": "u8" },
+        { "name": "alloc_symbols", "type": { "vec": { "array": ["u8", 8] } } },
+        { "name": "alloc_pcts", "type": { "vec": "u8" } }
+      ]
+    },
+    {
+      "name": "update_strategy",
+      "discriminator": [16, 76, 138, 179, 171, 112, 196, 21],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "strategy_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [115, 116, 114, 97, 116, 101, 103, 121] },
+              { "kind": "account", "path": "strategy_account.owner" }
+            ]
+          }
+        }
+      ],
+      "args": [
+        { "name": "strategy_type", "type": "u8" },
+        { "name": "confidence_threshold", "type": "u8" },
+        { "name": "max_actions_per_cycle", "type": "u8" },
+        { "name": "alloc_symbols", "type": { "vec": { "array": ["u8", 8] } } },
+        { "name": "alloc_pcts", "type": { "vec": "u8" } }
+      ]
+    },
+    {
+      "name": "log_action",
+      "discriminator": [123, 192, 243, 96, 38, 250, 134, 135],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "strategy_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [115, 116, 114, 97, 116, 101, 103, 121] },
+              { "kind": "account", "path": "strategy_account.owner" }
+            ]
+          }
+        },
+        {
+          "name": "audit_trail",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [97, 117, 100, 105, 116] },
+              { "kind": "account", "path": "strategy_account.owner" }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "docs": ["Owner pubkey for has_one constraint"]
+        }
+      ],
+      "args": [
+        { "name": "action_type", "type": "string" },
+        { "name": "protocol", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "executed", "type": "bool" },
+        { "name": "success", "type": "bool" }
+      ]
+    },
+    {
+      "name": "update_permissions",
+      "discriminator": [190, 35, 201, 204, 193, 197, 109, 69],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "strategy_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [115, 116, 114, 97, 116, 101, 103, 121] },
+              { "kind": "account", "path": "owner" }
+            ]
+          }
+        }
+      ],
+      "args": [
+        { "name": "new_agent_authority", "type": "pubkey" },
+        { "name": "new_mode", "type": "u8" }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StrategyAccount",
+      "discriminator": [97, 218, 254, 239, 248, 146, 59, 42]
+    },
+    {
+      "name": "AuditTrail",
+      "discriminator": [171, 223, 253, 181, 134, 88, 66, 26]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "InvalidStrategyType", "msg": "Invalid strategy type" },
+    { "code": 6001, "name": "InvalidAgentMode", "msg": "Invalid agent mode" },
+    { "code": 6002, "name": "InvalidAllocationSum", "msg": "Allocation percentages must sum to 100" },
+    { "code": 6003, "name": "InvalidAllocationEntry", "msg": "Invalid allocation entry" },
+    { "code": 6004, "name": "UnauthorizedStrategyUpdate", "msg": "Not authorized to update strategy" },
+    { "code": 6005, "name": "UnauthorizedLogAction", "msg": "Not authorized to log action" },
+    { "code": 6006, "name": "ActionTypeTooLong", "msg": "Action type exceeds 16 characters" },
+    { "code": 6007, "name": "ProtocolTooLong", "msg": "Protocol name exceeds 16 characters" },
+    { "code": 6008, "name": "DescriptionTooLong", "msg": "Description exceeds 64 characters" }
+  ],
+  "types": [
+    {
+      "name": "StrategyAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "pubkey" },
+          { "name": "agent_authority", "type": "pubkey" },
+          { "name": "strategy_type", "type": { "defined": { "name": "StrategyType" } } },
+          { "name": "mode", "type": { "defined": { "name": "AgentMode" } } },
+          { "name": "confidence_threshold", "type": "u8" },
+          { "name": "max_actions_per_cycle", "type": "u8" },
+          { "name": "target_allocation", "type": { "array": [{ "defined": { "name": "AllocationTarget" } }, 5] } },
+          { "name": "allocation_count", "type": "u8" },
+          { "name": "total_cycles", "type": "u64" },
+          { "name": "total_actions_executed", "type": "u64" },
+          { "name": "last_cycle_at", "type": "i64" },
+          { "name": "created_at", "type": "i64" },
+          { "name": "bump", "type": "u8" },
+          { "name": "_padding", "type": { "array": ["u8", 32] } }
+        ]
+      }
+    },
+    {
+      "name": "AuditTrail",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "pubkey" },
+          { "name": "head", "type": "u32" },
+          { "name": "count", "type": "u32" },
+          { "name": "entries", "type": { "array": [{ "defined": { "name": "AuditEntry" } }, 8] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "AuditEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "index", "type": "u32" },
+          { "name": "action_type", "type": { "array": ["u8", 16] } },
+          { "name": "protocol", "type": { "array": ["u8", 16] } },
+          { "name": "description", "type": { "array": ["u8", 64] } },
+          { "name": "executed", "type": "bool" },
+          { "name": "success", "type": "bool" },
+          { "name": "timestamp", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "AllocationTarget",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "symbol", "type": { "array": ["u8", 8] } },
+          { "name": "target_pct", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "StrategyType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Yield" },
+          { "name": "Trading" },
+          { "name": "Rebalance" },
+          { "name": "Liquidity" }
+        ]
+      }
+    },
+    {
+      "name": "AgentMode",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Advisory" },
+          { "name": "Auto" }
+        ]
+      }
+    }
+  ]
+}

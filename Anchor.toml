@@ -20,7 +20,7 @@ makora_privacy = "C1qXFsB6oJgZLQnXwRi9mwrm3QshKMU8kGGUZTAa9xcM"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

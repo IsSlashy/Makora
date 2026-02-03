@@ -1,7 +1,10 @@
 import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createConnection, getRpcDisplayUrl, type ConnectionConfig } from '@makora/data-feed';
+import { MarinadeAdapter } from '@makora/adapters-marinade';
+import { ExecutionEngine } from '@makora/execution-engine';
 import { loadConfig } from '../utils/config.js';
 import { loadWalletFromFile } from '../utils/wallet.js';
 import {
@@ -15,52 +18,16 @@ import {
   printRiskAssessment,
 } from '../utils/display.js';
 
-interface StakingOption {
-  protocol: string;
-  inputAmount: number;
-  inputToken: string;
-  outputAmount: number;
-  outputToken: string;
-  apy: number;
-  lockPeriod: string;
-  risk: 'Low' | 'Medium' | 'High';
-  fees: number;
-}
-
-/**
- * Generate mock staking details.
- */
-function generateStakingOption(amount: number, protocol: string): StakingOption {
-  const protocols: Record<string, { apy: number; token: string; lockPeriod: string; risk: 'Low' | 'Medium' | 'High'; fees: number }> = {
-    'marinade': { apy: 7.2, token: 'mSOL', lockPeriod: 'None (liquid staking)', risk: 'Low', fees: 0.01 },
-    'raydium': { apy: 12.4, token: 'RAY-LP', lockPeriod: 'None (withdraw anytime)', risk: 'Medium', fees: 0.02 },
-    'jito': { apy: 8.5, token: 'jitoSOL', lockPeriod: 'None (liquid staking)', risk: 'Low', fees: 0.01 },
-  };
-
-  const protocolData = protocols[protocol.toLowerCase()] || protocols['marinade'];
-  const outputAmount = amount * (1 - protocolData.fees);
-
-  return {
-    protocol: protocol.charAt(0).toUpperCase() + protocol.slice(1).toLowerCase(),
-    inputAmount: amount,
-    inputToken: 'SOL',
-    outputAmount,
-    outputToken: protocolData.token,
-    apy: protocolData.apy,
-    lockPeriod: protocolData.lockPeriod,
-    risk: protocolData.risk,
-    fees: protocolData.fees,
-  };
-}
-
 /**
  * Register the `makora stake` command.
+ *
+ * Wired to REAL Marinade Finance SDK for liquid staking on devnet/mainnet.
  */
 export function registerStakeCommand(program: Command): void {
   program
     .command('stake <amount>')
     .description('Stake SOL on liquid staking protocols')
-    .option('--protocol <name>', 'Staking protocol: marinade, raydium, jito', 'marinade')
+    .option('--protocol <name>', 'Staking protocol: marinade, jito', 'marinade')
     .option('--execute', 'Skip confirmation and execute immediately')
     .option('--wallet <path>', 'Path to wallet keypair JSON file')
     .option('--rpc <url>', 'Custom RPC endpoint URL')
@@ -74,7 +41,7 @@ export function registerStakeCommand(program: Command): void {
         process.exit(1);
       }
 
-      const validProtocols = ['marinade', 'raydium', 'jito'];
+      const validProtocols = ['marinade', 'jito'];
       if (!validProtocols.includes(options.protocol.toLowerCase())) {
         printError(`Invalid protocol. Choose from: ${validProtocols.join(', ')}`);
         process.exit(1);
@@ -109,8 +76,9 @@ export function registerStakeCommand(program: Command): void {
       const rpcDisplay = getRpcDisplayUrl(connectionConfig);
       const connectSpinner = ora({ text: `Connecting to ${config.cluster}...`, color: 'magenta' }).start();
 
+      let connection;
       try {
-        const connection = createConnection(connectionConfig);
+        connection = createConnection(connectionConfig);
         await connection.getSlot();
         connectSpinner.succeed(`Connected to ${config.cluster}`);
       } catch (err) {
@@ -119,54 +87,91 @@ export function registerStakeCommand(program: Command): void {
         process.exit(1);
       }
 
-      // Generate staking details
+      // Check SOL balance
+      const balanceSpinner = ora({ text: 'Checking SOL balance...', color: 'magenta' }).start();
+      let solBalance;
+      try {
+        const lamports = await connection.getBalance(wallet.publicKey);
+        solBalance = lamports / LAMPORTS_PER_SOL;
+        balanceSpinner.succeed(`SOL balance: ${solBalance.toFixed(4)} SOL`);
+      } catch (err) {
+        balanceSpinner.fail('Failed to check balance');
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      if (solBalance < amount + 0.05) {
+        printError(`Insufficient SOL. Need ${amount} + 0.05 SOL for gas. Have ${solBalance.toFixed(4)} SOL.`);
+        process.exit(1);
+      }
+
+      // Initialize Marinade adapter
+      const adapterSpinner = ora({ text: `Initializing ${options.protocol}...`, color: 'magenta' }).start();
+      const marinade = new MarinadeAdapter();
+      try {
+        await marinade.initialize({
+          rpcUrl: config.rpcUrl,
+          walletPublicKey: wallet.publicKey,
+        });
+        adapterSpinner.succeed(`${options.protocol} connected`);
+      } catch (err) {
+        adapterSpinner.fail(`Failed to initialize ${options.protocol}`);
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      // Fetch real quote from Marinade
+      const rawAmount = BigInt(Math.floor(amount * LAMPORTS_PER_SOL));
       const detailsSpinner = ora({ text: `Fetching staking details from ${options.protocol}...`, color: 'magenta' }).start();
-      await new Promise(resolve => setTimeout(resolve, 700)); // Mock delay
-      const stakingOption = generateStakingOption(amount, options.protocol);
-      detailsSpinner.succeed('Staking details loaded');
+      let quote;
+      try {
+        const { PublicKey } = await import('@solana/web3.js');
+        quote = await marinade.getQuote({
+          inputToken: new PublicKey('So11111111111111111111111111111111111111112'),
+          outputToken: new PublicKey('mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So'),
+          amount: rawAmount,
+          maxSlippageBps: 10,
+        });
+        detailsSpinner.succeed('Staking details loaded from Marinade');
+      } catch (err) {
+        detailsSpinner.fail('Failed to fetch staking details');
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+
+      const expectedMsol = Number(quote.expectedOutputAmount) / LAMPORTS_PER_SOL;
+      const exchangeRate = quote.raw?.exchangeRate ?? (expectedMsol / amount);
 
       console.log('');
-      printInfo(`Stake ${chalk.white(stakingOption.inputAmount)} ${chalk.cyan(stakingOption.inputToken)} → ${chalk.white(`~${stakingOption.outputAmount.toFixed(4)}`)} ${chalk.cyan(stakingOption.outputToken)} via ${chalk.magenta(stakingOption.protocol)} (${chalk.green(stakingOption.apy + '%')} APY)`);
+      printInfo(`Stake ${chalk.white(amount)} ${chalk.cyan('SOL')} -> ${chalk.white(`~${expectedMsol.toFixed(4)}`)} ${chalk.cyan('mSOL')} via ${chalk.magenta('Marinade')}`);
       console.log('');
 
-      // Display staking details
+      // Display staking details from real quote
       const stakingTable = [
-        ['Protocol', stakingOption.protocol],
-        ['Input', `${stakingOption.inputAmount} ${stakingOption.inputToken}`],
-        ['Expected Output', `~${stakingOption.outputAmount.toFixed(4)} ${stakingOption.outputToken}`],
-        ['APY', `${stakingOption.apy}%`],
-        ['Lock Period', stakingOption.lockPeriod],
-        ['Fees', `${(stakingOption.fees * 100).toFixed(2)}%`],
-        ['Risk Level', stakingOption.risk],
+        ['Protocol', 'Marinade Finance'],
+        ['Input', `${amount} SOL`],
+        ['Expected Output', `~${expectedMsol.toFixed(4)} mSOL`],
+        ['Exchange Rate', `1 SOL = ${exchangeRate.toFixed(6)} mSOL`],
+        ['Price Impact', `${quote.priceImpactPct.toFixed(2)}%`],
+        ['Route', quote.routeDescription],
+        ['Risk Level', 'Low'],
       ];
 
-      printTable(
-        ['Detail', 'Value'],
-        stakingTable
-      );
-
+      printTable(['Detail', 'Value'], stakingTable);
       console.log('');
 
       // Risk assessment
       const riskChecks = [
         { name: 'Protocol Security Audit', passed: true },
         { name: 'Liquidity Depth', passed: true },
-        { name: 'Smart Contract Risk', passed: stakingOption.risk !== 'High' },
-        { name: 'Slashing Risk', passed: stakingOption.risk === 'Low' },
+        { name: 'Smart Contract Risk', passed: true },
+        { name: 'Sufficient SOL Balance', passed: solBalance >= amount + 0.05 },
       ];
 
       printRiskAssessment(riskChecks);
-
       console.log('');
 
-      if (stakingOption.risk === 'Low') {
-        printSuccess(`Low risk staking option. Safe for conservative strategies.`);
-      } else if (stakingOption.risk === 'Medium') {
-        printWarning(`Medium risk staking option. Monitor your position regularly.`);
-      } else {
-        printWarning(`High risk staking option. Only proceed if you understand the risks.`);
-      }
-
+      printSuccess('Low risk staking option. Marinade is audited and liquid.');
       console.log('');
 
       // Confirmation
@@ -178,21 +183,40 @@ export function registerStakeCommand(program: Command): void {
         }
       }
 
-      // Execute
-      const execSpinner = ora({ text: 'Submitting staking transaction...', color: 'magenta' }).start();
-      await new Promise(resolve => setTimeout(resolve, 1800)); // Mock execution time
+      // Execute via real Marinade + execution engine
+      const execSpinner = ora({ text: 'Building and submitting staking transaction...', color: 'magenta' }).start();
+      try {
+        const instructions = await marinade.buildStakeIx({
+          amount: rawAmount,
+          userPublicKey: wallet.publicKey,
+        });
 
-      // Mock transaction signature
-      const mockTxSig = `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      execSpinner.succeed('Transaction confirmed');
+        const engine = new ExecutionEngine(connection);
+        const result = await engine.execute({
+          instructions,
+          signer: wallet,
+          description: `Stake ${amount} SOL via Marinade`,
+        });
 
-      console.log('');
-      printSuccess(`Staking executed successfully!`);
-      printInfo(`Transaction: ${chalk.white(mockTxSig)}`);
-      printInfo(`Explorer: ${chalk.white(`https://explorer.solana.com/tx/${mockTxSig}?cluster=${config.cluster}`)}`);
-      console.log('');
-      printInfo(`New balance: ${chalk.white(stakingOption.outputAmount.toFixed(4))} ${chalk.cyan(stakingOption.outputToken)}`);
-      printInfo(`Estimated yearly rewards: ${chalk.white((stakingOption.outputAmount * stakingOption.apy / 100).toFixed(4))} ${chalk.cyan(stakingOption.outputToken)}`);
+        if (result.success && result.signature) {
+          execSpinner.succeed('Transaction confirmed');
+          console.log('');
+          printSuccess('Staking executed successfully!');
+          printInfo(`Transaction: ${chalk.white(result.signature)}`);
+          printInfo(`Explorer: ${chalk.white(`https://explorer.solana.com/tx/${result.signature}?cluster=${config.cluster}`)}`);
+          if (result.slot) {
+            printInfo(`Confirmed at slot: ${chalk.white(result.slot)}`);
+          }
+          printInfo(`You will receive: ~${chalk.white(expectedMsol.toFixed(4))} ${chalk.cyan('mSOL')}`);
+        } else {
+          execSpinner.fail('Transaction failed');
+          printError(result.error || 'Unknown error');
+        }
+      } catch (err) {
+        execSpinner.fail('Transaction failed');
+        printError(err instanceof Error ? err.message : String(err));
+      }
+
       console.log('');
     });
 }

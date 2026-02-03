@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/makora_vault",
+    "programs/makora_strategy",
+    "programs/makora_privacy",
 ]
 
 resolver = "2"

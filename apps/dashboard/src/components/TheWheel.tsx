@@ -1,39 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-type OODAPhase = 'OBSERVE' | 'ORIENT' | 'DECIDE' | 'ACT';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useOODALoop, OODAPhase } from '@/hooks/useOODALoop';
 
 const PHASES: { name: OODAPhase; kanji: string; desc: string }[] = [
-  { name: 'OBSERVE', kanji: '観', desc: 'Market data ingestion' },
-  { name: 'ORIENT', kanji: '向', desc: 'Pattern analysis' },
-  { name: 'DECIDE', kanji: '決', desc: 'Strategy selection' },
-  { name: 'ACT', kanji: '行', desc: 'Transaction execution' },
+  { name: 'OBSERVE', kanji: '観', desc: 'Reading on-chain portfolio state' },
+  { name: 'ORIENT', kanji: '向', desc: 'Evaluating strategy & market context' },
+  { name: 'DECIDE', kanji: '決', desc: 'Validating action against risk limits' },
+  { name: 'ACT', kanji: '行', desc: 'Presenting recommendation' },
 ];
 
+const PHASE_INDEX_MAP: Record<string, number> = {
+  OBSERVE: 0,
+  ORIENT: 1,
+  DECIDE: 2,
+  ACT: 3,
+};
+
 export const TheWheel = () => {
-  const [activePhase, setActivePhase] = useState(0);
-  const [adaptations, setAdaptations] = useState(1247);
-  const [confidence, setConfidence] = useState(94);
-  const [isAdapting, setIsAdapting] = useState(false);
+  const { publicKey } = useWallet();
+  const ooda = useOODALoop();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAdapting(true);
-      setTimeout(() => setIsAdapting(false), 600);
-
-      setActivePhase(prev => {
-        const next = (prev + 1) % 4;
-        if (next === 0) {
-          setAdaptations(a => a + 1);
-          setConfidence(92 + Math.floor(Math.random() * 7));
-        }
-        return next;
-      });
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, []);
+  const activePhase = PHASE_INDEX_MAP[ooda.phase] ?? -1;
+  const isAdapting = ooda.phase !== 'IDLE';
 
   return (
     <div className="cursed-card p-6 flex flex-col items-center justify-center h-full min-h-[500px] relative">
@@ -55,7 +44,7 @@ export const TheWheel = () => {
           <img
             src="/wheel.png"
             alt="Wheel of Adaptation"
-            className="w-full h-full object-contain animate-wheel-spin animate-wheel-pulse"
+            className={`w-full h-full object-contain ${isAdapting ? 'animate-wheel-spin animate-wheel-pulse' : ''}`}
             style={{
               filter: 'invert(1) sepia(1) saturate(2) hue-rotate(10deg) brightness(0.9)',
             }}
@@ -112,7 +101,7 @@ export const TheWheel = () => {
               MAKORA
             </div>
             <div className="text-[9px] text-text-muted tracking-[0.3em] uppercase mb-3">
-              The Adaptive One
+              {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
             </div>
           </div>
         </div>
@@ -124,17 +113,19 @@ export const TheWheel = () => {
         <div className="flex items-center justify-between text-[11px] font-mono">
           <div>
             <div className="text-text-muted tracking-wider uppercase mb-1">Adaptations</div>
-            <div className="text-cursed font-bold text-lg">{adaptations.toLocaleString()}</div>
+            <div className="text-cursed font-bold text-lg">{ooda.adaptations.toLocaleString()}</div>
           </div>
           <div className="w-px h-8 bg-cursed/20" />
           <div>
             <div className="text-text-muted tracking-wider uppercase mb-1">Confidence</div>
-            <div className="text-cursed font-bold text-lg">{confidence}%</div>
+            <div className="text-cursed font-bold text-lg">
+              {ooda.confidence > 0 ? `${ooda.confidence}%` : '--'}
+            </div>
           </div>
           <div className="w-px h-8 bg-cursed/20" />
           <div>
             <div className="text-text-muted tracking-wider uppercase mb-1">Phase</div>
-            <div className="text-cursed font-bold text-lg">{PHASES[activePhase].name}</div>
+            <div className="text-cursed font-bold text-lg">{ooda.phase}</div>
           </div>
         </div>
       </div>
@@ -142,8 +133,13 @@ export const TheWheel = () => {
       {/* Current phase description */}
       <div className="mt-4 text-center">
         <div className="text-[10px] text-text-muted font-mono tracking-wider">
-          {PHASES[activePhase].desc}
+          {ooda.phaseDescription}
         </div>
+        {ooda.lastDecision && (
+          <div className="mt-2 text-[10px] text-cursed/70 font-mono">
+            {ooda.lastDecision.recommendation}
+          </div>
+        )}
       </div>
     </div>
   );

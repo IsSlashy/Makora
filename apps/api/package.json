@@ -1,24 +1,21 @@
 {
-  "name": "@makora/cli",
+  "name": "@makora/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Makora CLI - Command-line interface for the adaptive DeFi agent",
+  "description": "Makora REST API - Agent-to-Agent communication layer for Solana DeFi",
   "type": "module",
-  "bin": {
-    "makora": "dist/index.js"
-  },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsup",
-    "dev": "tsup src/index.ts --format esm --watch",
+    "dev": "tsup src/index.ts --format esm --watch --onSuccess 'node dist/index.js'",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@makora/types": "workspace:*",
-    "@makora/data-feed": "workspace:*",
     "@makora/agent-core": "workspace:*",
+    "@makora/data-feed": "workspace:*",
     "@makora/execution-engine": "workspace:*",
     "@makora/strategy-engine": "workspace:*",
     "@makora/risk-manager": "workspace:*",
@@ -28,13 +25,13 @@
     "@makora/adapters-marinade": "workspace:*",
     "@makora/adapters-privacy": "workspace:*",
     "@solana/web3.js": "^1.98.4",
-    "chalk": "^5.3.0",
-    "cli-table3": "^0.6.5",
-    "commander": "^14.0.0",
-    "dotenv": "^16.4.0",
-    "ora": "^8.0.0"
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
     "tsup": "^8.0.1",
     "typescript": "^5.3.0",
     "rimraf": "^5.0.0"
