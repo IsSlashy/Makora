@@ -29,12 +29,43 @@ export const TheWheel = ({ oodaState: ooda }: TheWheelProps) => {
   const blendedApy = ooda.lastDecision?.blendedApy ?? 0;
 
   return (
-    <div className="cursed-card p-6 flex flex-col items-center justify-center h-full min-h-[500px] relative overflow-hidden">
+    <div className="cursed-card p-6 flex flex-col items-center h-full min-h-[500px] relative overflow-hidden">
       {/* Kanji watermark */}
       <div className="kanji-watermark top-6 right-6">魔</div>
 
-      {/* The Wheel */}
-      <div className="relative w-72 h-72 lg:w-80 lg:h-80 mt-8">
+      {/* ── Title block — pinned to top ── */}
+      <div className="w-full text-center mb-2">
+        <h2
+          className="font-display text-4xl lg:text-5xl tracking-[0.35em] leading-none"
+          style={{
+            background: 'linear-gradient(135deg, #a68520 0%, #d4a829 35%, #e8c44a 50%, #d4a829 65%, #a68520 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            filter: 'drop-shadow(0 0 24px rgba(212, 168, 41, 0.35))',
+          }}
+        >
+          MAKORA
+        </h2>
+        <div
+          className="text-[10px] tracking-[0.45em] uppercase mt-1"
+          style={{
+            background: 'linear-gradient(90deg, #4a4740, #d4a829 45%, #e8c44a 55%, #d4a829 65%, #4a4740)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
+        </div>
+        {/* Gold accent line */}
+        <div className="mx-auto mt-3 h-px w-48" style={{
+          background: 'linear-gradient(90deg, transparent, #d4a829, transparent)',
+        }} />
+      </div>
+
+      {/* ── The Wheel ── */}
+      <div className="relative w-64 h-64 lg:w-72 lg:h-72 my-2">
         {/* Outer glow ring */}
         <div
           className="absolute inset-[-20px] rounded-full transition-all duration-700"
@@ -97,22 +128,10 @@ export const TheWheel = ({ oodaState: ooda }: TheWheelProps) => {
             </div>
           );
         })}
-
-        {/* Center info */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center z-10">
-            <div className="font-display text-2xl tracking-[0.25em] text-cursed-gradient mb-0.5">
-              MAKORA
-            </div>
-            <div className="text-[8px] text-text-muted tracking-[0.3em] uppercase">
-              {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="mt-8 w-full max-w-md">
+      {/* ── Stats bar ── */}
+      <div className="w-full max-w-md mt-auto">
         <div className="ink-divider mb-4" />
         <div className="flex items-center justify-between text-[11px] font-mono">
           <div>
@@ -141,8 +160,8 @@ export const TheWheel = ({ oodaState: ooda }: TheWheelProps) => {
         </div>
       </div>
 
-      {/* Current phase description */}
-      <div className="mt-4 text-center">
+      {/* ── Current phase description ── */}
+      <div className="mt-3 text-center">
         <div className="text-[10px] text-text-muted font-mono tracking-wider">
           {ooda.phaseDescription}
         </div>
