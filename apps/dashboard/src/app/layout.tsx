@@ -3,8 +3,8 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Makora | Adaptive DeFi Agent',
-  description: 'Autonomous DeFi portfolio management powered by OODA loop architecture',
+  title: 'MAKORA | The Adaptive DeFi Agent',
+  description: 'Autonomous DeFi portfolio management powered by cursed adaptation',
 };
 
 export default function RootLayout({

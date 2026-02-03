@@ -7,82 +7,68 @@ interface TokenBalance {
   amount: number;
   value: number;
   percentage: number;
-  color: string;
 }
 
 export const PortfolioCard = () => {
   const [totalValue, setTotalValue] = useState(12450.50);
 
   const tokens: TokenBalance[] = [
-    { symbol: 'SOL', amount: 45.2, value: 5602.50, percentage: 45, color: '#10b981' },
-    { symbol: 'mSOL', amount: 22.1, value: 3112.50, percentage: 25, color: '#3b82f6' },
-    { symbol: 'USDC', amount: 3112.50, value: 3112.50, percentage: 25, color: '#94a3b8' },
-    { symbol: 'Shielded', amount: 0, value: 622.50, percentage: 5, color: '#8b5cf6' },
+    { symbol: 'SOL', amount: 45.2, value: 5602.50, percentage: 45 },
+    { symbol: 'mSOL', amount: 22.1, value: 3112.50, percentage: 25 },
+    { symbol: 'USDC', amount: 3112.50, value: 3112.50, percentage: 25 },
+    { symbol: 'SHIELDED', amount: 0, value: 622.50, percentage: 5 },
   ];
 
   useEffect(() => {
-    // Simulate small portfolio value changes
     const interval = setInterval(() => {
-      setTotalValue(prev => prev + (Math.random() - 0.5) * 10);
+      setTotalValue(prev => prev + (Math.random() - 0.48) * 8);
     }, 3000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="glass-card p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-text-primary">Portfolio Value</h2>
-        <div className="flex items-center gap-2 text-green-500 text-sm">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-          </svg>
-          <span>+2.4%</span>
-        </div>
-      </div>
+    <div className="cursed-card p-5 animate-fade-up">
+      <div className="section-title mb-5">Portfolio</div>
 
-      <div className="mb-8">
-        <div className="text-4xl font-bold text-text-primary mb-1">
+      <div className="mb-6">
+        <div className="text-3xl font-bold text-text-primary font-mono">
           ${totalValue.toFixed(2)}
         </div>
-        <div className="text-sm text-text-secondary">
-          Last updated: {new Date().toLocaleTimeString()}
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-positive text-xs font-mono">+2.43%</span>
+          <span className="text-text-muted text-[10px]">24h</span>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {tokens.map((token) => (
-          <div key={token.symbol} className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+          <div key={token.symbol}>
+            <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: token.color }}
-                />
-                <span className="font-medium text-text-primary">{token.symbol}</span>
-                {token.symbol !== 'USDC' && token.symbol !== 'Shielded' && (
-                  <span className="text-text-secondary">
+                <span className="text-xs font-mono font-bold text-text-primary">{token.symbol}</span>
+                {token.symbol !== 'USDC' && token.symbol !== 'SHIELDED' && (
+                  <span className="text-[10px] text-text-muted font-mono">
                     {token.amount.toFixed(2)}
                   </span>
                 )}
               </div>
               <div className="text-right">
-                <div className="text-text-primary font-medium">
-                  ${token.value.toFixed(2)}
-                </div>
-                <div className="text-text-secondary text-xs">
-                  {token.percentage}%
-                </div>
+                <span className="text-xs font-mono text-text-primary">${token.value.toFixed(0)}</span>
+                <span className="text-[10px] text-text-muted ml-2">{token.percentage}%</span>
               </div>
             </div>
 
-            <div className="relative h-2 bg-bg-secondary rounded-full overflow-hidden">
+            <div className="relative h-[3px] bg-bg-inner">
               <div
-                className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+                className="absolute left-0 top-0 h-full transition-all duration-500"
                 style={{
                   width: `${token.percentage}%`,
-                  backgroundColor: token.color,
-                  boxShadow: `0 0 10px ${token.color}`,
+                  background: token.symbol === 'SHIELDED'
+                    ? 'linear-gradient(90deg, #6d28d9, #8b5cf6)'
+                    : `linear-gradient(90deg, #a68520, #d4a829)`,
+                  boxShadow: token.symbol === 'SHIELDED'
+                    ? '0 0 8px rgba(109, 40, 217, 0.4)'
+                    : '0 0 8px rgba(212, 168, 41, 0.3)',
                 }}
               />
             </div>
@@ -90,11 +76,10 @@ export const PortfolioCard = () => {
         ))}
       </div>
 
-      <div className="mt-6 pt-6 border-t border-accent/20">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-text-secondary">24h Change</span>
-          <span className="text-green-500 font-medium">+$295.40 (+2.43%)</span>
-        </div>
+      <div className="ink-divider mt-5 mb-3" />
+      <div className="flex items-center justify-between text-[10px] font-mono">
+        <span className="text-text-muted tracking-wider uppercase">24h P&L</span>
+        <span className="text-positive">+$295.40</span>
       </div>
     </div>
   );

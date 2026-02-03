@@ -6,8 +6,7 @@ interface Activity {
   id: string;
   time: string;
   action: string;
-  status: 'success' | 'info' | 'warning';
-  icon: string;
+  status: 'success' | 'adapt' | 'warning' | 'shield';
 }
 
 export const ActivityFeed = () => {
@@ -15,127 +14,99 @@ export const ActivityFeed = () => {
     {
       id: '1',
       time: new Date(Date.now() - 5 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Swapped 10 SOL → 245.3 USDC via Jupiter',
+      action: 'Swapped 10 SOL to 245.3 USDC via Jupiter',
       status: 'success',
-      icon: '✓',
     },
     {
       id: '2',
       time: new Date(Date.now() - 10 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Risk check: Position size OK (15% < 20%)',
+      action: 'Risk check passed: position 15% < limit 20%',
       status: 'success',
-      icon: '✓',
     },
     {
       id: '3',
       time: new Date(Date.now() - 12 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Strategy adapted: Yield → Rebalance',
-      status: 'info',
-      icon: '⟳',
+      action: 'Wheel turned: adapted strategy Yield to Rebalance',
+      status: 'adapt',
     },
     {
       id: '4',
       time: new Date(Date.now() - 17 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Shielded 5 SOL (ZK proof verified)',
-      status: 'success',
-      icon: '🔒',
+      action: 'Shielded 5 SOL into privacy pool (ZK verified)',
+      status: 'shield',
     },
     {
       id: '5',
       time: new Date(Date.now() - 23 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Deposited 20 SOL to Marinade (7.2% APY)',
+      action: 'Staked 20 SOL to Marinade at 7.2% APY',
       status: 'success',
-      icon: '✓',
     },
     {
       id: '6',
       time: new Date(Date.now() - 28 * 60000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      action: 'Market analysis: Volatility increased to 32%',
+      action: 'Volatility spike detected: 32% — adjusting limits',
       status: 'warning',
-      icon: '⚠',
     },
   ]);
 
   useEffect(() => {
-    // Simulate new activities
     const interval = setInterval(() => {
-      const newActivity: Activity = {
+      const actions = [
+        { action: 'Portfolio rebalanced successfully', status: 'success' as const },
+        { action: 'Wheel turned: new adaptation cycle complete', status: 'adapt' as const },
+        { action: 'Collected 0.45 SOL from Marinade rewards', status: 'success' as const },
+        { action: 'Strategy confidence updated to 96%', status: 'adapt' as const },
+      ];
+      const pick = actions[Math.floor(Math.random() * actions.length)];
+
+      setActivities(prev => [{
         id: Date.now().toString(),
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        action: getRandomAction(),
-        status: 'success',
-        icon: '✓',
-      };
-
-      setActivities(prev => [newActivity, ...prev].slice(0, 10));
-    }, 15000);
-
+        ...pick,
+      }, ...prev].slice(0, 10));
+    }, 12000);
     return () => clearInterval(interval);
   }, []);
 
-  const getRandomAction = () => {
-    const actions = [
-      'Portfolio rebalanced successfully',
-      'Collected 0.45 SOL from Marinade rewards',
-      'Risk parameters validated',
-      'Market data refreshed',
-      'Strategy confidence updated to 96%',
-    ];
-    return actions[Math.floor(Math.random() * actions.length)];
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'success': return 'bg-green-500/20 text-green-500 border-green-500/30';
-      case 'info': return 'bg-blue-500/20 text-blue-500 border-blue-500/30';
-      case 'warning': return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
-      default: return 'bg-gray-500/20 text-gray-500 border-gray-500/30';
+      case 'success': return { color: 'bg-positive', border: 'border-positive/20' };
+      case 'adapt': return { color: 'bg-cursed', border: 'border-cursed/20' };
+      case 'shield': return { color: 'bg-shadow-purple', border: 'border-shadow-purple/20' };
+      case 'warning': return { color: 'bg-caution', border: 'border-caution/20' };
+      default: return { color: 'bg-text-muted', border: 'border-text-muted/20' };
     }
   };
 
   return (
-    <div className="glass-card p-6 animate-fade-in h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-text-primary">Activity Feed</h2>
-        <div className="flex items-center gap-2 text-xs text-text-secondary">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <span>Live</span>
+    <div className="cursed-card p-5 animate-fade-up h-full flex flex-col">
+      <div className="flex items-center justify-between mb-5">
+        <div className="section-title">Activity</div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-positive animate-pulse" />
+          <span className="text-[10px] font-mono text-text-muted tracking-wider uppercase">Live</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-        {activities.map((activity) => (
-          <div
-            key={activity.id}
-            className={`p-3 rounded-lg border transition-all hover:scale-[1.02] ${getStatusColor(activity.status)}`}
-          >
-            <div className="flex items-start gap-3">
-              <span className="text-lg flex-shrink-0 mt-0.5">{activity.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-text-primary mb-1">{activity.action}</div>
-                <div className="text-xs text-text-secondary">{activity.time}</div>
+      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+        {activities.map((activity) => {
+          const indicator = getStatusIndicator(activity.status);
+          return (
+            <div
+              key={activity.id}
+              className={`p-2.5 bg-bg-inner border ${indicator.border} transition-all hover:translate-x-0.5`}
+            >
+              <div className="flex items-start gap-2.5">
+                <div className={`w-1.5 h-1.5 mt-1.5 flex-shrink-0 ${indicator.color}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] text-text-primary font-mono leading-relaxed">{activity.action}</div>
+                  <div className="text-[9px] text-text-muted font-mono mt-0.5">{activity.time}</div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: var(--bg-secondary);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--accent);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--accent-light);
-        }
-      `}</style>
     </div>
   );
 };
