@@ -19,6 +19,7 @@ export { ActionExplainer } from './explainer.js';
 export { DecisionLog } from './decision-log.js';
 export {
   type AgentConfig,
+  type LLMProviderConfig,
   type ParsedIntent,
   type ConfirmationCallback,
   type DecisionLogEntry,
@@ -26,3 +27,8 @@ export {
   AUTO_CONFIRM,
   ALWAYS_REJECT,
 } from './types.js';
+export {
+  parseLLMAnalysis,
+  convertAnalysisToEvaluation,
+  type LLMAnalysis,
+} from './llm-orient.js';

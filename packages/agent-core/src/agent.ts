@@ -13,7 +13,7 @@ import type {
   ValidatedAction,
 } from '@makora/types';
 
-import { createConnection, PortfolioReader, JupiterPriceFeed } from '@makora/data-feed';
+import { createConnection, PortfolioReader, JupiterPriceFeed, PolymarketFeed } from '@makora/data-feed';
 import { StrategyEngine, type StrategyEvaluation } from '@makora/strategy-engine';
 import { RiskManager } from '@makora/risk-manager';
 import { ExecutionEngine } from '@makora/execution-engine';
@@ -25,6 +25,7 @@ import { ActionExplainer } from './explainer.js';
 import { DecisionLog } from './decision-log.js';
 import type { AgentConfig, ConfirmationCallback, ParsedIntent, DecisionLogEntry } from './types.js';
 import { DEFAULT_AGENT_CONFIG } from './types.js';
+import type { LLMAnalysis } from './llm-orient.js';
 
 /**
  * Makora Agent (AGENT-01, AGENT-02, AGENT-03, AGENT-04, AGENT-05)
@@ -119,6 +120,16 @@ export class MakoraAgent {
       this.executionEngine,
       this.router,
     );
+
+    // Wire up LLM provider if configured (uses OODALoop's provider-agnostic interface)
+    if (this.config.llmConfig) {
+      this.oodaLoop.setLLMProvider(this.createLLMProviderAdapter(this.config.llmConfig));
+    }
+
+    // Wire up Polymarket feed if enabled
+    if (this.config.enablePolymarket !== false) {
+      this.oodaLoop.setPolymarketFeed(new PolymarketFeed());
+    }
 
     this.initialized = true;
   }
@@ -263,6 +274,13 @@ export class MakoraAgent {
    */
   getDecisionLog(): DecisionLog {
     return this.oodaLoop?.getDecisionLog() ?? new DecisionLog();
+  }
+
+  /**
+   * Get the last LLM analysis (if LLM provider is configured).
+   */
+  getLastLLMAnalysis(): LLMAnalysis | null {
+    return this.oodaLoop?.getLastLLMAnalysis() ?? null;
   }
 
   /**
@@ -539,6 +557,61 @@ export class MakoraAgent {
       `\n\nCurrent mode: ${this.getMode()}\n` +
       `OODA loop: ${this.isRunning() ? 'running' : 'stopped'}`
     );
+  }
+
+  /**
+   * Create an LLM provider adapter from config (avoids importing @makora/llm-provider).
+   * The OODALoop only needs { providerId, model, complete, ping }.
+   */
+  private createLLMProviderAdapter(cfg: NonNullable<AgentConfig['llmConfig']>) {
+    const isAnthropic = cfg.providerId === 'anthropic';
+    const baseUrl = cfg.baseUrl ??
+      (isAnthropic
+        ? 'https://api.anthropic.com'
+        : cfg.providerId === 'qwen'
+          ? 'https://dashscope.aliyuncs.com/compatible-mode'
+          : 'https://api.openai.com');
+
+    return {
+      providerId: cfg.providerId,
+      model: cfg.model,
+      async complete(
+        messages: Array<{ role: string; content: string }>,
+        options?: { jsonMode?: boolean; temperature?: number },
+      ) {
+        const start = Date.now();
+        const temp = options?.temperature ?? cfg.temperature ?? 0.3;
+        const maxTokens = cfg.maxTokens ?? 4096;
+
+        let url: string;
+        let headers: Record<string, string>;
+        let body: Record<string, unknown>;
+
+        if (isAnthropic) {
+          url = `${baseUrl}/v1/messages`;
+          headers = { 'Content-Type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' };
+          const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+          const chat = messages.filter(m => m.role !== 'system');
+          body = { model: cfg.model, max_tokens: maxTokens, temperature: temp, messages: chat };
+          if (system) (body as any).system = system;
+        } else {
+          url = `${baseUrl}/v1/chat/completions`;
+          headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` };
+          body = { model: cfg.model, max_tokens: maxTokens, temperature: temp, messages };
+          if (options?.jsonMode) body.response_format = { type: 'json_object' };
+        }
+
+        const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error(`LLM API ${res.status}`);
+        const data = await res.json();
+
+        const content = isAnthropic
+          ? (data.content?.map((b: any) => b.text || '').join('') ?? '')
+          : (data.choices?.[0]?.message?.content ?? '');
+
+        return { content, latencyMs: Date.now() - start };
+      },
+    };
   }
 
   private ensureInitialized(): void {

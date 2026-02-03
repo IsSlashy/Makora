@@ -1,10 +1,11 @@
 # Makora
 
-**The First Privacy-Preserving DeFi Agent on Solana**
+**The First LLM-Powered Privacy-Preserving DeFi Agent on Solana**
 
 [![Built by Claude](https://img.shields.io/badge/Built%20by-Claude%20(AI)-8b5cf6?style=flat-square)](https://claude.ai)
 [![Solana](https://img.shields.io/badge/Solana-Native-14F195?style=flat-square)](https://solana.com)
 [![ZK Privacy](https://img.shields.io/badge/ZK-Groth16-orange?style=flat-square)](https://en.wikipedia.org/wiki/Zero-knowledge_proof)
+[![LLM Powered](https://img.shields.io/badge/LLM-BYOK-d4a829?style=flat-square)](#llm-powered-intelligence)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 > All code in this repository was written by an AI agent (Claude) for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon). Every line of TypeScript, Rust, and Circom.
@@ -13,18 +14,21 @@
 
 ## What Makes Makora Different
 
-Makora is not a trading bot. It's an **autonomous DeFi agent** that thinks, adapts, and protects your privacy on Solana.
+Makora is not a trading bot. It's an **autonomous DeFi agent** that thinks with LLMs, reads prediction markets, and protects your privacy on Solana.
 
 | Feature | Makora | Typical DeFi Bots |
 |---------|--------|-------------------|
+| Intelligence | **LLM-powered** (Anthropic/OpenAI/Qwen) + Polymarket signals | Simple rules |
 | On-chain programs | 3 Anchor programs | 0 (API-only) |
 | Zero-knowledge privacy | Stealth addresses + shielded transfers | None |
-| Decision framework | OODA loop (Observe-Orient-Decide-Act) | Simple rules |
+| Decision framework | OODA loop with AI reasoning | If/else logic |
+| Market intelligence | Polymarket prediction markets + DeFi yields | Price feeds only |
 | Risk management | Circuit breaker + absolute VETO | Basic limits |
 | Solana-native | 100% | Often EVM-first |
 | Agent-to-Agent API | REST API for composability | None |
 | NL interface | Parse natural language commands | Commands only |
-| Interfaces | CLI + Dashboard + Telegram + REST API | Single interface |
+| Interfaces | CLI + Dashboard + Telegram + REST API + Worker | Single interface |
+| BYOK | Bring Your Own Key -- user's LLM API key, zero lock-in | N/A |
 
 ---
 
@@ -34,27 +38,57 @@ Makora is not a trading bot. It's an **autonomous DeFi agent** that thinks, adap
 You: "swap 10 SOL to USDC"
 
 Makora:
-  1. OBSERVE  - Fetches Jupiter quote, checks 20+ DEX routes
-  2. ORIENT   - Analyzes price impact, slippage, market conditions
-  3. DECIDE   - Strategy engine evaluates, risk manager approves
-  4. ACT      - Executes on-chain via versioned transaction
+  1. OBSERVE  - Fetches portfolio, prices, on-chain positions
+  2. ORIENT   - LLM analyzes market data + Polymarket signals + yields
+               → "Neutral sentiment, 65% confidence. SOL range-bound,
+                  recommend 40% stake, 30% lend, 20% LP."
+  3. DECIDE   - Strategy evaluation + risk manager validation (VETO power)
+  4. ACT      - Executes on-chain via stealth session wallets
 
   Result: TX confirmed at slot 312,847,291
-  Explorer: https://explorer.solana.com/tx/5K2x...
 ```
+
+### LLM-Powered Intelligence
+
+Makora's ORIENT phase is powered by real LLM reasoning instead of hardcoded rules:
+
+- **Bring Your Own Key (BYOK)** -- Anthropic (Claude), OpenAI (GPT), or Qwen
+- **Polymarket Integration** -- Prediction market signals as forward-looking sentiment
+- **Structured Analysis** -- LLM outputs JSON: sentiment, allocation, risk assessment, reasoning
+- **Transparent Reasoning** -- Every decision shows the LLM's chain of thought in the dashboard
+- **Graceful Fallback** -- If the LLM fails, the deterministic strategy engine takes over
 
 ### DeFi Operations
 - **Swaps** via Jupiter (real aggregation across Raydium, Orca, Lifinity, Meteora, Phoenix)
 - **Staking** via Marinade (SOL -> mSOL liquid staking, ~7.2% APY)
+- **Lending** via Kamino (USDC/SOL lending vaults)
+- **LP** via Raydium (concentrated and standard liquidity)
 - **Privacy** via ZK proofs (stealth addresses + shielded transfers)
 
 ### Operating Modes
-- **Advisory** -- Makora suggests, you approve
+- **Advisory** -- Makora analyzes with LLM reasoning, you approve
 - **Autonomous** -- Makora executes within risk limits (circuit breaker protected)
 
 ---
 
 ## Architecture
+
+```
+User's API Key (localStorage, never leaves browser)
+        |
+Dashboard (Vercel) --POST /api/llm/analyze--> LLM Provider (Anthropic/OpenAI/Qwen)
+        |                                              |
+        v                                              v
+  useOODALoop                                   Structured LLMAnalysis
+  +----------+                                  +-------------------+
+  | OBSERVE  |<-- on-chain portfolio            | sentiment         |
+  | ORIENT   |<-- yields + Polymarket + LLM --> | allocation[]      |
+  | DECIDE   |<-- risk manager validation       | risk assessment   |
+  | ACT      |--> stealth session execution     | reasoning chain   |
+  +----------+                                  +-------------------+
+        |
+  Backend Worker (Railway) -- same OODA loop, runs 24/7
+```
 
 ```mermaid
 graph TB
@@ -63,6 +97,7 @@ graph TB
         TG[Telegram Bot]
         API[REST API - 10 Endpoints]
         DASH[Web Dashboard]
+        WRK[Backend Worker - 24/7]
     end
 
     subgraph Agent Core
@@ -72,7 +107,9 @@ graph TB
     end
 
     subgraph Intelligence
-        SE[Strategy Engine]
+        LLM[LLM Provider - BYOK]
+        PM[Polymarket Feed]
+        SE[Strategy Engine - Fallback]
         MA[Market Analyzer]
         YO[Yield Optimizer]
         RB[Rebalancer]
@@ -85,6 +122,7 @@ graph TB
 
     subgraph Execution
         EE[Execution Engine]
+        SM[Session Manager - Stealth]
         TB[TX Builder]
         CT[Confirmation Tracker]
     end
@@ -92,6 +130,8 @@ graph TB
     subgraph Protocols
         JUP[Jupiter - Swap]
         MAR[Marinade - Stake]
+        RAY[Raydium - LP]
+        KAM[Kamino - Lend]
         PRV[Privacy - ZK Shield]
     end
 
@@ -105,18 +145,26 @@ graph TB
     TG --> NL
     API --> NL
     DASH --> OODA
+    WRK --> OODA
     NL --> OODA
+    OODA --> LLM
+    OODA --> PM
     OODA --> SE
-    OODA --> RM
+    LLM --> OODA
+    PM --> OODA
     SE --> MA
     SE --> YO
     SE --> RB
+    OODA --> RM
     RM --> CB
     OODA --> EE
+    EE --> SM
     EE --> TB
     EE --> CT
     EE --> JUP
     EE --> MAR
+    EE --> RAY
+    EE --> KAM
     EE --> PRV
     JUP --> V
     MAR --> V
@@ -127,16 +175,16 @@ graph TB
 ### The OODA Loop (The Wheel)
 
 ```
-     ╔═══════════╗
-     ║  OBSERVE  ║  Fetch portfolio, prices, yields
-     ╠═══════════╣
-     ║  ORIENT   ║  Classify market: volatility, trend, regime
-     ╠═══════════╣
-     ║  DECIDE   ║  Strategy evaluation + risk validation
-     ╠═══════════╣
-     ║    ACT    ║  Execute with simulation, retry, confirmation
-     ╚═══════════╝
-         ↻ repeat every 30 seconds (auto mode)
+     +===========+
+     |  OBSERVE  |  Fetch portfolio, prices, yields, positions
+     +===========+
+     |  ORIENT   |  LLM analysis + Polymarket signals + strategy engine
+     +===========+
+     |  DECIDE   |  Risk validation (5 checks, VETO power)
+     +===========+
+     |    ACT    |  Execute via stealth session wallets
+     +===========+
+         ~ repeat every 60 seconds (auto mode)
 ```
 
 ---
@@ -156,17 +204,20 @@ pnpm install
 # Build all packages
 pnpm build
 
+# Start dashboard (the primary interface)
+cd apps/dashboard && pnpm dev
+# Open http://localhost:3000
+# Click gear icon -> configure your LLM API key -> watch the agent think
+
 # Set up wallet (if you don't have one)
 solana-keygen new
 
 # Run CLI
 cd apps/cli && node dist/index.js status
 
-# Start API server
-cd apps/api && node dist/index.js
-
-# Start Telegram bot (requires TELEGRAM_BOT_TOKEN in .env)
-cd apps/telegram && node dist/index.js
+# Start headless worker (24/7 agent)
+LLM_PROVIDER=anthropic LLM_API_KEY=sk-... LLM_MODEL=claude-sonnet-4-20250514 \
+  node apps/worker/dist/index.js
 ```
 
 ### Environment Variables
@@ -179,7 +230,39 @@ HELIUS_API_KEY=your_helius_key          # Optional: faster RPC
 WALLET_PATH=~/.config/solana/id.json
 TELEGRAM_BOT_TOKEN=your_telegram_token  # For Telegram bot
 PORT=8080                               # For API server
+
+# LLM config (for worker -- dashboard uses BYOK via Settings panel)
+LLM_PROVIDER=anthropic                  # anthropic | openai | qwen
+LLM_API_KEY=your_llm_api_key
+LLM_MODEL=claude-sonnet-4-20250514
 ```
+
+---
+
+## Dashboard
+
+The dashboard is the primary interface for judges. Features:
+
+- **TheWheel** -- OODA loop phase visualization with kanji symbols
+- **Portfolio Card** -- Real-time portfolio value from connected wallet
+- **LLM Reasoning Panel** -- Live display of LLM analysis: sentiment, allocation, key factors, warnings
+- **Polymarket Panel** -- Crypto prediction markets with probability bars, volume, 24h change
+- **Strategy Panel** -- Active strategy with recommended allocation and blended APY
+- **Activity Feed** -- Live log of agent actions with on-chain TX signatures
+- **Risk Controls** -- Interactive sliders for position limits, slippage, circuit breakers
+- **Settings Panel** -- BYOK: choose provider, enter API key, select model, test connection
+- **Stealth Sessions** -- Privacy session status from on-chain vault state
+
+### BYOK Settings (Bring Your Own Key)
+
+Click the gear icon in the header to configure:
+
+1. **Provider**: Anthropic (Claude) / OpenAI (GPT) / Qwen
+2. **API Key**: Stored in localStorage only -- never touches our servers
+3. **Model**: claude-sonnet-4-20250514, gpt-4o-mini, qwen-plus, etc.
+4. **Temperature**: 0.0 (precise) to 1.0 (creative)
+5. **Polymarket**: Toggle prediction market intelligence on/off
+6. **Test Connection**: Validates your key works before saving
 
 ---
 
@@ -266,7 +349,38 @@ POST /api/agent/cycle
 
 # Natural language command
 POST /api/agent/command  { "command": "swap 10 SOL to USDC" }
+
+# LLM-powered analysis (dashboard)
+POST /api/llm/analyze   { "provider": "anthropic", "apiKey": "...", ... }
+POST /api/llm/stream    (SSE streaming variant)
+POST /api/llm/ping      (API key validation)
+
+# Polymarket intelligence
+GET /api/polymarket
 ```
+
+---
+
+## Backend Worker
+
+Headless Node.js process that runs the OODA loop 24/7 with LLM reasoning:
+
+```bash
+# Configure via env vars
+LLM_PROVIDER=anthropic \
+LLM_API_KEY=sk-ant-... \
+LLM_MODEL=claude-sonnet-4-20250514 \
+SOLANA_RPC_URL=https://api.devnet.solana.com \
+WALLET_PATH=~/.config/solana/id.json \
+CYCLE_INTERVAL_MS=60000 \
+AGENT_MODE=advisory \
+node apps/worker/dist/index.js
+
+# Health check: GET http://localhost:8081/health
+# Status:       GET http://localhost:8081/status
+```
+
+Deployable to Railway (free tier) or run locally with pm2.
 
 ---
 
@@ -274,39 +388,42 @@ POST /api/agent/command  { "command": "swap 10 SOL to USDC" }
 
 ```
 makora/
-├── packages/
-│   ├── types/              # Shared type definitions
-│   ├── data-feed/          # Portfolio reader, Jupiter prices, RPC
-│   ├── protocol-router/    # Multi-protocol routing + adapter registry
-│   ├── execution-engine/   # TX build → simulate → risk check → send → confirm → retry
-│   ├── risk-manager/       # VETO power + circuit breaker + daily loss tracking
-│   ├── strategy-engine/    # Market analyzer + yield optimizer + rebalancer
-│   ├── agent-core/         # OODA loop + NL parser + decision log
-│   ├── privacy/            # Stealth addresses + shielded transfers + Merkle tree + ZK prover
-│   └── adapters/
-│       ├── jupiter/        # DEX aggregator (real @jup-ag/api)
-│       ├── marinade/       # Liquid staking (real @marinade.finance/marinade-ts-sdk)
-│       ├── raydium/        # AMM / CLMM
-│       ├── kamino/         # Vault strategies
-│       └── privacy/        # Shield / unshield via makora_privacy program
-├── apps/
-│   ├── cli/                # Terminal interface (7 commands, real execution)
-│   ├── dashboard/          # Next.js web UI with The Wheel visualization
-│   ├── telegram/           # Telegram bot (grammy)
-│   └── api/                # REST API (Express, 10 endpoints)
-├── programs/
-│   ├── makora_vault/       # Anchor — portfolio vaults
-│   ├── makora_strategy/    # Anchor — strategy + audit trail
-│   └── makora_privacy/     # Anchor — stealth + shielded pool + nullifiers
-├── circuits/
-│   ├── transfer.circom     # Shielded transfer proof
-│   ├── merkle.circom       # Merkle inclusion proof
-│   └── poseidon.circom     # Poseidon hash (ZK-friendly)
-└── tests/
-    └── integration.test.ts # End-to-end integration tests
++-- packages/
+|   +-- types/              # Shared type definitions
+|   +-- data-feed/          # Portfolio reader, Jupiter prices, Polymarket feed
+|   +-- llm-provider/       # LLM provider layer (Anthropic/OpenAI/Qwen, raw fetch)
+|   +-- protocol-router/    # Multi-protocol routing + adapter registry
+|   +-- execution-engine/   # TX build -> simulate -> risk check -> send -> confirm -> retry
+|   +-- risk-manager/       # VETO power + circuit breaker + daily loss tracking
+|   +-- strategy-engine/    # Market analyzer + yield optimizer + rebalancer
+|   +-- agent-core/         # OODA loop + LLM orient + NL parser + decision log
+|   +-- session-manager/    # Stealth trading sessions (ephemeral wallet rotation)
+|   +-- privacy/            # Stealth addresses + shielded transfers + Merkle tree + ZK prover
+|   +-- adapters/
+|       +-- jupiter/        # DEX aggregator (real @jup-ag/api)
+|       +-- marinade/       # Liquid staking (real @marinade.finance/marinade-ts-sdk)
+|       +-- raydium/        # AMM / CLMM
+|       +-- kamino/         # Vault strategies
+|       +-- privacy/        # Shield / unshield via makora_privacy program
++-- apps/
+|   +-- cli/                # Terminal interface (7 commands, real execution)
+|   +-- dashboard/          # Next.js web UI with LLM reasoning + Polymarket + The Wheel
+|   +-- telegram/           # Telegram bot (grammy)
+|   +-- api/                # REST API (Express, 10 endpoints)
+|   +-- worker/             # Headless agent worker (24/7 OODA loop with LLM)
++-- programs/
+|   +-- makora_vault/       # Anchor -- portfolio vaults
+|   +-- makora_strategy/    # Anchor -- strategy + audit trail
+|   +-- makora_privacy/     # Anchor -- stealth + shielded pool + nullifiers
++-- circuits/
+|   +-- transfer.circom     # Shielded transfer proof
+|   +-- merkle.circom       # Merkle inclusion proof
+|   +-- poseidon.circom     # Poseidon hash (ZK-friendly)
++-- tests/
+    +-- integration.test.ts # End-to-end integration tests
 ```
 
-**21 packages** | **3 Solana programs** | **3 ZK circuits** | **4 apps** | **~20,000 lines of code**
+**23 packages** | **3 Solana programs** | **3 ZK circuits** | **5 apps** | **~25,000 lines of code**
 
 ---
 
@@ -317,12 +434,15 @@ makora/
 | Blockchain | Solana (devnet + mainnet-beta) |
 | Smart Contracts | Anchor 0.30.1 / Rust |
 | ZK Proofs | Circom / Groth16 / snarkjs |
-| DeFi Protocols | Jupiter v6, Marinade v5 |
+| LLM Intelligence | Anthropic Claude / OpenAI GPT / Qwen (BYOK, raw fetch) |
+| Market Intelligence | Polymarket Gamma API (prediction markets) |
+| DeFi Protocols | Jupiter v6, Marinade v5, Raydium, Kamino |
 | TypeScript | pnpm workspaces + Turborepo + tsup |
 | CLI | Commander.js + chalk + ora |
-| Dashboard | Next.js + Tailwind CSS |
+| Dashboard | Next.js 16 + React 19 + Tailwind CSS |
 | Telegram | grammy |
 | API | Express + CORS |
+| Worker | Node.js (Railway / pm2) |
 | Wallet | Solana Wallet Adapter |
 | Tests | Vitest |
 
@@ -335,10 +455,10 @@ makora/
 Generate one-time addresses for receiving payments. The sender creates a fresh address from the recipient's stealth meta-address; only the recipient can detect and spend from it.
 
 ```
-Sender → generateStealthAddress(recipientMeta)
-       → derives one-time PublicKey + ephemeral key
-       → sends SOL to one-time address
-       → only recipient can scan and claim
+Sender -> generateStealthAddress(recipientMeta)
+       -> derives one-time PublicKey + ephemeral key
+       -> sends SOL to one-time address
+       -> only recipient can scan and claim
 ```
 
 ### Shielded Transfers
@@ -347,10 +467,14 @@ Deposit SOL into a shielded pool using ZK proofs. Withdraw to any address withou
 
 ```
 Shield:   commitment = Poseidon(secret, amount)
-          Merkle tree insert → on-chain pool deposit
+          Merkle tree insert -> on-chain pool deposit
 Unshield: Generate Groth16 proof of commitment knowledge
-          Verify on-chain → withdraw without linkage
+          Verify on-chain -> withdraw without linkage
 ```
+
+### Stealth Trading Sessions
+
+Auto-mode trades are routed through ephemeral wallets that rotate periodically, making it impossible to link trades back to the main wallet.
 
 ---
 
@@ -362,18 +486,11 @@ Unshield: Generate Groth16 proof of commitment knowledge
 | `makora_strategy` | `EH5sixTHAoLsdFox1bR3YUqgwf5VuX2BdXFew5wTE6dj` | 295KB | Strategy config + on-chain audit trail (ring buffer, 8 entries) |
 | `makora_privacy` | `C1qXFsB6oJgZLQnXwRi9mwrm3QshKMU8kGGUZTAa9xcM` | 298KB | Stealth registry + shielded pool + nullifier double-spend prevention |
 
-Verify on devnet:
-```bash
-solana program show BTAd1ghiv4jKd4kREh14jCtHrVG6zDFNgLRNoF9pUgqw --url devnet
-solana program show EH5sixTHAoLsdFox1bR3YUqgwf5VuX2BdXFew5wTE6dj --url devnet
-solana program show C1qXFsB6oJgZLQnXwRi9mwrm3QshKMU8kGGUZTAa9xcM --url devnet
-```
-
 ---
 
 ## Risk Management
 
-The risk manager has **absolute VETO power** over every agent action.
+The risk manager has **absolute VETO power** over every agent action -- even when the LLM recommends it.
 
 | Control | Default |
 |---------|---------|
@@ -383,7 +500,7 @@ The risk manager has **absolute VETO power** over every agent action.
 | Min SOL reserve | 0.05 SOL (always keep gas) |
 | Max protocol exposure | 50% per protocol |
 
-If any check fails, the transaction is **blocked** -- even in autonomous mode.
+If any check fails, the transaction is **blocked** -- even in autonomous mode, even if the LLM says to do it.
 
 ---
 
@@ -391,7 +508,7 @@ If any check fails, the transaction is **blocked** -- even in autonomous mode.
 
 This entire project was built autonomously by Claude (Anthropic) for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon).
 
-**7 development phases, each executed by AI:**
+**8 development phases, each executed by AI:**
 
 1. Foundation -- Monorepo, types, data feed, Jupiter adapter, vault program, CLI
 2. Core DeFi -- Marinade/Raydium/Kamino adapters, protocol router, execution engine, risk manager
@@ -399,9 +516,16 @@ This entire project was built autonomously by Claude (Anthropic) for the [Solana
 4. Privacy Layer -- ZK circuits (Circom), stealth addresses, shielded transfers, privacy program
 5. CLI + Dashboard -- 7 CLI commands, Next.js dashboard with The Wheel visualization
 6. Telegram + API -- Telegram bot, REST API (10 endpoints), agent-to-agent composability
-7. Integration -- End-to-end tests, real devnet execution, README
+7. Integration -- End-to-end tests, real devnet execution
+8. **LLM Intelligence** -- LLM provider layer (BYOK), Polymarket integration, AI-powered OODA ORIENT phase, dashboard reasoning panel, backend worker
 
 Every line of TypeScript, Rust, and Circom was written by Claude. No human-written code.
+
+---
+
+## Team
+
+**Slashy Fx** -- Solo dev, [Volta Team](https://github.com/IsSlashy)
 
 ---
 
@@ -411,4 +535,4 @@ MIT
 
 ---
 
-*Built for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon) by [Volta Team](https://github.com/IsSlashy)*
+*Built for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon) by Volta Team*

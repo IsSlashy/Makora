@@ -250,7 +250,7 @@ export class NLParser {
 
     // Advisory / suggestion queries
     if (/(?:what\s+(?:should|do|can|would)\s+(?:i|you)|recommend|suggest|advice|next\s+move)/i.test(input)) {
-      return { type: 'strategy', query: 'advice' };
+      return { type: 'strategy', query: 'current' };
     }
 
     return null;

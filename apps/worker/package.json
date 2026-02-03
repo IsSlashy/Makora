@@ -1,0 +1,29 @@
+{
+  "name": "@makora/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Makora headless agent worker - runs OODA loop 24/7 with LLM reasoning",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --clean",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@makora/types": "workspace:*",
+    "@makora/agent-core": "workspace:*",
+    "@makora/data-feed": "workspace:*",
+    "@makora/strategy-engine": "workspace:*",
+    "@makora/risk-manager": "workspace:*",
+    "@makora/execution-engine": "workspace:*",
+    "@makora/protocol-router": "workspace:*",
+    "@makora/llm-provider": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

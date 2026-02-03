@@ -29,6 +29,8 @@ import type { SessionManager, StealthSession } from '@makora/session-manager';
 import { ActionExplainer } from './explainer.js';
 import { DecisionLog } from './decision-log.js';
 import type { ConfirmationCallback, DecisionLogEntry } from './types.js';
+import { parseLLMAnalysis, convertAnalysisToEvaluation } from './llm-orient.js';
+import type { LLMAnalysis } from './llm-orient.js';
 
 /**
  * OODA Loop (AGENT-04)
@@ -43,6 +45,25 @@ import type { ConfirmationCallback, DecisionLogEntry } from './types.js';
  * The loop runs continuously on a timer. Each cycle is independent.
  * The loop can be paused, resumed, or run as a single cycle.
  */
+/** Minimal LLM provider interface (avoids hard dep on @makora/llm-provider). */
+interface LLMProviderLike {
+  readonly providerId: string;
+  readonly model: string;
+  complete(
+    messages: Array<{ role: string; content: string }>,
+    options?: { jsonMode?: boolean; temperature?: number },
+  ): Promise<{ content: string; latencyMs: number }>;
+}
+
+/** Minimal Polymarket feed interface. */
+interface PolymarketFeedLike {
+  getMarketIntelligence(): Promise<{
+    cryptoMarkets: Array<{ question: string; probability: number; volume24h: number; priceChange24h: number; relevance: string }>;
+    sentimentSummary: { overallBias: string; highConvictionCount: number; averageProbability: number };
+    fetchedAt: number;
+  }>;
+}
+
 export class OODALoop {
   // Dependencies
   private portfolioReader: PortfolioReader;
@@ -54,6 +75,11 @@ export class OODALoop {
   private explainer: ActionExplainer;
   private decisionLog: DecisionLog;
   private sessionManager: SessionManager | null = null;
+
+  // LLM + Polymarket (optional)
+  private llmProvider: LLMProviderLike | null = null;
+  private polymarketFeed: PolymarketFeedLike | null = null;
+  private lastLLMAnalysis: LLMAnalysis | null = null;
 
   // State
   private walletPublicKey: PublicKey;
@@ -142,9 +168,48 @@ export class OODALoop {
       this.setPhase('orient');
       const orientStart = Date.now();
 
-      evaluation = this.strategyEngine.evaluate(portfolio, marketData);
-      this.lastEvaluation = evaluation;
+      if (this.llmProvider) {
+        // LLM-powered orientation
+        try {
+          const intelligence = await this.polymarketFeed?.getMarketIntelligence().catch(() => null);
 
+          // Build context for the LLM
+          const contextParts: string[] = [];
+          contextParts.push(`## PORTFOLIO STATE\nTotal Value: $${portfolio.totalValueUsd.toFixed(2)}\nSOL Balance: ${portfolio.solBalance.toFixed(4)} SOL`);
+          contextParts.push(`## MARKET DATA\nSOL Price: $${marketData.solPriceUsd.toFixed(2)}\n24h Change: ${marketData.solChange24hPct.toFixed(2)}%\nVolatility: ${marketData.volatilityIndex}/100`);
+
+          if (intelligence) {
+            const mkts = intelligence.cryptoMarkets.slice(0, 8).map(
+              (m) => `  "${m.question}" → ${(m.probability * 100).toFixed(1)}% YES | Vol: $${m.volume24h.toLocaleString()}`
+            ).join('\n');
+            contextParts.push(`## PREDICTION MARKET SIGNALS\nBias: ${intelligence.sentimentSummary.overallBias}\n${mkts}`);
+          }
+
+          const context = contextParts.join('\n\n');
+          const systemPrompt = `You are Makora, an autonomous DeFi agent on Solana. Analyze market data and output ONLY valid JSON with: marketAssessment (sentiment, confidence 0-100, reasoning, keyFactors), allocation (protocol, action, token, percentOfPortfolio, rationale — max 5, sum ≤100%), riskAssessment (overallRisk 0-100, warnings), explanation. Protocols: Jupiter/Marinade/Raydium/Kamino. Tokens: SOL/USDC/mSOL/JitoSOL/JLP.`;
+
+          const response = await this.llmProvider.complete(
+            [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Analyze:\n\n${context}` },
+            ],
+            { jsonMode: true, temperature: 0.3 },
+          );
+
+          const analysis = parseLLMAnalysis(response.content);
+          this.lastLLMAnalysis = analysis;
+          evaluation = convertAnalysisToEvaluation(analysis, marketData);
+        } catch (llmErr) {
+          // LLM failed — fall back to strategy engine
+          this.emit({ type: 'error', message: `LLM ORIENT failed, using strategy engine fallback: ${llmErr}` });
+          evaluation = this.strategyEngine.evaluate(portfolio, marketData);
+        }
+      } else {
+        // Classic strategy engine orientation
+        evaluation = this.strategyEngine.evaluate(portfolio, marketData);
+      }
+
+      this.lastEvaluation = evaluation;
       phaseTimings.orient = Date.now() - orientStart;
 
       // ====== DECIDE ======
@@ -387,6 +452,35 @@ export class OODALoop {
    */
   setVaultPDA(pda: PublicKey): void {
     this.vaultPDA = pda;
+  }
+
+  /**
+   * Set the LLM provider for AI-powered ORIENT phase.
+   * When set, the ORIENT phase will call the LLM instead of the strategy engine.
+   */
+  setLLMProvider(provider: LLMProviderLike): void {
+    this.llmProvider = provider;
+  }
+
+  /**
+   * Get the LLM provider (if configured).
+   */
+  getLLMProvider(): LLMProviderLike | null {
+    return this.llmProvider;
+  }
+
+  /**
+   * Set the Polymarket feed for prediction market intelligence.
+   */
+  setPolymarketFeed(feed: PolymarketFeedLike): void {
+    this.polymarketFeed = feed;
+  }
+
+  /**
+   * Get the last LLM analysis (if any).
+   */
+  getLastLLMAnalysis(): LLMAnalysis | null {
+    return this.lastLLMAnalysis;
   }
 
   // ---- Private ----

@@ -11,7 +11,8 @@
       "@makora/execution-engine": ["packages/execution-engine/src"],
       "@makora/protocol-router": ["packages/protocol-router/src"],
       "@makora/privacy": ["packages/privacy/src"],
-      "@makora/strategy-engine": ["packages/strategy-engine/src"]
+      "@makora/strategy-engine": ["packages/strategy-engine/src"],
+      "@makora/llm-provider": ["packages/llm-provider/src"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", "target", "programs"]

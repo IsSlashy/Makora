@@ -15,3 +15,9 @@ export {
   findTokenByMint,
   NATIVE_SOL_MINT,
 } from './tokens.js';
+export {
+  PolymarketFeed,
+  type PolymarketMarket,
+  type CryptoMarketSignal,
+  type MarketIntelligence,
+} from './polymarket.js';

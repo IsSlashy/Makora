@@ -10,6 +10,36 @@ import type { YieldOpportunity, StrategyTag } from './useYieldData';
 
 export type OODAPhase = 'IDLE' | 'OBSERVE' | 'ORIENT' | 'DECIDE' | 'ACT';
 
+export interface LLMAnalysisResult {
+  marketAssessment: {
+    sentiment: 'bullish' | 'neutral' | 'bearish';
+    confidence: number;
+    reasoning: string;
+    keyFactors: string[];
+  };
+  allocation: Array<{
+    protocol: string;
+    action: string;
+    token: string;
+    percentOfPortfolio: number;
+    rationale: string;
+  }>;
+  riskAssessment: {
+    overallRisk: number;
+    warnings: string[];
+  };
+  explanation: string;
+}
+
+export interface LLMOrientState {
+  analysis: LLMAnalysisResult | null;
+  reasoning: string;
+  provider: string;
+  model: string;
+  latencyMs: number;
+  error: string | null;
+}
+
 export interface SessionInfo {
   id: string;
   walletAddress: string;
@@ -31,6 +61,7 @@ export interface OODAState {
   stealthSessions: SessionInfo[];
   totalInSession: number;
   stealthActive: boolean;
+  llmOrient: LLMOrientState;
 }
 
 export interface ObservationData {
@@ -194,9 +225,37 @@ export function useOODALoop() {
     stealthSessions: [],
     totalInSession: 0,
     stealthActive: false,
+    llmOrient: {
+      analysis: null,
+      reasoning: '',
+      provider: '',
+      model: '',
+      latencyMs: 0,
+      error: null,
+    },
   });
 
   const runningRef = useRef(false);
+
+  // External LLM config injected via setLLMConfig
+  const llmConfigRef = useRef<{
+    providerId: string;
+    apiKey: string;
+    model: string;
+    temperature?: number;
+  } | null>(null);
+  const setLLMConfig = useCallback((config: typeof llmConfigRef.current) => {
+    llmConfigRef.current = config;
+  }, []);
+
+  // External Polymarket intelligence injected via setPolymarketData
+  const polymarketRef = useRef<{
+    cryptoMarkets: Array<{ question: string; probability: number; volume24h: number; priceChange24h: number; relevance: string }>;
+    sentimentSummary: { overallBias: string; highConvictionCount: number; averageProbability: number };
+  } | null>(null);
+  const setPolymarketData = useCallback((data: typeof polymarketRef.current) => {
+    polymarketRef.current = data;
+  }, []);
 
   // External yields injected via setYields (called from page component)
   const yieldsRef = useRef<YieldOpportunity[]>([]);
@@ -283,15 +342,84 @@ export function useOODALoop() {
     // Re-read after fetches
     const currentDeps = depsRef.current;
     let confidence = 50;
-    if (observation.totalPortfolio > 1) confidence += 10;
-    if (observation.totalPortfolio > 5) confidence += 10;
-    if (observation.totalPortfolio > 10) confidence += 5;
-    if (currentDeps.vaultState) confidence += 10;
-    if (currentDeps.strategyState) confidence += 10;
-    confidence = Math.min(98, Math.max(30, confidence));
-    confidence += Math.floor(Math.random() * 5) - 2;
+    let llmOrientUpdate: LLMOrientState = { analysis: null, reasoning: '', provider: '', model: '', latencyMs: 0, error: null };
 
-    setState(prev => ({ ...prev, confidence }));
+    const llmCfg = llmConfigRef.current;
+    if (llmCfg && llmCfg.apiKey) {
+      // LLM-powered ORIENT
+      try {
+        const contextParts: string[] = [];
+        contextParts.push(`## PORTFOLIO\nTotal: ${observation.totalPortfolio.toFixed(4)} SOL\nWallet: ${observation.walletBalance.toFixed(4)} SOL\nVault: ${observation.vaultBalance.toFixed(4)} SOL`);
+
+        // Add yield data
+        const yields = yieldsRef.current;
+        if (yields.length > 0) {
+          contextParts.push(`## YIELD OPPORTUNITIES\n${yields.map(y => `  ${y.protocol} | ${y.symbol} | ${y.apy}% APY | TVL ${y.tvl} | Risk: ${y.risk}`).join('\n')}`);
+        }
+
+        // Add Polymarket data
+        const poly = polymarketRef.current;
+        if (poly && poly.cryptoMarkets.length > 0) {
+          contextParts.push(`## PREDICTION MARKETS (Polymarket)\nBias: ${poly.sentimentSummary.overallBias}\n${poly.cryptoMarkets.slice(0, 5).map(m => `  "${m.question}" → ${(m.probability * 100).toFixed(1)}% YES`).join('\n')}`);
+        }
+
+        const orientStart = Date.now();
+        const res = await fetch('/api/llm/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: llmCfg.providerId,
+            apiKey: llmCfg.apiKey,
+            model: llmCfg.model,
+            temperature: llmCfg.temperature ?? 0.3,
+            context: contextParts.join('\n\n'),
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const analysis = data.analysis as LLMAnalysisResult;
+          const latencyMs = Date.now() - orientStart;
+
+          confidence = analysis.marketAssessment.confidence;
+          llmOrientUpdate = {
+            analysis,
+            reasoning: analysis.marketAssessment.reasoning,
+            provider: llmCfg.providerId,
+            model: llmCfg.model,
+            latencyMs,
+            error: null,
+          };
+
+          deps.addActivity({
+            action: `LLM (${llmCfg.model}): ${analysis.marketAssessment.sentiment} — ${confidence}% confidence (${(latencyMs / 1000).toFixed(1)}s)`,
+            status: 'adapt',
+          });
+        } else {
+          throw new Error(`API ${res.status}`);
+        }
+      } catch (llmErr: any) {
+        llmOrientUpdate = { ...llmOrientUpdate, error: llmErr.message || 'LLM call failed' };
+        deps.addActivity({ action: `LLM orient failed: ${llmErr.message || 'unknown'}`, status: 'warning' });
+        // Fall back to hardcoded confidence
+        if (observation.totalPortfolio > 1) confidence += 10;
+        if (observation.totalPortfolio > 5) confidence += 10;
+        if (currentDeps.vaultState) confidence += 10;
+        if (currentDeps.strategyState) confidence += 10;
+        confidence = Math.min(98, Math.max(30, confidence));
+      }
+    } else {
+      // Classic hardcoded confidence
+      if (observation.totalPortfolio > 1) confidence += 10;
+      if (observation.totalPortfolio > 5) confidence += 10;
+      if (observation.totalPortfolio > 10) confidence += 5;
+      if (currentDeps.vaultState) confidence += 10;
+      if (currentDeps.strategyState) confidence += 10;
+      confidence = Math.min(98, Math.max(30, confidence));
+      confidence += Math.floor(Math.random() * 5) - 2;
+    }
+
+    setState(prev => ({ ...prev, confidence, llmOrient: llmOrientUpdate }));
     deps.addActivity({
       action: `Strategy evaluation: ${confidence}% confidence`,
       status: 'adapt',
@@ -313,13 +441,42 @@ export function useOODALoop() {
       riskScore = Math.min(10, Math.max(1, riskScore));
     }
 
-    // Compute allocation using live yield data
+    // Compute allocation — prefer LLM allocation if available
     const yields = yieldsRef.current;
-    const allocation = yields.length > 0
-      ? computeAllocation(yields, confidence)
-      : [];
-    const blendedApy = computeBlendedApy(allocation);
-    const stratLabel = getStrategyLabel(confidence);
+    const llmAnalysis = llmOrientUpdate.analysis;
+    let allocation: AllocationSlot[];
+    let blendedApy: number;
+    let stratLabel: string;
+
+    if (llmAnalysis && llmAnalysis.allocation.length > 0) {
+      // Map LLM allocation to AllocationSlot format
+      allocation = llmAnalysis.allocation.map(a => ({
+        protocol: a.protocol,
+        symbol: a.token,
+        pct: a.percentOfPortfolio,
+        expectedApy: 0, // LLM doesn't predict exact APY
+        strategyTag: (a.action === 'stake' ? 'stake' : a.action === 'lend' ? 'lend' : a.action === 'lp' ? 'lp' : 'lend') as StrategyTag,
+        risk: (llmAnalysis.riskAssessment.overallRisk > 60 ? 'High' : llmAnalysis.riskAssessment.overallRisk > 30 ? 'Medium' : 'Low') as 'Low' | 'Medium' | 'High',
+      }));
+
+      // Try to enrich APY from yield data
+      for (const slot of allocation) {
+        const match = yields.find(y =>
+          y.protocol.toLowerCase().includes(slot.protocol.toLowerCase()) ||
+          y.symbol.toLowerCase() === slot.symbol.toLowerCase()
+        );
+        if (match) slot.expectedApy = match.apy;
+      }
+
+      blendedApy = computeBlendedApy(allocation);
+      stratLabel = `LLM ${llmAnalysis.marketAssessment.sentiment}`;
+    } else {
+      allocation = yields.length > 0
+        ? computeAllocation(yields, confidence)
+        : [];
+      blendedApy = computeBlendedApy(allocation);
+      stratLabel = getStrategyLabel(confidence);
+    }
 
     let recommendation: string;
     let action: string;
@@ -466,5 +623,7 @@ export function useOODALoop() {
     startLoop,
     stopLoop,
     setYields,
+    setLLMConfig,
+    setPolymarketData,
   };
 }

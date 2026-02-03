@@ -20,6 +20,16 @@ import type { StrategyEvaluation } from '@makora/strategy-engine';
 // Agent Configuration
 // ============================================================================
 
+/** LLM provider configuration (BYOK) */
+export interface LLMProviderConfig {
+  providerId: 'anthropic' | 'openai' | 'qwen';
+  apiKey: string;
+  model: string;
+  baseUrl?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
 /** Full agent configuration */
 export interface AgentConfig {
   /** Solana connection */
@@ -40,6 +50,10 @@ export interface AgentConfig {
   autoStart: boolean;
   /** RPC URL */
   rpcUrl: string;
+  /** LLM provider config for AI-powered ORIENT phase */
+  llmConfig?: LLMProviderConfig;
+  /** Enable Polymarket prediction market intelligence (default: true) */
+  enablePolymarket?: boolean;
 }
 
 /** Default agent configuration */
@@ -147,4 +161,14 @@ export interface DecisionLogEntry {
   userConfirmed?: boolean;
   /** Full decision rationale */
   rationale: string;
+  /** LLM provider used (if any) */
+  llmProvider?: string;
+  /** LLM model used (if any) */
+  llmModel?: string;
+  /** LLM reasoning chain (if any) */
+  llmReasoning?: string;
+  /** LLM call latency in ms */
+  llmLatencyMs?: number;
+  /** Polymarket signals used in this cycle */
+  polymarketSignals?: Array<{ question: string; probability: number }>;
 }

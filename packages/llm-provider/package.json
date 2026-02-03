@@ -1,0 +1,29 @@
+{
+  "name": "@makora/llm-provider",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LLM provider layer for Makora - Anthropic, OpenAI, Qwen via raw fetch",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.0"
+  }
+}
