@@ -139,7 +139,16 @@ export function useVault() {
     setLoading(true);
     setError(null);
     try {
-      const lamports = new BN(Math.floor(solAmount * LAMPORTS_PER_SOL));
+      // Cap to on-chain current_balance (deposited - withdrawn) to avoid
+      // InsufficientBalance error — the PDA holds extra lamports for rent
+      // that are not part of the deposited balance.
+      const maxWithdrawable = vaultState
+        ? vaultState.totalDeposited.sub(vaultState.totalWithdrawn).toNumber() / LAMPORTS_PER_SOL
+        : 0;
+      const cappedAmount = Math.min(solAmount, maxWithdrawable);
+      if (cappedAmount <= 0) throw new Error('Nothing to withdraw');
+
+      const lamports = new BN(Math.floor(cappedAmount * LAMPORTS_PER_SOL));
       const tx = await (vaultProgram.methods as any)
         .withdraw(lamports)
         .accounts({

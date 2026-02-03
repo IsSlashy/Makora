@@ -246,14 +246,23 @@ export const PortfolioCard = () => {
                 </button>
               </div>
               <div className="flex gap-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="SOL amount"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="flex-1 px-2 py-1.5 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
-                />
+                <div className="flex-1 relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="SOL amount"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="w-full px-2 py-1.5 pr-12 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawAmount(currentBalance > 0 ? currentBalance.toFixed(4) : '0')}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[8px] font-mono tracking-wider text-cursed hover:bg-cursed/10 transition-colors uppercase"
+                  >
+                    MAX
+                  </button>
+                </div>
                 <button
                   onClick={handleWithdraw}
                   disabled={loading || !withdrawAmount}
@@ -262,6 +271,11 @@ export const PortfolioCard = () => {
                   WITHDRAW
                 </button>
               </div>
+              {currentBalance > 0 && (
+                <div className="text-[9px] text-text-muted font-mono mt-1">
+                  Max withdrawable: {currentBalance.toFixed(4)} SOL
+                </div>
+              )}
             </div>
           )}
         </>
