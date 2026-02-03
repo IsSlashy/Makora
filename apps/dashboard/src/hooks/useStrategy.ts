@@ -115,6 +115,7 @@ export function useStrategy() {
     }
   }, [publicKey, strategyProgram]);
 
+  // Single initial fetch on wallet connect (throttle middleware prevents 429 cascade)
   useEffect(() => {
     fetchStrategyState();
   }, [fetchStrategyState]);
@@ -129,12 +130,14 @@ export function useStrategy() {
     setLoading(true);
     setError(null);
     try {
-      // Default allocation: SOL 50%, USDC 50%
+      // Default balanced allocation: SOL 35%, USDC 25%, mSOL 25%, JLP 15%
       const symbols = [
         stringToFixedBytes('SOL', 8),
         stringToFixedBytes('USDC', 8),
+        stringToFixedBytes('mSOL', 8),
+        stringToFixedBytes('JLP', 8),
       ];
-      const pcts = [50, 50];
+      const pcts = [35, 25, 25, 15];
 
       const tx = await (strategyProgram.methods as any)
         .initialize(
@@ -144,7 +147,7 @@ export function useStrategy() {
           opts?.confidenceThreshold ?? 70,
           opts?.maxActionsPerCycle ?? 3,
           symbols,
-          Buffer.from(pcts),
+          pcts,
         )
         .accounts({
           owner: publicKey,
@@ -183,7 +186,7 @@ export function useStrategy() {
           confidenceThreshold,
           maxActionsPerCycle,
           symbols,
-          Buffer.from(allocPcts),
+          allocPcts,
         )
         .accounts({
           authority: publicKey,

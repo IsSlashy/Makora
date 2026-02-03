@@ -3,6 +3,9 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useStrategy } from '@/hooks/useStrategy';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
+import type { OODAState, AllocationSlot } from '@/hooks/useOODALoop';
+import { getStrategyLabel } from '@/hooks/useOODALoop';
+import type { YieldOpportunity } from '@/hooks/useYieldData';
 
 const STRATEGY_LABELS: Record<string, string> = {
   yield: 'YIELD OPT',
@@ -11,20 +14,13 @@ const STRATEGY_LABELS: Record<string, string> = {
   liquidity: 'LIQUIDITY',
 };
 
-interface YieldOpportunity {
-  protocol: string;
-  apy: number;
-  tvl: string;
-  risk: 'Low' | 'Medium' | 'High';
-}
-
-// Static yield sources (these protocols are mainnet-only, shown for reference)
-const opportunities: YieldOpportunity[] = [
-  { protocol: 'Marinade', apy: 7.2, tvl: '$1.2B', risk: 'Low' },
-  { protocol: 'Jupiter Perps', apy: 12.4, tvl: '$450M', risk: 'Medium' },
-  { protocol: 'Kamino', apy: 8.9, tvl: '$890M', risk: 'Low' },
-  { protocol: 'Raydium', apy: 15.6, tvl: '$320M', risk: 'Medium' },
-];
+const TAG_LABELS: Record<string, string> = {
+  stake: 'Liquid Stake',
+  lend: 'Lending',
+  lp: 'LP',
+  loop: 'Leverage Loop',
+  'perps-lp': 'Perps LP',
+};
 
 const getRiskStyle = (risk: string) => {
   switch (risk) {
@@ -41,10 +37,30 @@ function bytesToString(bytes: number[]): string {
   return String.fromCharCode(...slice);
 }
 
-export const StrategyPanel = () => {
+interface StrategyPanelProps {
+  oodaState?: OODAState & { adaptations: number };
+  yields?: YieldOpportunity[];
+  yieldLoading?: boolean;
+  yieldLastUpdated?: Date | null;
+  yieldError?: string | null;
+}
+
+export const StrategyPanel = ({
+  oodaState,
+  yields,
+  yieldLoading: yieldLoadingProp,
+  yieldLastUpdated: lastUpdatedProp,
+  yieldError: yieldErrorProp,
+}: StrategyPanelProps) => {
   const { publicKey } = useWallet();
   const { strategyState, strategyTypeString, totalCycles, totalActions, loading, initializeStrategy } = useStrategy();
   const { addActivity } = useActivityFeed();
+
+  // Use props if provided, otherwise show empty state
+  const opportunities = yields ?? [];
+  const yieldLoading = yieldLoadingProp ?? false;
+  const lastUpdated = lastUpdatedProp ?? null;
+  const yieldError = yieldErrorProp ?? null;
 
   const strategyLabel = STRATEGY_LABELS[strategyTypeString.toLowerCase()] || strategyTypeString;
 
@@ -61,6 +77,12 @@ export const StrategyPanel = () => {
       }
     }
   }
+
+  // Get allocation from OODA decision
+  const allocation: AllocationSlot[] = oodaState?.lastDecision?.allocation ?? [];
+  const blendedApy = oodaState?.lastDecision?.blendedApy ?? 0;
+  const confidence = oodaState?.confidence ?? 0;
+  const stratLabel = confidence > 0 ? getStrategyLabel(confidence) : null;
 
   const handleInitStrategy = async () => {
     try {
@@ -126,10 +148,55 @@ export const StrategyPanel = () => {
             </div>
           </div>
 
-          {/* Yield opportunities (reference — mainnet only) */}
-          <div className="text-[10px] text-text-muted font-mono tracking-wider uppercase mb-3">
-            Yield Sources (mainnet ref)
+          {/* Recommended Allocation from OODA DECIDE phase */}
+          {allocation.length > 0 && (
+            <div className="mb-5 p-3 bg-bg-inner border border-cursed/15">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] text-text-muted font-mono tracking-wider uppercase">
+                  Recommended Allocation
+                </span>
+                {stratLabel && (
+                  <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 border border-cursed/30 text-cursed bg-cursed/5 uppercase">
+                    {stratLabel}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {allocation.map((slot, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-[11px] font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-primary font-bold">{slot.symbol}</span>
+                      <span className="text-[9px] text-text-muted">{TAG_LABELS[slot.strategyTag] || slot.strategyTag}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[9px] ${getRiskStyle(slot.risk)}`}>{slot.risk}</span>
+                      <span className="text-text-secondary w-8 text-right">{slot.pct}%</span>
+                      <span className="text-cursed w-12 text-right">{slot.expectedApy}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 pt-2 border-t border-cursed/12 flex justify-between text-[10px] font-mono">
+                <span className="text-text-muted">Blended APY</span>
+                <span className="text-cursed font-bold">{blendedApy}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* Live yield opportunities from DeFi protocols */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] text-text-muted font-mono tracking-wider uppercase">
+              Yield Sources {yieldLoading ? '(loading...)' : '(live)'}
+            </div>
+            {lastUpdated && (
+              <div className="text-[9px] text-text-muted font-mono">
+                {lastUpdated.toLocaleTimeString()}
+              </div>
+            )}
           </div>
+          {yieldError && (
+            <div className="text-[9px] text-caution font-mono mb-2">{yieldError}</div>
+          )}
           <div className="space-y-2">
             {opportunities.map((opp, idx) => (
               <div
@@ -143,7 +210,9 @@ export const StrategyPanel = () => {
                   <span className="text-xs font-mono font-bold text-cursed">{opp.apy}%</span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-text-muted">TVL {opp.tvl}</span>
+                  <span className="text-text-muted">
+                    {opp.symbol} | TVL {opp.tvl}
+                  </span>
                   <span className={getRiskStyle(opp.risk)}>{opp.risk}</span>
                 </div>
               </div>

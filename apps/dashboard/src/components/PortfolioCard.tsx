@@ -41,9 +41,7 @@ export const PortfolioCard = () => {
 
   useEffect(() => {
     fetchBalance();
-    // Poll balance every 10s
-    const interval = setInterval(fetchBalance, 10000);
-    return () => clearInterval(interval);
+    // No polling — OODA loop handles periodic updates to avoid 429 rate limits
   }, [fetchBalance]);
 
   const totalValue = walletBalance + vaultBalance;

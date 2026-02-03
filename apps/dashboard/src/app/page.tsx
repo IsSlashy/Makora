@@ -1,13 +1,24 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { TheWheel } from '@/components/TheWheel';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { StrategyPanel } from '@/components/StrategyPanel';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { RiskControls } from '@/components/RiskControls';
+import { useOODALoop } from '@/hooks/useOODALoop';
+import { useYieldData } from '@/hooks/useYieldData';
 
 export default function Home() {
+  const ooda = useOODALoop();
+  const { opportunities, loading: yieldLoading, lastUpdated, error: yieldError } = useYieldData();
+
+  // Keep OODA loop fed with latest yield data
+  useEffect(() => {
+    ooda.setYields(opportunities);
+  }, [opportunities, ooda.setYields]);
+
   return (
     <div className="min-h-screen bg-bg-void">
       <Header />
@@ -16,13 +27,19 @@ export default function Home() {
         {/* Top grid: Wheel + Portfolio + Strategy */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           <div className="lg:col-span-2 lg:row-span-2">
-            <TheWheel />
+            <TheWheel oodaState={ooda} />
           </div>
           <div>
             <PortfolioCard />
           </div>
           <div>
-            <StrategyPanel />
+            <StrategyPanel
+              oodaState={ooda}
+              yields={opportunities}
+              yieldLoading={yieldLoading}
+              yieldLastUpdated={lastUpdated}
+              yieldError={yieldError}
+            />
           </div>
         </div>
 

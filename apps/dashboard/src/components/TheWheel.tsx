@@ -1,7 +1,7 @@
 'use client';
 
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useOODALoop, OODAPhase } from '@/hooks/useOODALoop';
+import type { OODAState, OODAPhase } from '@/hooks/useOODALoop';
 
 const PHASES: { name: OODAPhase; kanji: string; desc: string }[] = [
   { name: 'OBSERVE', kanji: '観', desc: 'Reading on-chain portfolio state' },
@@ -17,20 +17,24 @@ const PHASE_INDEX_MAP: Record<string, number> = {
   ACT: 3,
 };
 
-export const TheWheel = () => {
+interface TheWheelProps {
+  oodaState: OODAState & { adaptations: number };
+}
+
+export const TheWheel = ({ oodaState: ooda }: TheWheelProps) => {
   const { publicKey } = useWallet();
-  const ooda = useOODALoop();
 
   const activePhase = PHASE_INDEX_MAP[ooda.phase] ?? -1;
   const isAdapting = ooda.phase !== 'IDLE';
+  const blendedApy = ooda.lastDecision?.blendedApy ?? 0;
 
   return (
-    <div className="cursed-card p-6 flex flex-col items-center justify-center h-full min-h-[500px] relative">
+    <div className="cursed-card p-6 flex flex-col items-center justify-center h-full min-h-[500px] relative overflow-hidden">
       {/* Kanji watermark */}
-      <div className="kanji-watermark top-4 right-4">魔</div>
+      <div className="kanji-watermark top-6 right-6">魔</div>
 
       {/* The Wheel */}
-      <div className="relative w-72 h-72 lg:w-80 lg:h-80">
+      <div className="relative w-72 h-72 lg:w-80 lg:h-80 mt-8">
         {/* Outer glow ring */}
         <div
           className="absolute inset-[-20px] rounded-full transition-all duration-700"
@@ -55,7 +59,7 @@ export const TheWheel = () => {
         {PHASES.map((phase, idx) => {
           const isActive = idx === activePhase;
           const angle = (idx * 90 - 90) * (Math.PI / 180);
-          const radius = 52;
+          const radius = 58;
           const x = 50 + radius * Math.cos(angle);
           const y = 50 + radius * Math.sin(angle);
 
@@ -97,10 +101,10 @@ export const TheWheel = () => {
         {/* Center info */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center z-10">
-            <div className="font-display text-3xl tracking-[0.25em] text-cursed-gradient mb-1">
+            <div className="font-display text-2xl tracking-[0.25em] text-cursed-gradient mb-0.5">
               MAKORA
             </div>
-            <div className="text-[9px] text-text-muted tracking-[0.3em] uppercase mb-3">
+            <div className="text-[8px] text-text-muted tracking-[0.3em] uppercase">
               {publicKey ? 'The Adaptive One' : 'Connect Wallet'}
             </div>
           </div>
@@ -108,7 +112,7 @@ export const TheWheel = () => {
       </div>
 
       {/* Stats bar */}
-      <div className="mt-8 w-full max-w-sm">
+      <div className="mt-8 w-full max-w-md">
         <div className="ink-divider mb-4" />
         <div className="flex items-center justify-between text-[11px] font-mono">
           <div>
@@ -120,6 +124,13 @@ export const TheWheel = () => {
             <div className="text-text-muted tracking-wider uppercase mb-1">Confidence</div>
             <div className="text-cursed font-bold text-lg">
               {ooda.confidence > 0 ? `${ooda.confidence}%` : '--'}
+            </div>
+          </div>
+          <div className="w-px h-8 bg-cursed/20" />
+          <div>
+            <div className="text-text-muted tracking-wider uppercase mb-1">APY</div>
+            <div className="text-cursed font-bold text-lg">
+              {blendedApy > 0 ? `${blendedApy}%` : '--'}
             </div>
           </div>
           <div className="w-px h-8 bg-cursed/20" />

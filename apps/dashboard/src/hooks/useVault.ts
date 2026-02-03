@@ -57,7 +57,7 @@ export function useVault() {
     }
   }, [publicKey, vaultProgram, connection]);
 
-  // Auto-fetch on wallet connect
+  // Single initial fetch on wallet connect (throttle middleware prevents 429 cascade)
   useEffect(() => {
     fetchVaultState();
   }, [fetchVaultState]);
