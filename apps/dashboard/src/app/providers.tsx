@@ -44,44 +44,13 @@ const ActivityProvider: FC<{ children: ReactNode }> = ({ children }) => {
 };
 
 export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
-  // Read network from env (defaults to devnet for hackathon demo)
-  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
-  const network = networkEnv === 'devnet'
-    ? WalletAdapterNetwork.Devnet
-    : networkEnv === 'testnet'
-      ? WalletAdapterNetwork.Testnet
-      : WalletAdapterNetwork.Mainnet;
+  // HARDCODED: Devnet + Helius RPC for hackathon demo
+  const network = WalletAdapterNetwork.Devnet;
 
-  const endpoint = useMemo(() => {
-    const custom = process.env.NEXT_PUBLIC_RPC_URL;
+  // HARDCODED: Always use Helius devnet - no conditions, no env vars
+  const endpoint = 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
 
-    // ALWAYS use Helius for devnet - public RPC has 403 rate limits
-    const isDevnet = network === WalletAdapterNetwork.Devnet ||
-                     networkEnv === 'devnet' ||
-                     (custom && custom.includes('devnet'));
-
-    console.log('[RPC Debug]', {
-      custom,
-      networkEnv,
-      network,
-      isDevnet,
-    });
-
-    if (isDevnet) {
-      const heliusUrl = 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
-      console.log('[RPC] Using Helius devnet:', heliusUrl);
-      return heliusUrl;
-    }
-
-    // For non-devnet, use custom RPC or default
-    if (custom) {
-      console.log('[RPC] Using custom:', custom);
-      return custom;
-    }
-    const defaultUrl = clusterApiUrl(network);
-    console.log('[RPC] Using default:', defaultUrl);
-    return defaultUrl;
-  }, [network, networkEnv]);
+  console.log('[RPC] HARDCODED Helius devnet:', endpoint);
 
   // Disable automatic retry on 429 to prevent infinite cascade,
   // and throttle requests to ~5/sec via fetchMiddleware.
