@@ -104,7 +104,7 @@ P01 est un **privacy layer pour Solana** livre lors d'un hackathon precedent. Lo
 ### 2. S'enregistrer au hackathon
 - Diriger l'agent OpenClaw vers https://colosseum.com/agent-hackathon
 - Recuperer le claim code
-- Lier compte X (@Protocol01_ ou autre) + wallet Solana
+- Lier compte X (@Not_Mikuu) + wallet Solana
 
 ### 3. Choisir et builder le projet
 - Decision a prendre avec Slashy au prochain lancement

@@ -96,7 +96,7 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, o
               <a href="https://github.com/IsSlashy/Makora" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
                 GitHub
               </a>
-              <a href="https://x.com/Protocol01_" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
+              <a href="https://x.com/Not_Mikuu" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
                 Twitter
               </a>
             </div>
