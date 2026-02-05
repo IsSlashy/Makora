@@ -44,8 +44,8 @@ export const PortfolioCard = () => {
     // No polling — OODA loop handles periodic updates to avoid 429 rate limits
   }, [fetchBalance]);
 
-  // On mainnet, local vault is a soft allocation within the wallet — don't double-count
-  const isMainnet = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta';
+  // HARDCODED to devnet for hackathon (matches providers.tsx)
+  const isMainnet = false;
   const totalValue = isMainnet
     ? walletBalance + inSessionAmount // vault is subset of wallet on mainnet
     : walletBalance + vaultBalance + inSessionAmount; // on devnet, vault holds real SOL in PDA
@@ -156,7 +156,8 @@ export const PortfolioCard = () => {
     <div className="cursed-card p-5 animate-fade-up">
       <div className="flex items-center justify-between mb-5">
         <div className="section-title">Portfolio</div>
-        {(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') !== 'mainnet-beta' && (
+        {/* Always show airdrop on devnet (hardcoded) */}
+        {true && (
           <button
             onClick={handleAirdrop}
             disabled={airdropping}
@@ -317,7 +318,7 @@ export const PortfolioCard = () => {
       {lastTxSig && (
         <div className="mt-2">
           <a
-            href={`https://explorer.solana.com/tx/${lastTxSig}${(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta' ? '' : '?cluster=devnet'}`}
+            href={`https://explorer.solana.com/tx/${lastTxSig}?cluster=devnet`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[9px] font-mono text-cursed/70 hover:text-cursed transition-colors truncate block"

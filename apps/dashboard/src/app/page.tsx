@@ -321,7 +321,7 @@ export default function Home() {
     connection.getBalance(publicKey).then(bal => {
       const sol = bal / LAMPORTS_PER_SOL;
       chatBridge.injectContext(
-        `LIVE WALLET DATA: ${sol.toFixed(4)} SOL in wallet. Mode: ${ooda.isAutoMode ? 'AUTO' : 'ADVISORY'}. Network: ${process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta'}.`
+        `LIVE WALLET DATA: ${sol.toFixed(4)} SOL in wallet. Mode: ${ooda.isAutoMode ? 'AUTO' : 'ADVISORY'}. Network: devnet.`
       );
       initialContextSent.current = true;
     }).catch(() => {});

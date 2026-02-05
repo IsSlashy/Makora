@@ -26,9 +26,8 @@ export const ExecutionPanel = ({
   const gs = tradeGuard?.state;
   const gc = tradeGuard?.config;
 
-  // Determine Solana explorer cluster
-  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta';
-  const explorerCluster = networkEnv === 'mainnet-beta' ? '' : `?cluster=${networkEnv}`;
+  // HARDCODED devnet for hackathon
+  const explorerCluster = '?cluster=devnet';
 
   return (
     <div className="cursed-card p-5 animate-fade-up h-full flex flex-col">

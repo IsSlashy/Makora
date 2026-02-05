@@ -88,7 +88,7 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, o
             {/* Network */}
             <div className="hidden md:flex items-center gap-2 text-[10px] text-text-muted font-mono tracking-wider uppercase">
               <div className={`w-1.5 h-1.5 ${connected ? 'bg-positive' : 'bg-text-muted'}`} />
-              {(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta' ? 'Mainnet' : process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'Devnet'}
+              Devnet
             </div>
 
             {/* External links */}

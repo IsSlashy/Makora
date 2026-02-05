@@ -549,8 +549,8 @@ export function useOODALoop() {
 
       const currentVaultBal = depsRef.current.vaultBalance;
       const walletSol = walletBal / LAMPORTS_PER_SOL;
-      // On mainnet, local vault is a soft allocation within the wallet — don't double-count
-      const isMainnet = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta';
+      // HARDCODED devnet for hackathon - vault holds real SOL in PDA
+      const isMainnet = false;
       observation = {
         walletBalance: walletSol,
         vaultBalance: currentVaultBal,
