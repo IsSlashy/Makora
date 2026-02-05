@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from '@/components/Header';
+import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { TheWheel } from '@/components/TheWheel';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { TradeGuardPanel } from '@/components/TradeGuardPanel';
@@ -12,8 +13,11 @@ import { LLMReasoningPanel } from '@/components/LLMReasoningPanel';
 import { PolymarketPanel } from '@/components/PolymarketPanel';
 import { ChatPanel } from '@/components/ChatPanel';
 import { ExecutionPanel } from '@/components/ExecutionPanel';
+import { SelfEvaluationPanel } from '@/components/SelfEvaluationPanel';
 import { PositionsPanel } from '@/components/PositionsPanel';
+import { PerformanceHistoryPanel } from '@/components/PerformanceHistoryPanel';
 import { useOODALoop } from '@/hooks/useOODALoop';
+import type { PastDecision } from '@/hooks/useSelfEvaluation';
 import { useYieldData } from '@/hooks/useYieldData';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { usePolymarket } from '@/hooks/usePolymarket';
@@ -247,6 +251,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'intelligence' | 'execution' | 'risk'>('details');
   const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Re-check connection when settings panel closes (user may have saved new keys)
   const handleSettingsClose = useCallback(() => {
@@ -425,6 +430,32 @@ export default function Home() {
     { id: 'risk' as const, kanji: '防', label: 'RISK' },
   ];
 
+  // ── Derive past decisions for Self-Evaluation from execution results ──────
+
+  const selfEvalDecisions = useMemo<PastDecision[]>(() => {
+    return ooda.executionResults
+      .filter(r => !r.simulated)
+      .map(r => ({
+        timestamp: Date.now(),
+        action: `${r.action} via ${r.protocol}`,
+        reasoning: r.riskAssessment?.summary || 'No reasoning available',
+        outcome: (r.success ? 'profit' : 'loss') as 'profit' | 'loss' | 'neutral',
+        pnlPercent: r.success ? (r.riskAssessment?.riskScore ?? 0) * 0.1 : -(r.riskAssessment?.riskScore ?? 0) * 0.1,
+      }));
+  }, [ooda.executionResults]);
+
+  const selfEvalLLMConfig = useMemo(() => {
+    if (!config?.llmKeys) return null;
+    const entries = Object.entries(config.llmKeys);
+    const active = entries.find(([, v]) => v && v.length > 0);
+    if (!active) return null;
+    return {
+      provider: active[0],
+      apiKey: active[1] as string,
+      model: active[0] === 'anthropic' ? 'claude-sonnet-4-20250514' : active[0] === 'openai' ? 'gpt-4o' : 'qwen-max',
+    };
+  }, [config?.llmKeys]);
+
   return (
     <div className="h-screen bg-bg-void flex flex-col overflow-hidden">
       <Header
@@ -438,6 +469,17 @@ export default function Home() {
       {/* ── Main content: Wheel (left) + Chat (right) — always visible ── */}
       <main className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[1600px] mx-auto px-4 py-2 h-full flex flex-col">
+
+          {/* Onboarding banner for edge cases */}
+          {!bannerDismissed && (
+            <div className="flex-shrink-0 mb-2">
+              <OnboardingBanner
+                walletConnected={!!publicKey}
+                llmConfigured={isConfigured}
+                onDismiss={() => setBannerDismissed(true)}
+              />
+            </div>
+          )}
 
           {/* Top row: Wheel + Chat */}
           <div className="flex gap-3 min-h-0" style={{ flex: secondaryOpen ? '0 0 55%' : '1 1 auto' }}>
@@ -512,27 +554,38 @@ export default function Home() {
             <div className="flex-1 min-h-0 overflow-auto mt-1">
               {/* DETAILS */}
               {activeTab === 'details' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full">
-                  <div className="min-h-0 overflow-auto">
-                    <PortfolioCard />
+                <div className="space-y-3 h-full">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <div className="min-h-0 overflow-auto">
+                      <PortfolioCard />
+                    </div>
+                    <div className="min-h-0 overflow-auto">
+                      <LLMReasoningPanel llmOrient={ooda.llmOrient} phase={ooda.phase} />
+                    </div>
+                    <div className="min-h-0 overflow-auto">
+                      <ActivityFeed />
+                    </div>
                   </div>
                   <div className="min-h-0 overflow-auto">
-                    <LLMReasoningPanel llmOrient={ooda.llmOrient} phase={ooda.phase} />
-                  </div>
-                  <div className="min-h-0 overflow-auto">
-                    <ActivityFeed />
+                    <PerformanceHistoryPanel />
                   </div>
                 </div>
               )}
 
               {/* INTELLIGENCE */}
               {activeTab === 'intelligence' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 h-full">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full">
                   <div className="min-h-0 overflow-auto">
                     <PolymarketPanel
                       intelligence={intelligence}
                       loading={polyLoading}
                       error={polyError}
+                    />
+                  </div>
+                  <div className="min-h-0 overflow-auto">
+                    <SelfEvaluationPanel
+                      decisions={selfEvalDecisions}
+                      llmConfig={selfEvalLLMConfig}
                     />
                   </div>
                   <div className="min-h-0 overflow-auto">

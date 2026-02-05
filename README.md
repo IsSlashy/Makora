@@ -31,6 +31,11 @@ Makora is not a trading bot. It's an **autonomous DeFi agent** that thinks with 
 | NL interface | Parse natural language commands | Commands only |
 | Interfaces | CLI + Dashboard + Telegram + REST API + Worker | Single interface |
 | BYOK | Bring Your Own Key -- user's LLM API key, zero lock-in | N/A |
+| Self-evaluation | Agent reviews own performance via LLM | None |
+| Solana Blinks | Shareable Action URLs for swaps/strategy | None |
+| Session reports | Exportable Markdown trading reports | None |
+| Performance history | Persistent trade log with P&L charts | None |
+| PWA | Installable on mobile devices | None |
 
 ---
 
@@ -406,7 +411,91 @@ POST /api/llm/ping      (API key validation)
 
 # Polymarket intelligence
 GET /api/polymarket
+
+# Agent capabilities discovery (agent-to-agent)
+GET /api/agent/capabilities
+
+# Solana Actions / Blinks
+GET /api/actions/swap          (Action metadata for Blink rendering)
+POST /api/actions/swap         (Build Jupiter swap transaction)
+GET /api/actions/strategy      (AI strategy recommendation Action)
+POST /api/actions/strategy     (Portfolio analysis message)
 ```
+
+---
+
+## Solana Actions / Blinks
+
+Makora supports [Solana Actions](https://solana.com/docs/advanced/actions) -- shareable URLs that encode transactions. Any Blink-compatible wallet or client can render and execute Makora actions.
+
+### Available Actions
+
+| Action | Endpoint | Description |
+|--------|----------|-------------|
+| **Swap** | `/api/actions/swap` | Swap tokens via Jupiter (SOL, USDC, mSOL, JLP, jupSOL, jitoSOL, BONK) |
+| **Strategy** | `/api/actions/strategy` | Get AI-powered portfolio strategy recommendation |
+
+### How It Works
+
+```
+1. Share a Makora Action URL (e.g., https://makora.vercel.app/api/actions/swap)
+2. Blink client renders the Action card (icon, title, input fields)
+3. User enters amount and clicks "Swap"
+4. Makora builds the Jupiter transaction server-side
+5. User signs with their wallet -- done
+```
+
+This enables **agent-to-agent composability**: other agents can discover Makora's capabilities via `/api/agent/capabilities` and generate Action URLs for users to execute.
+
+---
+
+## Agent Self-Evaluation
+
+Makora can evaluate its own trading decisions using LLM reasoning:
+
+- Reviews past trades (win rate, P&L patterns, mistakes)
+- Identifies behavioral patterns ("overtrading in sideways markets", "good entries on dips")
+- Recommends adjustments ("reduce position size", "be more cautious")
+- Adjusts confidence threshold (-10 to +10) based on self-assessment
+- Results persist across sessions in localStorage
+
+This feedback loop makes Makora a **truly adaptive agent** -- it doesn't just follow rules, it learns from its own performance.
+
+---
+
+## Performance History
+
+All trades are tracked in localStorage with full details:
+
+- Trade log: action, asset, amount, price, P&L, reasoning, session ID
+- Cumulative P&L chart (SVG, last 50 trades)
+- Win rate, best/worst trade, average P&L
+- Per-mode breakdown (PERPS vs INVEST)
+- Session report export (downloadable Markdown)
+
+---
+
+## Session Reports
+
+Export a complete trading session as a Markdown report:
+
+```markdown
+# Makora Session Report
+## Session Overview
+| Field | Value |
+|-------|-------|
+| Mode | PERPS |
+| Duration | 45 minutes |
+| OODA Cycles | 892 |
+## Performance Summary
+| Total P&L | +0.1234 SOL (+2.47%) |
+| Win Rate | 67% |
+## Trade Log
+| # | Time | Action | Asset | P&L | Reasoning |
+...
+```
+
+Download directly from the dashboard Execution Panel.
 
 ---
 
@@ -472,7 +561,7 @@ makora/
     +-- integration.test.ts # End-to-end integration tests
 ```
 
-**23 packages** | **3 Solana programs** | **3 ZK circuits** | **5 apps** | **~25,000 lines of code**
+**23 packages** | **3 Solana programs** | **3 ZK circuits** | **5 apps** | **2 Solana Actions** | **~27,000 lines of code**
 
 ---
 
@@ -586,6 +675,7 @@ This entire project was built autonomously by Claude (Anthropic) for the [Solana
 7. Integration -- End-to-end tests, real devnet execution
 8. **LLM Intelligence** -- LLM provider layer (BYOK), Polymarket integration, AI-powered OODA ORIENT phase, dashboard reasoning panel, backend worker
 9. **PERPS Trading** -- Jupiter Perps integration, 3-second OODA cycles, Auto-TP/SL, position charts, session P&L tracking, MoltBot persona, Chat panel
+10. **Polish & Agentic Features** -- Solana Blinks/Actions, agent self-evaluation, performance history, session report export, PWA support, onboarding UX, agent capabilities discovery endpoint, CI/CD
 
 Every line of TypeScript, Rust, and Circom was written by Claude. No human-written code.
 

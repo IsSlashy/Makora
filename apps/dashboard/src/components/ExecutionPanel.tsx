@@ -2,6 +2,7 @@
 
 import type { ExecutionResultEntry, PositionSnapshotData } from '@/hooks/useOODALoop';
 import type { useTradeGuard } from '@/hooks/useTradeGuard';
+import { useSessionReport } from '@/hooks/useSessionReport';
 
 interface ExecutionPanelProps {
   executionResults: ExecutionResultEntry[];
@@ -18,6 +19,7 @@ export const ExecutionPanel = ({
   confidence,
   tradeGuard,
 }: ExecutionPanelProps) => {
+  const { downloadReport } = useSessionReport();
   const successCount = executionResults.filter(r => r.success && !r.simulated).length;
   const simulatedCount = executionResults.filter(r => r.success && r.simulated).length;
   const failedCount = executionResults.filter(r => !r.success).length;
@@ -35,6 +37,42 @@ export const ExecutionPanel = ({
       <div className="flex items-center justify-between mb-4">
         <div className="section-title">Execution Engine</div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              // Build report from available ExecutionPanel data
+              const gs = tradeGuard?.state;
+              const now = Date.now();
+              // Derive trades from execution results that have quotes
+              const trades = executionResults
+                .filter(r => r.success && r.quote)
+                .map(r => ({
+                  timestamp: now,
+                  action: r.action,
+                  asset: r.protocol,
+                  amount: r.quote ? parseFloat(r.quote.inputAmount) / 1e9 : 0,
+                  pnl: 0, // Individual trade P&L not tracked in ExecutionResultEntry
+                  reasoning: r.riskAssessment.summary,
+                }));
+
+              downloadReport({
+                sessionId: `exec-${Date.now()}`,
+                startTime: gs?.sessionStartValue ? now - 3600000 : now, // TODO: track real start time
+                endTime: now,
+                mode: 'INVEST', // TODO: pass trading mode from parent
+                trades,
+                totalPnL: gs?.pnlSol ?? 0,
+                totalPnLPercent: gs?.pnlPct ?? 0,
+                budget: gs?.sessionStartValue ?? 0,
+                walletAddress: 'N/A', // TODO: pass wallet address from parent
+                llmProvider: undefined, // TODO: pass LLM provider from parent
+                oodaCycles: executionResults.length,
+              });
+            }}
+            className="text-[9px] font-mono tracking-wider uppercase text-text-muted hover:text-cursed transition-colors px-1.5 py-0.5 border border-transparent hover:border-cursed/20"
+            title="Export session report as Markdown"
+          >
+            Export
+          </button>
           <span className={`inline-flex items-center gap-1.5 text-[9px] font-mono tracking-wider uppercase ${
             isAutoMode ? 'text-positive' : 'text-text-muted'
           }`}>

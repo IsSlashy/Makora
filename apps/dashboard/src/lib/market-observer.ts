@@ -149,14 +149,33 @@ export async function observeMarket(): Promise<MarketObservation> {
 
   const prices = await fetchPrices();
 
-  // Simulate price changes (in production, would compare to historical prices)
-  // Adding small random variation to simulate real market movement
-  const randomChange = () => (Math.random() - 0.5) * 4; // -2% to +2%
+  // Simulate realistic price changes using deterministic sine waves + small noise.
+  // Based on timestamp so the pattern is reproducible but looks like real market data.
+  // SOL: slight upward bias, occasional dips, mean-reverting micro-movements.
+  const t = now / 1000; // seconds
+  const simulateChange = (
+    seed: number,
+    amplitude: number,
+    bias: number
+  ): { pct1h: number; pct24h: number } => {
+    // Primary trend: slow sine wave (period ~20 min)
+    const trend = Math.sin(t / 1200 + seed) * amplitude * 0.6;
+    // Secondary oscillation: faster cycle (period ~5 min) for micro-movements
+    const micro = Math.sin(t / 300 + seed * 3.7) * amplitude * 0.3;
+    // Small noise for realism (capped to ~10% of amplitude)
+    const noise = (Math.random() - 0.5) * amplitude * 0.2;
+    // Mean-reverting clamp: keep within -3% to +3%
+    const pct1h = Math.max(-3, Math.min(3, trend + micro + noise + bias));
+    // 24h change: slower wave with larger amplitude, correlated to 1h direction
+    const trend24 = Math.sin(t / 7200 + seed * 1.3) * amplitude * 1.5;
+    const pct24h = Math.max(-6, Math.min(6, trend24 + bias * 2 + noise));
+    return { pct1h: parseFloat(pct1h.toFixed(2)), pct24h: parseFloat(pct24h.toFixed(2)) };
+  };
 
   const changes = {
-    SOL: { pct1h: randomChange(), pct24h: randomChange() * 2 },
-    ETH: { pct1h: randomChange(), pct24h: randomChange() * 2 },
-    BTC: { pct1h: randomChange() * 0.5, pct24h: randomChange() }, // BTC less volatile
+    SOL: simulateChange(0, 2.0, 0.15),     // slight upward bias, moderate volatility
+    ETH: simulateChange(1.5, 1.8, 0.05),   // near-neutral bias, moderate volatility
+    BTC: simulateChange(3.0, 1.0, 0.08),   // slight upward bias, lower volatility
   };
 
   const momentum = {
