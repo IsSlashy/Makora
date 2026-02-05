@@ -60,13 +60,27 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
                      networkEnv === 'devnet' ||
                      (custom && custom.includes('devnet'));
 
+    console.log('[RPC Debug]', {
+      custom,
+      networkEnv,
+      network,
+      isDevnet,
+    });
+
     if (isDevnet) {
-      return 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
+      const heliusUrl = 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
+      console.log('[RPC] Using Helius devnet:', heliusUrl);
+      return heliusUrl;
     }
 
     // For non-devnet, use custom RPC or default
-    if (custom) return custom;
-    return clusterApiUrl(network);
+    if (custom) {
+      console.log('[RPC] Using custom:', custom);
+      return custom;
+    }
+    const defaultUrl = clusterApiUrl(network);
+    console.log('[RPC] Using default:', defaultUrl);
+    return defaultUrl;
   }, [network, networkEnv]);
 
   // Disable automatic retry on 429 to prevent infinite cascade,
