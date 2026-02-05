@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub mod errors;
 pub mod instructions;
 pub mod state;
+pub mod verifying_key;
 
 use instructions::*;
 
@@ -34,8 +35,9 @@ pub mod makora_privacy {
         ctx: Context<Shield>,
         amount: u64,
         commitment: [u8; 32],
+        new_root: [u8; 32],
     ) -> Result<()> {
-        instructions::shield::handler(ctx, amount, commitment)
+        instructions::shield::handler(ctx, amount, commitment, new_root)
     }
 
     pub fn unshield(
@@ -43,7 +45,20 @@ pub mod makora_privacy {
         amount: u64,
         nullifier_hash: [u8; 32],
         new_root: [u8; 32],
+        proof_a: [u8; 64],
+        proof_b: [u8; 128],
+        proof_c: [u8; 64],
+        public_inputs: [[u8; 32]; 7],
     ) -> Result<()> {
-        instructions::unshield::handler(ctx, amount, nullifier_hash, new_root)
+        instructions::unshield::handler(
+            ctx,
+            amount,
+            nullifier_hash,
+            new_root,
+            proof_a,
+            proof_b,
+            proof_c,
+            public_inputs,
+        )
     }
 }

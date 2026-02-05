@@ -44,12 +44,14 @@ const ActivityProvider: FC<{ children: ReactNode }> = ({ children }) => {
 };
 
 export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
-  // Use devnet for the hackathon
-  const network = WalletAdapterNetwork.Devnet;
+  // Read network from env (defaults to mainnet-beta for real execution)
+  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta';
+  const network = networkEnv === 'devnet'
+    ? WalletAdapterNetwork.Devnet
+    : networkEnv === 'testnet'
+      ? WalletAdapterNetwork.Testnet
+      : WalletAdapterNetwork.Mainnet;
 
-  // Override via NEXT_PUBLIC_RPC_URL env var if needed (e.g. Helius free tier).
-  // Falls back to official Solana devnet (rate-limited but compatible).
-  // disableRetryOnRateLimit + fetchMiddleware prevent 429 cascades.
   const endpoint = useMemo(() => {
     const custom = process.env.NEXT_PUBLIC_RPC_URL;
     if (custom) return custom;

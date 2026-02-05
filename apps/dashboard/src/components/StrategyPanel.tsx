@@ -4,7 +4,6 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useStrategy } from '@/hooks/useStrategy';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import type { OODAState, AllocationSlot } from '@/hooks/useOODALoop';
-import { getStrategyLabel } from '@/hooks/useOODALoop';
 import type { YieldOpportunity } from '@/hooks/useYieldData';
 
 const STRATEGY_LABELS: Record<string, string> = {
@@ -78,11 +77,12 @@ export const StrategyPanel = ({
     }
   }
 
-  // Get allocation from OODA decision
+  // Get allocation from OODA decision (now 100% LLM-driven)
   const allocation: AllocationSlot[] = oodaState?.lastDecision?.allocation ?? [];
   const blendedApy = oodaState?.lastDecision?.blendedApy ?? 0;
-  const confidence = oodaState?.confidence ?? 0;
-  const stratLabel = confidence > 0 ? getStrategyLabel(confidence) : null;
+  const llmSentiment = oodaState?.llmOrient?.analysis?.marketAssessment?.sentiment;
+  // Strategy label comes from LLM sentiment, not hardcoded confidence tiers
+  const stratLabel = llmSentiment ? `AI ${llmSentiment.charAt(0).toUpperCase() + llmSentiment.slice(1)}` : null;
 
   const handleInitStrategy = async () => {
     try {

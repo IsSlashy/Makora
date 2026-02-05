@@ -41,11 +41,7 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
         )}
       </div>
 
-      {!provider ? (
-        <div className="text-[10px] text-text-muted font-mono text-center py-8 tracking-wider">
-          Configure an LLM provider in Settings to enable AI-powered analysis
-        </div>
-      ) : isThinking ? (
+      {isThinking ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-cursed animate-pulse rounded-full" />
@@ -58,8 +54,36 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
           </div>
         </div>
       ) : error ? (
-        <div className="p-3 bg-negative/5 border border-negative/20 text-[10px] font-mono text-negative">
-          {error}
+        <div className="space-y-3">
+          {/* LLM Required Warning */}
+          <div className="p-4 bg-negative/10 border border-negative/30 rounded">
+            <div className="flex items-start gap-2">
+              <span className="text-negative text-lg">⚠</span>
+              <div className="flex-1">
+                <p className="text-[11px] font-mono font-bold text-negative tracking-wide uppercase mb-1">
+                  LLM REQUIRED
+                </p>
+                <p className="text-[10px] font-mono text-negative/90 leading-relaxed">
+                  {error}
+                </p>
+                <p className="text-[10px] font-mono text-negative/70 mt-2 leading-relaxed">
+                  MoltBot will <span className="font-bold">HOLD</span> all positions until LLM is configured and working.
+                  No automated trades will be executed without AI analysis.
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Configuration hint */}
+          <div className="p-3 bg-bg-inner border border-cursed/10">
+            <p className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">
+              How to fix:
+            </p>
+            <ol className="text-[10px] font-mono text-text-secondary space-y-1 list-decimal list-inside">
+              <li>Open <span className="text-cursed">Settings</span> panel</li>
+              <li>Add your LLM API key (Anthropic, OpenAI, or local model)</li>
+              <li>Click <span className="text-cursed">Test Connection</span> to verify</li>
+            </ol>
+          </div>
         </div>
       ) : analysis ? (
         <div className="space-y-4">

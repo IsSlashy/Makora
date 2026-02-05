@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export type StrategyTag = 'stake' | 'lend' | 'lp' | 'loop' | 'perps-lp';
+export type StrategyTag = 'stake' | 'lend' | 'lp' | 'loop' | 'perps-lp' | 'sell' | 'swap' | 'perp-long' | 'perp-short' | 'perp-close';
 
 export interface YieldOpportunity {
   protocol: string;

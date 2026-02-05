@@ -72,6 +72,8 @@ export function useStrategy() {
   const [error, setError] = useState<string | null>(null);
   const [lastTxSig, setLastTxSig] = useState<string | null>(null);
 
+  // Strategy is now 100% on-chain (devnet) - mainnet blocking removed
+
   const fetchStrategyState = useCallback(async () => {
     if (!publicKey || !strategyProgram) return;
 
@@ -80,7 +82,7 @@ export function useStrategy() {
       const account = await (strategyProgram.account as any).strategyAccount.fetch(strategyPDA);
       setStrategyState(account as any);
     } catch (e: any) {
-      if (e.message?.includes('Account does not exist') || e.message?.includes('could not find')) {
+      if (e.message?.includes('Account does not exist') || e.message?.includes('could not find') || e.message?.includes('Attempt to load') || e.message?.includes('403')) {
         setStrategyState(null);
       }
     }

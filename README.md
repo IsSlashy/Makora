@@ -19,6 +19,8 @@ Makora is not a trading bot. It's an **autonomous DeFi agent** that thinks with 
 | Feature | Makora | Typical DeFi Bots |
 |---------|--------|-------------------|
 | Intelligence | **LLM-powered** (Anthropic/OpenAI/Qwen) + Polymarket signals | Simple rules |
+| Trading Modes | **PERPS** (3s cycles, perpetuals) + **INVEST** (5min, DeFi yields) | Single mode |
+| Auto Risk Controls | **Deterministic Auto-TP/SL** (no LLM needed) | Manual or none |
 | On-chain programs | 3 Anchor programs | 0 (API-only) |
 | Zero-knowledge privacy | Stealth addresses + shielded transfers | None |
 | Decision framework | OODA loop with AI reasoning | If/else logic |
@@ -47,6 +49,29 @@ Makora:
 
   Result: TX confirmed at slot 312,847,291
 ```
+
+### Trading Modes
+
+Makora operates in two distinct modes optimized for different strategies:
+
+| Mode | Cycle Time | Focus | Risk Profile |
+|------|------------|-------|--------------|
+| **PERPS** | **3 seconds** | Perpetual futures (SOL-PERP, ETH-PERP, BTC-PERP) | Aggressive scalping |
+| **INVEST** | 5 minutes | DeFi yields (stake, lend, LP) | Conservative growth |
+
+#### PERPS Mode (Default)
+- Ultra-fast perpetual futures trading on Jupiter Perps
+- 2-5x leverage on SOL, ETH, BTC perpetuals
+- **Deterministic Auto Take-Profit** at +2% (no LLM needed)
+- **Deterministic Auto Stop-Loss** at -5% (no LLM needed)
+- Real-time P&L tracking with live position charts
+- Session P&L aggregation across all trades
+
+#### INVEST Mode
+- Slower DeFi yield optimization
+- Stake SOL via Marinade, lend via Kamino, LP via Raydium
+- LLM-powered allocation decisions
+- Lower risk, compounding returns
 
 ### LLM-Powered Intelligence
 
@@ -176,15 +201,15 @@ graph TB
 
 ```
      +===========+
-     |  OBSERVE  |  Fetch portfolio, prices, yields, positions
+     |  OBSERVE  |  Fetch portfolio, prices, yields, open positions
      +===========+
      |  ORIENT   |  LLM analysis + Polymarket signals + strategy engine
      +===========+
      |  DECIDE   |  Risk validation (5 checks, VETO power)
      +===========+
-     |    ACT    |  Execute via stealth session wallets
+     |    ACT    |  Execute trades + Auto-TP/SL (deterministic)
      +===========+
-         ~ repeat every 60 seconds (auto mode)
+         ~ PERPS: every 3 seconds | INVEST: every 60 seconds
 ```
 
 ---
@@ -244,7 +269,12 @@ LLM_MODEL=claude-sonnet-4-20250514
 The dashboard is the primary interface for judges. Features:
 
 - **TheWheel** -- OODA loop phase visualization with kanji symbols
+- **Trading Mode Selector** -- Toggle between PERPS (3s) and INVEST (5min) modes
 - **Portfolio Card** -- Real-time portfolio value from connected wallet
+- **Position Charts** -- Live SVG price curves with entry, TP, SL, liquidation levels
+- **Session P&L** -- Aggregate profit/loss tracking across trading session
+- **Execution Panel** -- Real-time trade execution log with timestamps
+- **Chat Panel** -- Natural language interface with MoltBot trading persona
 - **LLM Reasoning Panel** -- Live display of LLM analysis: sentiment, allocation, key factors, warnings
 - **Polymarket Panel** -- Crypto prediction markets with probability bars, volume, 24h change
 - **Strategy Panel** -- Active strategy with recommended allocation and blended APY
@@ -252,6 +282,16 @@ The dashboard is the primary interface for judges. Features:
 - **Risk Controls** -- Interactive sliders for position limits, slippage, circuit breakers
 - **Settings Panel** -- BYOK: choose provider, enter API key, select model, test connection
 - **Stealth Sessions** -- Privacy session status from on-chain vault state
+
+### Position Visualization
+
+In PERPS mode, each open position displays:
+- **Dynamic SVG chart** with real-time price curve (updates every 2 seconds)
+- **Entry price** (blue dashed line)
+- **Take Profit level** (green) and **Stop Loss level** (red)
+- **Liquidation price** (orange) with leverage-adjusted calculation
+- **Unrealized P&L** with percentage and USD value
+- **Pulsing current price indicator** at chart edge
 
 ### BYOK Settings (Bring Your Own Key)
 
@@ -349,6 +389,15 @@ POST /api/agent/cycle
 
 # Natural language command
 POST /api/agent/command  { "command": "swap 10 SOL to USDC" }
+
+# Get open perp positions
+GET /api/agent/positions?wallet=...
+
+# Execute trade (open/close perp position)
+POST /api/agent/execute  { "action": "close_perp", "positionId": "..." }
+
+# Chat with MoltBot
+POST /api/openclaw/chat  { "messages": [...], "llmKeys": {...} }
 
 # LLM-powered analysis (dashboard)
 POST /api/llm/analyze   { "provider": "anthropic", "apiKey": "...", ... }
@@ -492,6 +541,8 @@ Auto-mode trades are routed through ephemeral wallets that rotate periodically, 
 
 The risk manager has **absolute VETO power** over every agent action -- even when the LLM recommends it.
 
+### Risk Controls
+
 | Control | Default |
 |---------|---------|
 | Max position size | 25% of portfolio |
@@ -502,13 +553,29 @@ The risk manager has **absolute VETO power** over every agent action -- even whe
 
 If any check fails, the transaction is **blocked** -- even in autonomous mode, even if the LLM says to do it.
 
+### Deterministic Auto Take-Profit / Stop-Loss
+
+In PERPS mode, risk controls execute **without LLM** to guarantee fast exits:
+
+| Control | Threshold | Behavior |
+|---------|-----------|----------|
+| **Auto Take-Profit** | +2% P&L | Close position immediately |
+| **Auto Stop-Loss** | -5% P&L | Close position immediately |
+
+These triggers run at the start of every ACT phase (every 3 seconds) and fire even if:
+- LLM is rate-limited (429 errors)
+- LLM returns no response
+- Network latency to LLM provider
+
+This ensures positions are protected even during LLM outages.
+
 ---
 
 ## How It Was Built
 
 This entire project was built autonomously by Claude (Anthropic) for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon).
 
-**8 development phases, each executed by AI:**
+**9 development phases, each executed by AI:**
 
 1. Foundation -- Monorepo, types, data feed, Jupiter adapter, vault program, CLI
 2. Core DeFi -- Marinade/Raydium/Kamino adapters, protocol router, execution engine, risk manager
@@ -518,6 +585,7 @@ This entire project was built autonomously by Claude (Anthropic) for the [Solana
 6. Telegram + API -- Telegram bot, REST API (10 endpoints), agent-to-agent composability
 7. Integration -- End-to-end tests, real devnet execution
 8. **LLM Intelligence** -- LLM provider layer (BYOK), Polymarket integration, AI-powered OODA ORIENT phase, dashboard reasoning panel, backend worker
+9. **PERPS Trading** -- Jupiter Perps integration, 3-second OODA cycles, Auto-TP/SL, position charts, session P&L tracking, MoltBot persona, Chat panel
 
 Every line of TypeScript, Rust, and Circom was written by Claude. No human-written code.
 

@@ -4,27 +4,22 @@ import { useState, useCallback, useEffect } from 'react';
 
 export type LLMProviderId = 'anthropic' | 'openai' | 'qwen';
 
+export type SigningMode = 'agent' | 'wallet';
+
 export interface LLMConfig {
-  providerId: LLMProviderId;
-  apiKey: string;
-  model: string;
-  temperature: number;
+  // Local model endpoint (LM Studio / Ollama / vLLM — OpenAI-compatible)
+  localEndpoint: string; // e.g. http://localhost:1234
+
+  // Cloud LLM API keys
+  llmKeys: Partial<Record<LLMProviderId, string>>;
+
   enablePolymarket: boolean;
+
+  // Execution signing mode: 'agent' = server-side keypair, 'wallet' = Phantom approval
+  signingMode: SigningMode;
 }
 
 const STORAGE_KEY = 'makora_llm_config';
-
-const PROVIDER_MODELS: Record<LLMProviderId, string[]> = {
-  anthropic: ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414'],
-  openai: ['gpt-4o', 'gpt-4o-mini'],
-  qwen: ['qwen-plus', 'qwen-turbo'],
-};
-
-const DEFAULT_MODEL: Record<LLMProviderId, string> = {
-  anthropic: 'claude-sonnet-4-20250514',
-  openai: 'gpt-4o-mini',
-  qwen: 'qwen-plus',
-};
 
 function loadConfig(): LLMConfig | null {
   if (typeof window === 'undefined') return null;
@@ -32,7 +27,10 @@ function loadConfig(): LLMConfig | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed.providerId || !parsed.apiKey) return null;
+    // Accept if at least local endpoint or one cloud key is set
+    const hasLocal = parsed.localEndpoint && parsed.localEndpoint.length > 0;
+    const hasCloud = parsed.llmKeys && Object.values(parsed.llmKeys).some((k: unknown) => typeof k === 'string' && k.length > 0);
+    if (!hasLocal && !hasCloud) return null;
     return parsed;
   } catch {
     return null;
@@ -60,14 +58,16 @@ export function useLLMConfig() {
     } catch { /* ignore */ }
   }, []);
 
-  const isConfigured = config !== null && config.apiKey.length > 0;
+  const hasLocalModel = config !== null && config.localEndpoint.length > 0;
+  const hasCloudKey = config !== null && Object.values(config.llmKeys).some(k => k && k.length > 0);
+  const isConfigured = hasLocalModel || hasCloudKey;
 
   return {
     config,
     setConfig,
     clearConfig,
+    hasLocalModel,
+    hasCloudKey,
     isConfigured,
-    providerModels: PROVIDER_MODELS,
-    defaultModel: DEFAULT_MODEL,
   };
 }

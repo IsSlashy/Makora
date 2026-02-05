@@ -48,3 +48,11 @@ pnpm-install-output.txt
 con
 nul
 dev-log.txt
+
+# Build / deploy artifacts
+build-*.txt
+deploy-*.txt
+vercel-debug.txt
+vercel-ls.txt
+*.b64
+temp_pkg*

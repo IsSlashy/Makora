@@ -25,6 +25,10 @@ export interface VaultState {
   inSessionAmount: BN;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Vault is now 100% on-chain (devnet) - localStorage fallback removed
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function useVault() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
@@ -36,20 +40,19 @@ export function useVault() {
   const [lastTxSig, setLastTxSig] = useState<string | null>(null);
 
   const fetchVaultState = useCallback(async () => {
-    if (!publicKey || !vaultProgram) return;
+    if (!publicKey) return;
+    if (!vaultProgram) return;
 
     try {
       const [vaultPDA] = getVaultPDA(publicKey);
       const account = await (vaultProgram.account as any).vault.fetch(vaultPDA);
       setVaultState(account as any);
 
-      // Get actual lamport balance of the vault PDA
       const balance = await connection.getBalance(vaultPDA);
       setVaultBalance(balance / LAMPORTS_PER_SOL);
       setError(null);
     } catch (e: any) {
-      // Account doesn't exist yet — that's fine
-      if (e.message?.includes('Account does not exist') || e.message?.includes('could not find')) {
+      if (e.message?.includes('Account does not exist') || e.message?.includes('could not find') || e.message?.includes('does not exist') || e.message?.includes('403') || e.message?.includes('Attempt to load')) {
         setVaultState(null);
         setVaultBalance(0);
       } else {
@@ -58,7 +61,7 @@ export function useVault() {
     }
   }, [publicKey, vaultProgram, connection]);
 
-  // Single initial fetch on wallet connect (throttle middleware prevents 429 cascade)
+  // Single initial fetch on wallet connect
   useEffect(() => {
     fetchVaultState();
   }, [fetchVaultState]);
@@ -70,7 +73,8 @@ export function useVault() {
     minSolReserve?: number;
     maxProtocolExposurePct?: number;
   }) => {
-    if (!publicKey || !vaultProgram) throw new Error('Wallet not connected');
+    if (!publicKey) throw new Error('Wallet not connected');
+    if (!vaultProgram) throw new Error('Wallet not connected');
 
     setLoading(true);
     setError(null);
@@ -105,7 +109,8 @@ export function useVault() {
   }, [publicKey, vaultProgram, connection, fetchVaultState]);
 
   const deposit = useCallback(async (solAmount: number) => {
-    if (!publicKey || !vaultProgram) throw new Error('Wallet not connected');
+    if (!publicKey) throw new Error('Wallet not connected');
+    if (!vaultProgram) throw new Error('Wallet not connected');
     if (solAmount <= 0) throw new Error('Amount must be positive');
 
     setLoading(true);
@@ -134,14 +139,13 @@ export function useVault() {
   }, [publicKey, vaultProgram, connection, fetchVaultState]);
 
   const withdraw = useCallback(async (solAmount: number) => {
-    if (!publicKey || !vaultProgram) throw new Error('Wallet not connected');
+    if (!publicKey) throw new Error('Wallet not connected');
+    if (!vaultProgram) throw new Error('Wallet not connected');
     if (solAmount <= 0) throw new Error('Amount must be positive');
 
     setLoading(true);
     setError(null);
     try {
-      // Fetch fresh vault state to get accurate deposited/withdrawn values
-      // (the closure may hold a stale vaultState from an earlier render)
       const [vaultPDA] = getVaultPDA(publicKey);
       const freshVault = await (vaultProgram.account as any).vault.fetch(vaultPDA) as VaultState;
       const maxWithdrawable = freshVault.totalDeposited.sub(freshVault.totalWithdrawn).toNumber() / LAMPORTS_PER_SOL;
@@ -171,7 +175,8 @@ export function useVault() {
   }, [publicKey, vaultProgram, connection, fetchVaultState]);
 
   const setMode = useCallback(async (mode: 'advisory' | 'auto') => {
-    if (!publicKey || !vaultProgram) throw new Error('Wallet not connected');
+    if (!publicKey) throw new Error('Wallet not connected');
+    if (!vaultProgram) throw new Error('Wallet not connected');
 
     setLoading(true);
     setError(null);

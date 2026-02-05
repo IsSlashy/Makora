@@ -5,8 +5,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { provider, apiKey, model } = body;
 
-    if (!provider || !apiKey || !model) {
+    if (!provider || !model) {
       return NextResponse.json({ ok: false, error: 'Missing fields' }, { status: 400 });
+    }
+    if (!apiKey) {
+      return NextResponse.json({ ok: false, error: 'Missing API key' }, { status: 400 });
     }
 
     let url: string;

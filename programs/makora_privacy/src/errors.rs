@@ -14,4 +14,6 @@ pub enum PrivacyError {
     UnauthorizedClaim,
     #[msg("Nullifier already used (double-spend attempt).")]
     NullifierAlreadyUsed,
+    #[msg("Invalid zero-knowledge proof.")]
+    InvalidProof,
 }

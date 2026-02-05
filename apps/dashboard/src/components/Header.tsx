@@ -2,11 +2,15 @@
 
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletButton } from './WalletButton';
+import { TradingModeBadge } from './TradingModeSelector';
+import type { TradingMode } from '@/hooks/useOODALoop';
 
 interface HeaderProps {
   onSettingsOpen?: () => void;
   llmModel?: string;
   sentimentBias?: 'bullish' | 'neutral' | 'bearish';
+  tradingMode?: TradingMode;
+  onTradingModeChange?: (mode: TradingMode) => void;
 }
 
 const BIAS_DOT: Record<string, string> = {
@@ -15,12 +19,19 @@ const BIAS_DOT: Record<string, string> = {
   bearish: 'bg-negative',
 };
 
-export const Header = ({ onSettingsOpen, llmModel, sentimentBias }: HeaderProps) => {
+export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, onTradingModeChange }: HeaderProps) => {
   const { publicKey, connected } = useWallet();
+
+  // Toggle between trading modes
+  const handleModeClick = () => {
+    if (onTradingModeChange && tradingMode) {
+      onTradingModeChange(tradingMode === 'invest' ? 'perps' : 'invest');
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-bg-void/90 backdrop-blur-sm border-b border-cursed/10">
-      <div className="max-w-[1400px] mx-auto px-6 py-3">
+      <div className="max-w-[1400px] mx-auto px-6 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-5">
             {/* Logo */}
@@ -35,6 +46,9 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias }: HeaderProps)
                 MAKORA
               </h1>
             </div>
+
+            {/* Version */}
+            <span className="hidden md:inline text-[9px] font-mono text-text-muted tracking-wider">v0.1</span>
 
             {/* Status */}
             <div className="hidden md:flex items-center gap-2 px-3 py-1 border border-cursed/20 bg-cursed-faint">
@@ -63,13 +77,28 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias }: HeaderProps)
                 </span>
               </div>
             )}
+
+            {/* Trading mode badge */}
+            {tradingMode && (
+              <TradingModeBadge mode={tradingMode} onClick={handleModeClick} />
+            )}
           </div>
 
           <div className="flex items-center gap-4">
             {/* Network */}
             <div className="hidden md:flex items-center gap-2 text-[10px] text-text-muted font-mono tracking-wider uppercase">
               <div className={`w-1.5 h-1.5 ${connected ? 'bg-positive' : 'bg-text-muted'}`} />
-              Devnet
+              {(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta' ? 'Mainnet' : process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'Devnet'}
+            </div>
+
+            {/* External links */}
+            <div className="hidden md:flex items-center gap-3">
+              <a href="https://github.com/IsSlashy/Makora" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
+                GitHub
+              </a>
+              <a href="https://x.com/Protocol01_" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
+                Twitter
+              </a>
             </div>
 
             {/* Settings gear */}

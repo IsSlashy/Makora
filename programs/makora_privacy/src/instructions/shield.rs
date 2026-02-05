@@ -23,6 +23,7 @@ pub fn handler(
     ctx: Context<Shield>,
     amount: u64,
     commitment: [u8; 32],
+    new_root: [u8; 32],
 ) -> Result<()> {
     require!(amount > 0, PrivacyError::InvalidAmount);
 
@@ -52,7 +53,9 @@ pub fn handler(
 
     pool.last_tx_at = clock.unix_timestamp;
 
-    // Emit commitment as event (in real ZK system, this would be added to merkle tree)
+    // Store updated Merkle root after inserting the new commitment leaf
+    pool.merkle_root = new_root;
+
     msg!(
         "Shield deposit: {} lamports | leaf_index: {} | commitment: {:?}",
         amount,

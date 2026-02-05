@@ -44,17 +44,26 @@ export const PortfolioCard = () => {
     // No polling — OODA loop handles periodic updates to avoid 429 rate limits
   }, [fetchBalance]);
 
-  const totalValue = walletBalance + vaultBalance + inSessionAmount;
+  // On mainnet, local vault is a soft allocation within the wallet — don't double-count
+  const isMainnet = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta';
+  const totalValue = isMainnet
+    ? walletBalance + inSessionAmount // vault is subset of wallet on mainnet
+    : walletBalance + vaultBalance + inSessionAmount; // on devnet, vault holds real SOL in PDA
+
+  // Free SOL = wallet minus vault allocation on mainnet
+  const freeSol = isMainnet
+    ? Math.max(0, walletBalance - vaultBalance)
+    : walletBalance;
 
   // Build token list from real data
   const tokens: TokenBalance[] = [];
   if (totalValue > 0) {
-    if (walletBalance > 0) {
+    if (freeSol > 0) {
       tokens.push({
         symbol: 'SOL',
-        amount: walletBalance,
-        value: walletBalance,
-        percentage: Math.round((walletBalance / totalValue) * 100),
+        amount: freeSol,
+        value: freeSol,
+        percentage: Math.round((freeSol / totalValue) * 100),
       });
     }
     if (availableBalance > 0) {
@@ -147,13 +156,15 @@ export const PortfolioCard = () => {
     <div className="cursed-card p-5 animate-fade-up">
       <div className="flex items-center justify-between mb-5">
         <div className="section-title">Portfolio</div>
-        <button
-          onClick={handleAirdrop}
-          disabled={airdropping}
-          className="text-[9px] font-mono tracking-wider px-2 py-1 border border-cursed/20 text-cursed hover:bg-cursed/10 transition-colors uppercase disabled:opacity-50"
-        >
-          {airdropping ? 'AIRDROPPING...' : 'AIRDROP 2 SOL'}
-        </button>
+        {(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') !== 'mainnet-beta' && (
+          <button
+            onClick={handleAirdrop}
+            disabled={airdropping}
+            className="text-[9px] font-mono tracking-wider px-2 py-1 border border-cursed/20 text-cursed hover:bg-cursed/10 transition-colors uppercase disabled:opacity-50"
+          >
+            {airdropping ? 'AIRDROPPING...' : 'AIRDROP 2 SOL'}
+          </button>
+        )}
       </div>
 
       <div className="mb-4">
@@ -162,7 +173,7 @@ export const PortfolioCard = () => {
         </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-text-muted text-[10px] font-mono">
-            Wallet: {walletBalance.toFixed(4)}
+            Wallet: {freeSol.toFixed(4)}
           </span>
           {availableBalance > 0 && (
             <>
@@ -225,9 +236,8 @@ export const PortfolioCard = () => {
         )}
       </div>
 
-      <div className="ink-divider mt-4 mb-3" />
-
       {/* Vault actions */}
+      <div className="ink-divider mt-4 mb-3" />
       {!vaultState ? (
         <button
           onClick={handleInitVault}
@@ -307,7 +317,7 @@ export const PortfolioCard = () => {
       {lastTxSig && (
         <div className="mt-2">
           <a
-            href={`https://explorer.solana.com/tx/${lastTxSig}?cluster=devnet`}
+            href={`https://explorer.solana.com/tx/${lastTxSig}${(process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') === 'mainnet-beta' ? '' : '?cluster=devnet'}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[9px] font-mono text-cursed/70 hover:text-cursed transition-colors truncate block"

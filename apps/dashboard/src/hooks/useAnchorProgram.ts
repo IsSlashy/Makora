@@ -25,6 +25,8 @@ export function useAnchorProvider() {
   }, [connection, wallet]);
 }
 
+// Programs work on devnet - mainnet blocking removed for MoltBot intelligence
+
 export function useVaultProgram() {
   const provider = useAnchorProvider();
 

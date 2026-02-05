@@ -19,7 +19,7 @@ export const ActivityFeed = () => {
   };
 
   return (
-    <div className="cursed-card p-5 animate-fade-up h-full flex flex-col max-h-[420px]">
+    <div className="cursed-card p-5 animate-fade-up h-full flex flex-col">
       <div className="flex items-center justify-between mb-5">
         <div className="section-title">Activity</div>
         <div className="flex items-center gap-1.5">
