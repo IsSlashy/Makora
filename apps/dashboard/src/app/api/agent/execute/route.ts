@@ -242,7 +242,7 @@ async function getJupiterSwapTransaction(
     }
 
     const txBuf = Buffer.from(data.swapTransaction, 'base64');
-    const transaction = VersionedTransaction.deserialize(txBuf);
+    const transaction = VersionedTransaction.deserialize(new Uint8Array(txBuf));
     return { transaction };
   } catch (err) {
     return { transaction: null, error: err instanceof Error ? err.message : 'Jupiter swap failed' };
