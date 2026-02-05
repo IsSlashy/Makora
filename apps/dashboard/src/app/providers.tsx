@@ -54,7 +54,11 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
 
   const endpoint = useMemo(() => {
     const custom = process.env.NEXT_PUBLIC_RPC_URL;
-    if (custom) return custom;
+    if (custom && !custom.includes('api.devnet.solana.com')) return custom;
+    // Fallback to Helius public devnet (more reliable than api.devnet.solana.com)
+    if (network === WalletAdapterNetwork.Devnet) {
+      return 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
+    }
     return clusterApiUrl(network);
   }, [network]);
 
