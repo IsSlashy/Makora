@@ -16,6 +16,7 @@ import { ExecutionPanel } from '@/components/ExecutionPanel';
 import { SelfEvaluationPanel } from '@/components/SelfEvaluationPanel';
 import { PositionsPanel } from '@/components/PositionsPanel';
 import { PerformanceHistoryPanel } from '@/components/PerformanceHistoryPanel';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useOODALoop } from '@/hooks/useOODALoop';
 import type { PastDecision } from '@/hooks/useSelfEvaluation';
 import { useYieldData } from '@/hooks/useYieldData';
@@ -472,13 +473,15 @@ export default function Home() {
 
           {/* Onboarding banner for edge cases */}
           {!bannerDismissed && (
-            <div className="flex-shrink-0 mb-2">
-              <OnboardingBanner
-                walletConnected={!!publicKey}
-                llmConfigured={isConfigured}
-                onDismiss={() => setBannerDismissed(true)}
-              />
-            </div>
+            <ErrorBoundary fallback={null}>
+              <div className="flex-shrink-0 mb-2">
+                <OnboardingBanner
+                  walletConnected={!!publicKey}
+                  llmConfigured={isConfigured}
+                  onDismiss={() => setBannerDismissed(true)}
+                />
+              </div>
+            </ErrorBoundary>
           )}
 
           {/* Top row: Wheel + Chat */}
@@ -566,9 +569,11 @@ export default function Home() {
                       <ActivityFeed />
                     </div>
                   </div>
-                  <div className="min-h-0 overflow-auto">
-                    <PerformanceHistoryPanel />
-                  </div>
+                  <ErrorBoundary>
+                    <div className="min-h-0 overflow-auto">
+                      <PerformanceHistoryPanel />
+                    </div>
+                  </ErrorBoundary>
                 </div>
               )}
 
@@ -582,12 +587,14 @@ export default function Home() {
                       error={polyError}
                     />
                   </div>
-                  <div className="min-h-0 overflow-auto">
-                    <SelfEvaluationPanel
-                      decisions={selfEvalDecisions}
-                      llmConfig={selfEvalLLMConfig}
-                    />
-                  </div>
+                  <ErrorBoundary>
+                    <div className="min-h-0 overflow-auto">
+                      <SelfEvaluationPanel
+                        decisions={selfEvalDecisions}
+                        llmConfig={selfEvalLLMConfig}
+                      />
+                    </div>
+                  </ErrorBoundary>
                   <div className="min-h-0 overflow-auto">
                     <ActivityFeed />
                   </div>

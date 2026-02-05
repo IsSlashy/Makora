@@ -107,6 +107,7 @@ Respond ONLY with the JSON object.`;
 
   // Load persisted evaluation on mount
   const loadEvaluation = useCallback(() => {
+    if (typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem('makora-self-evaluation');
       if (stored) setEvaluation(JSON.parse(stored));
