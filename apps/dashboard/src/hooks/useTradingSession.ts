@@ -390,7 +390,7 @@ export function useTradingSession() {
     } catch { /* ignore */ }
     sessionRef.current = initialState();
     setSession(initialState());
-    callbacksRef.current.onStopLoop?.();
+    callbacksRef.current?.onStopLoop?.();
   }, []);
 
   // ── Computed values ────────────────────────────────────────────────────────
