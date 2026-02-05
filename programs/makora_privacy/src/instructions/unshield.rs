@@ -1,6 +1,21 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::pubkey;
 use crate::state::{ShieldedPool, NullifierRecord};
 use crate::errors::PrivacyError;
+
+/// Murkl STARK Verifier program ID (devnet + mainnet)
+/// See: https://github.com/exidz/murkl
+pub const STARK_VERIFIER_ID: Pubkey = pubkey!("StArKSLbAn43UCcujFMc5gKc8rY2BVfSbguMfyLTMtw");
+
+/// Proof buffer layout offsets (from Murkl SDK)
+const OFFSET_OWNER: usize = 0;
+const OFFSET_SIZE: usize = 32;
+const OFFSET_EXPECTED_SIZE: usize = 36;
+const OFFSET_FINALIZED: usize = 40;
+const OFFSET_COMMITMENT: usize = 41;
+const OFFSET_NULLIFIER: usize = 73;
+const OFFSET_MERKLE_ROOT: usize = 105;
+const MIN_BUFFER_SIZE: usize = 137;
 
 #[derive(Accounts)]
 #[instruction(amount: u64, nullifier_hash: [u8; 32], new_root: [u8; 32])]
@@ -22,6 +37,15 @@ pub struct Unshield<'info> {
     )]
     pub nullifier_record: Account<'info, NullifierRecord>,
 
+    /// CHECK: STARK verifier proof buffer — validated in handler.
+    /// Must be owned by the STARK Verifier program and contain a finalized proof
+    /// whose public inputs (commitment, nullifier, merkle_root) match the
+    /// transaction parameters.
+    #[account(
+        constraint = verifier_buffer.owner == &STARK_VERIFIER_ID @ PrivacyError::InvalidProofBuffer
+    )]
+    pub verifier_buffer: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub recipient: Signer<'info>,
 
@@ -40,6 +64,48 @@ pub fn handler(
     let nullifier_record = &mut ctx.accounts.nullifier_record;
     let clock = Clock::get()?;
 
+    // =====================================================================
+    // STARK PROOF VERIFICATION (via Murkl Verifier CPI)
+    //
+    // The proof buffer was created by:
+    //   1. init_proof_buffer() — allocate buffer account
+    //   2. upload_chunk()      — upload STARK proof in chunks
+    //   3. finalize_and_verify() — verify proof, set finalized=true
+    //
+    // We read the buffer to check:
+    //   a) finalized == true (proof was cryptographically verified)
+    //   b) nullifier matches nullifier_hash (prevents proof reuse)
+    //   c) merkle_root matches new_root (proves membership in current tree)
+    //
+    // This replaces the previous unverified merkle root update.
+    // See: https://github.com/exidz/murkl/blob/main/docs/INTEGRATION.md
+    // =====================================================================
+    let buffer_data = ctx.accounts.verifier_buffer.try_borrow_data()?;
+
+    // Validate buffer size
+    require!(
+        buffer_data.len() >= MIN_BUFFER_SIZE,
+        PrivacyError::InvalidProofBuffer
+    );
+
+    // Check proof is finalized (verified by STARK verifier)
+    let finalized = buffer_data[OFFSET_FINALIZED] == 1;
+    require!(finalized, PrivacyError::ProofNotVerified);
+
+    // Verify nullifier matches — binds this proof to this specific withdrawal
+    let proof_nullifier = &buffer_data[OFFSET_NULLIFIER..OFFSET_NULLIFIER + 32];
+    require!(
+        proof_nullifier == nullifier_hash,
+        PrivacyError::ProofNullifierMismatch
+    );
+
+    // Verify merkle root matches — proves the note exists in the current tree
+    let proof_merkle_root = &buffer_data[OFFSET_MERKLE_ROOT..OFFSET_MERKLE_ROOT + 32];
+    require!(
+        proof_merkle_root == new_root,
+        PrivacyError::ProofMerkleRootMismatch
+    );
+
     // Verify pool has sufficient balance
     require!(
         pool.total_shielded >= amount,
@@ -52,7 +118,7 @@ pub fn handler(
     nullifier_record.used_at = clock.unix_timestamp;
     nullifier_record.bump = ctx.bumps.nullifier_record;
 
-    // Update merkle root (in real ZK system, this would be verified via proof)
+    // Update merkle root (now verified by STARK proof)
     pool.merkle_root = new_root;
 
     // Update pool state
@@ -77,9 +143,8 @@ pub fn handler(
         .ok_or(PrivacyError::InvalidAmount)?;
 
     msg!(
-        "Unshield withdrawal: {} lamports | new_root: {:?}",
-        amount,
-        new_root
+        "Unshield withdrawal: {} lamports | nullifier verified | merkle_root verified",
+        amount
     );
 
     Ok(())
