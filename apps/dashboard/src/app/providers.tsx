@@ -54,13 +54,20 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
 
   const endpoint = useMemo(() => {
     const custom = process.env.NEXT_PUBLIC_RPC_URL;
-    if (custom && !custom.includes('api.devnet.solana.com')) return custom;
-    // Fallback to Helius public devnet (more reliable than api.devnet.solana.com)
-    if (network === WalletAdapterNetwork.Devnet) {
+
+    // ALWAYS use Helius for devnet - public RPC has 403 rate limits
+    const isDevnet = network === WalletAdapterNetwork.Devnet ||
+                     networkEnv === 'devnet' ||
+                     (custom && custom.includes('devnet'));
+
+    if (isDevnet) {
       return 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
     }
+
+    // For non-devnet, use custom RPC or default
+    if (custom) return custom;
     return clusterApiUrl(network);
-  }, [network]);
+  }, [network, networkEnv]);
 
   // Disable automatic retry on 429 to prevent infinite cascade,
   // and throttle requests to ~5/sec via fetchMiddleware.
