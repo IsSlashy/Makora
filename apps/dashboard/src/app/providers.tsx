@@ -44,8 +44,8 @@ const ActivityProvider: FC<{ children: ReactNode }> = ({ children }) => {
 };
 
 export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
-  // Read network from env (defaults to mainnet-beta for real execution)
-  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta';
+  // Read network from env (defaults to devnet for hackathon demo)
+  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
   const network = networkEnv === 'devnet'
     ? WalletAdapterNetwork.Devnet
     : networkEnv === 'testnet'
