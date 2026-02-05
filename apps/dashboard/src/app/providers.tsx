@@ -47,10 +47,10 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
   // HARDCODED: Devnet + Helius RPC for hackathon demo
   const network = WalletAdapterNetwork.Devnet;
 
-  // HARDCODED: Always use Helius devnet - no conditions, no env vars
-  const endpoint = 'https://devnet.helius-rpc.com/?api-key=1d8740dc-e5f4-421c-b823-e1bad1889eff';
+  // HARDCODED: Use Ankr public devnet (no API key needed)
+  const endpoint = 'https://rpc.ankr.com/solana_devnet';
 
-  console.log('[RPC] HARDCODED Helius devnet:', endpoint);
+  console.log('[RPC] Using Ankr devnet:', endpoint);
 
   // Disable automatic retry on 429 to prevent infinite cascade,
   // and throttle requests to ~5/sec via fetchMiddleware.
