@@ -1442,7 +1442,7 @@ DO NOT suggest perp-long, perp-short, or perp-close actions in INVEST mode.`);
 
                   // Deserialize the unsigned transaction
                   const txBuf = Buffer.from(result.unsignedTx, 'base64');
-                  const tx = VersionedTransaction.deserialize(txBuf);
+                  const tx = VersionedTransaction.deserialize(new Uint8Array(txBuf));
 
                   // Sign with wallet adapter (Phantom popup)
                   const signedTx = await depsRef.current.signTransaction!(tx);
