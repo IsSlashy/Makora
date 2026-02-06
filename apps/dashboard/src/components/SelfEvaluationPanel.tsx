@@ -58,7 +58,7 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
         <button
           onClick={handleRunEvaluation}
           disabled={!canEvaluate}
-          className="text-[9px] font-mono tracking-[0.15em] uppercase px-3 py-1.5 bg-cursed/10 border border-cursed/30 text-cursed hover:bg-cursed/20 transition-colors font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-[11px] md:text-[9px] font-mono tracking-[0.15em] uppercase px-3 py-1.5 min-h-[44px] md:min-h-0 bg-cursed/10 border border-cursed/30 text-cursed hover:bg-cursed/20 transition-colors font-bold disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isEvaluating ? 'EVALUATING...' : 'RUN EVALUATION'}
         </button>
@@ -100,23 +100,23 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
           <div className="flex items-center gap-3">
             {/* Win Rate */}
             <div className="flex-1 p-3 bg-bg-inner border border-cursed/8">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Win Rate</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Win Rate</div>
               <div className={`text-lg font-mono font-bold ${evaluation.winRate >= 0.5 ? 'text-positive' : 'text-negative'}`}>
                 {(evaluation.winRate * 100).toFixed(0)}%
               </div>
-              <div className="text-[9px] font-mono text-text-muted">
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                 {evaluation.totalDecisions} decisions
               </div>
             </div>
 
             {/* Confidence Adjustment */}
             <div className="flex-1 p-3 bg-bg-inner border border-cursed/8">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Confidence Adj.</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Confidence Adj.</div>
               <div className="flex items-center gap-2">
                 <span className={`text-lg font-mono font-bold ${evaluation.confidenceAdjustment >= 0 ? 'text-positive' : 'text-negative'}`}>
                   {evaluation.confidenceAdjustment > 0 ? '+' : ''}{evaluation.confidenceAdjustment}
                 </span>
-                <span className={`text-[9px] font-mono px-2 py-0.5 border ${getConfidenceStyle(evaluation.confidenceAdjustment)}`}>
+                <span className={`text-[11px] md:text-[9px] font-mono px-2 py-0.5 border ${getConfidenceStyle(evaluation.confidenceAdjustment)}`}>
                   {evaluation.confidenceAdjustment > 2 ? 'MORE AGGRESSIVE' :
                    evaluation.confidenceAdjustment < -2 ? 'MORE CAUTIOUS' : 'STEADY'}
                 </span>
@@ -126,7 +126,7 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
 
           {/* Summary */}
           <div className="p-3 bg-bg-inner border border-cursed/12">
-            <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-2">Summary</div>
+            <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-2">Summary</div>
             <div className="text-[11px] font-mono text-text-secondary leading-relaxed">
               {evaluation.summary}
             </div>
@@ -135,7 +135,7 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
           {/* Patterns detected */}
           {evaluation.patterns.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase">Patterns Detected</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase">Patterns Detected</div>
               {evaluation.patterns.map((pattern, i) => (
                 <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-text-secondary">
                   <span className="text-cursed/60 mt-0.5 flex-shrink-0">&bull;</span>
@@ -148,7 +148,7 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
           {/* Adjustments */}
           {evaluation.adjustments.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase">Recommended Adjustments</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase">Recommended Adjustments</div>
               {evaluation.adjustments.map((adj, i) => (
                 <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-text-secondary">
                   <span className="text-caution/60 mt-0.5 flex-shrink-0">&rsaquo;</span>
@@ -159,7 +159,7 @@ export const SelfEvaluationPanel = ({ decisions, llmConfig }: SelfEvaluationPane
           )}
 
           {/* Timestamp */}
-          <div className="pt-3 border-t border-cursed/8 text-[9px] font-mono text-text-muted tracking-wider">
+          <div className="pt-3 border-t border-cursed/8 text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider">
             Last evaluated: {formatTimestamp(evaluation.evaluatedAt)}
           </div>
         </div>

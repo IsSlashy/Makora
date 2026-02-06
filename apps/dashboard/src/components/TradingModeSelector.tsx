@@ -59,7 +59,7 @@ export const TradingModeSelector = ({
             <span className="text-sm">{MODE_ICONS[mode]}</span>
             <span>{mode.toUpperCase()}</span>
             {isActive && (
-              <span className="text-[8px] opacity-70">
+              <span className="text-[10px] md:text-[8px] opacity-70">
                 {mode === 'invest' ? '5min' : '20s'}
               </span>
             )}
@@ -85,7 +85,7 @@ export const TradingModeBadge = ({
     <button
       onClick={onClick}
       className={`
-        flex items-center gap-1.5 px-2 py-1 text-[9px] font-mono tracking-wider uppercase
+        flex items-center gap-1.5 px-2 py-1 min-h-[44px] md:min-h-0 text-[11px] md:text-[9px] font-mono tracking-wider uppercase
         ${colors.bg} ${colors.border} ${colors.text} border
         hover:opacity-80 transition-opacity
       `}

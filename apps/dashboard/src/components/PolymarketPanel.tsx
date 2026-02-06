@@ -53,7 +53,7 @@ export const PolymarketPanel = ({ intelligence, loading, error }: PolymarketPane
       </div>
 
       {error && (
-        <div className="mb-3 text-[9px] font-mono text-caution">{error}</div>
+        <div className="mb-3 text-[11px] md:text-[9px] font-mono text-caution">{error}</div>
       )}
 
       {/* Sentiment summary */}
@@ -80,14 +80,14 @@ export const PolymarketPanel = ({ intelligence, loading, error }: PolymarketPane
               <div className="text-[10px] font-mono text-text-secondary leading-snug mb-1.5">
                 {market.question}
               </div>
-              <div className="flex items-center justify-between text-[9px] font-mono">
+              <div className="flex items-center justify-between text-[11px] md:text-[9px] font-mono">
                 <div className="flex items-center gap-3">
                   {/* Probability bar */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-text-primary font-bold">{formatProbability(market.probability)}</span>
                     <span className="text-text-muted">YES</span>
                   </div>
-                  <div className="w-16 h-1 bg-bg-void overflow-hidden">
+                  <div className="w-20 md:w-16 h-1.5 md:h-1 bg-bg-void overflow-hidden">
                     <div
                       className="h-full bg-cursed/40"
                       style={{ width: `${probPct}%` }}

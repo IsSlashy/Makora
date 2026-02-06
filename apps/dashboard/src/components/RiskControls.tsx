@@ -96,26 +96,26 @@ export const RiskControls = ({
       ) : (
         <div className="space-y-4">
           {/* Source indicator */}
-          <div className={`text-[9px] font-mono tracking-wider ${sourceColor}`}>
+          <div className={`text-[11px] md:text-[9px] font-mono tracking-wider ${sourceColor}`}>
             {sourceLabel}
           </div>
 
           {/* Read-only 2x2 Risk Params Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-bg-inner border border-cursed/10 p-3">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Max Position</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Max Position</div>
               <div className="text-lg font-mono font-bold text-cursed">{maxPos}%</div>
             </div>
             <div className="bg-bg-inner border border-cursed/10 p-3">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Max Slippage</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Max Slippage</div>
               <div className="text-lg font-mono font-bold text-cursed">{maxSlip}<span className="text-[10px] text-text-muted ml-0.5">bps</span></div>
             </div>
             <div className="bg-bg-inner border border-cursed/10 p-3">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Daily Loss Limit</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Daily Loss Limit</div>
               <div className="text-lg font-mono font-bold text-caution">{dailyLoss}%</div>
             </div>
             <div className="bg-bg-inner border border-cursed/10 p-3">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Stop Loss</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Stop Loss</div>
               <div className="text-lg font-mono font-bold text-negative">{stopLoss}%</div>
             </div>
           </div>
@@ -126,13 +126,13 @@ export const RiskControls = ({
               <div className="ink-divider" />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Agent Budget (Vault)</div>
+                  <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Agent Budget (Vault)</div>
                   <div className="text-sm font-mono font-bold text-positive">
                     {(vaultBalance ?? 0) > 0 ? `${vaultBalance!.toFixed(4)} SOL` : '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Your Funds (Wallet)</div>
+                  <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">Your Funds (Wallet)</div>
                   <div className="text-sm font-mono font-bold text-text-primary">
                     {walletBalance !== undefined ? `${walletBalance.toFixed(4)} SOL` : '—'}
                   </div>
@@ -177,11 +177,11 @@ export const RiskControls = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-mono font-bold text-text-primary mb-0.5">Agent Mode</div>
-                <div className="text-[9px] font-mono text-text-muted">
+                <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                   {isAutoMode ? 'Agent executes autonomously' : 'Agent suggests, you confirm'}
                 </div>
                 {!vaultState && isAutoMode && (
-                  <div className="text-[8px] font-mono text-caution mt-0.5">LOCAL MODE — no on-chain vault</div>
+                  <div className="text-[10px] md:text-[8px] font-mono text-caution mt-0.5">LOCAL MODE — no on-chain vault</div>
                 )}
               </div>
               <button
@@ -208,13 +208,13 @@ export const RiskControls = ({
                     setModeLoading(false);
                   }
                 }}
-                className={`relative w-10 h-5 transition-colors ${
+                className={`relative w-11 h-6 md:w-10 md:h-5 transition-colors ${
                   isAutoMode ? 'bg-positive/30' : 'bg-bg-inner'
                 } border ${isAutoMode ? 'border-positive/40' : 'border-text-muted/20'} ${
                   modeLoading ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
-                <span className={`absolute top-0.5 w-4 h-4 transition-transform ${
+                <span className={`absolute top-0.5 w-5 h-5 md:w-4 md:h-4 transition-transform ${
                   isAutoMode ? 'left-5 bg-positive' : 'left-0.5 bg-text-muted'
                 }`} />
               </button>
@@ -224,7 +224,7 @@ export const RiskControls = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-mono font-bold text-text-primary mb-0.5">Signing Mode</div>
-                <div className="text-[9px] font-mono text-text-muted">
+                <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                   {signingMode === 'agent' ? 'Server keypair signs txs' : 'Wallet approves each tx'}
                 </div>
               </div>
@@ -234,7 +234,7 @@ export const RiskControls = ({
                     onSetSigningMode?.('wallet');
                     addActivity({ action: 'Signing mode → WALLET (manual approval)', status: 'adapt' });
                   }}
-                  className={`px-2 py-1 text-[9px] font-mono tracking-wider border transition-colors ${
+                  className={`px-3 py-2 md:px-2 md:py-1 min-h-[44px] md:min-h-0 text-[11px] md:text-[9px] font-mono tracking-wider border transition-colors ${
                     signingMode === 'wallet'
                       ? 'text-cursed border-cursed/40 bg-cursed/10'
                       : 'text-text-muted border-text-muted/20 hover:border-text-muted/40'
@@ -247,7 +247,7 @@ export const RiskControls = ({
                     onSetSigningMode?.('agent');
                     addActivity({ action: 'Signing mode → AGENT (autonomous)', status: 'warning' });
                   }}
-                  className={`px-2 py-1 text-[9px] font-mono tracking-wider border transition-colors ${
+                  className={`px-3 py-2 md:px-2 md:py-1 min-h-[44px] md:min-h-0 text-[11px] md:text-[9px] font-mono tracking-wider border transition-colors ${
                     signingMode === 'agent'
                       ? 'text-negative border-negative/40 bg-negative/10'
                       : 'text-text-muted border-text-muted/20 hover:border-text-muted/40'

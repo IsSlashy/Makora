@@ -29,11 +29,11 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
         <div className="section-title">LLM Reasoning</div>
         {provider && (
           <div className="flex items-center gap-2">
-            <div className="text-[9px] font-mono tracking-wider text-text-muted bg-bg-inner border border-cursed/15 px-2 py-0.5">
+            <div className="text-[11px] md:text-[9px] font-mono tracking-wider text-text-muted bg-bg-inner border border-cursed/15 px-2 py-0.5">
               {model || provider}
             </div>
             {latencyMs > 0 && (
-              <div className="text-[9px] font-mono text-text-muted">
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                 {(latencyMs / 1000).toFixed(1)}s
               </div>
             )}
@@ -75,7 +75,7 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
           </div>
           {/* Configuration hint */}
           <div className="p-3 bg-bg-inner border border-cursed/10">
-            <p className="text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">
+            <p className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase mb-1">
               How to fix:
             </p>
             <ol className="text-[10px] font-mono text-text-secondary space-y-1 list-decimal list-inside">
@@ -105,10 +105,10 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
           {/* Key factors */}
           {analysis.marketAssessment.keyFactors.length > 0 && (
             <div className="space-y-1">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase">Key Factors</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase">Key Factors</div>
               <div className="flex flex-wrap gap-1.5">
                 {analysis.marketAssessment.keyFactors.map((f, i) => (
-                  <span key={i} className="text-[9px] font-mono px-2 py-0.5 bg-bg-inner border border-cursed/10 text-text-secondary">
+                  <span key={i} className="text-[11px] md:text-[9px] font-mono px-2 py-0.5 bg-bg-inner border border-cursed/10 text-text-secondary">
                     {f}
                   </span>
                 ))}
@@ -119,7 +119,7 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
           {/* Allocation table */}
           {analysis.allocation.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase">Recommended Allocation</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase">Recommended Allocation</div>
               {analysis.allocation.map((a, i) => (
                 <div key={i} className="flex items-center justify-between text-[10px] font-mono p-2 bg-bg-inner border border-cursed/5">
                   <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export const LLMReasoningPanel = ({ llmOrient, phase }: LLMReasoningPanelProps) 
           {/* Risk warnings */}
           {analysis.riskAssessment.warnings.length > 0 && (
             <div className="space-y-1">
-              <div className="text-[9px] font-mono text-text-muted tracking-wider uppercase">Warnings</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-wider uppercase">Warnings</div>
               {analysis.riskAssessment.warnings.map((w, i) => (
                 <div key={i} className="text-[10px] font-mono text-caution flex items-start gap-1.5">
                   <span className="text-caution/60 mt-0.5">!</span>

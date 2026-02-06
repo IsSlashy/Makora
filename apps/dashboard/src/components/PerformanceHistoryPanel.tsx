@@ -158,13 +158,13 @@ export const PerformanceHistoryPanel = () => {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={handleClear}
-                    className="text-[9px] font-mono text-negative hover:text-negative/80 transition-colors uppercase tracking-wider"
+                    className="text-[11px] md:text-[9px] font-mono text-negative hover:text-negative/80 transition-colors uppercase tracking-wider"
                   >
                     Confirm
                   </button>
                   <button
                     onClick={() => setShowClearConfirm(false)}
-                    className="text-[9px] font-mono text-text-muted hover:text-text-secondary transition-colors uppercase tracking-wider"
+                    className="text-[11px] md:text-[9px] font-mono text-text-muted hover:text-text-secondary transition-colors uppercase tracking-wider"
                   >
                     Cancel
                   </button>
@@ -172,7 +172,7 @@ export const PerformanceHistoryPanel = () => {
               ) : (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="text-[9px] font-mono text-text-muted hover:text-negative transition-colors uppercase tracking-wider"
+                  className="text-[11px] md:text-[9px] font-mono text-text-muted hover:text-negative transition-colors uppercase tracking-wider"
                 >
                   Clear
                 </button>
@@ -185,20 +185,20 @@ export const PerformanceHistoryPanel = () => {
       {!collapsed && (
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Stats row */}
-          <div className="grid grid-cols-4 gap-3 mb-4 flex-shrink-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 flex-shrink-0">
             <div>
-              <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+              <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                 Total Trades
               </div>
               <div className="text-lg font-bold font-mono text-text-primary">
                 {stats.totalTrades}
               </div>
-              <div className="text-[9px] font-mono text-text-muted">
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                 {stats.tradesPerMode.PERPS}P / {stats.tradesPerMode.INVEST}I
               </div>
             </div>
             <div>
-              <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+              <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                 Win Rate
               </div>
               <div className={`text-lg font-bold font-mono ${stats.winRate >= 50 ? 'text-positive' : stats.totalTrades > 0 ? 'text-negative' : 'text-text-primary'}`}>
@@ -206,22 +206,22 @@ export const PerformanceHistoryPanel = () => {
               </div>
             </div>
             <div>
-              <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+              <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                 Total P&L
               </div>
               <div className={`text-lg font-bold font-mono ${stats.totalPnL >= 0 ? 'text-positive' : 'text-negative'}`}>
                 {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toFixed(4)}
               </div>
-              <div className="text-[9px] font-mono text-text-muted">SOL</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted">SOL</div>
             </div>
             <div>
-              <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+              <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                 Avg P&L
               </div>
               <div className={`text-lg font-bold font-mono ${stats.avgPnL >= 0 ? 'text-positive' : 'text-negative'}`}>
                 {stats.avgPnL >= 0 ? '+' : ''}{stats.avgPnL.toFixed(4)}
               </div>
-              <div className="text-[9px] font-mono text-text-muted">SOL/trade</div>
+              <div className="text-[11px] md:text-[9px] font-mono text-text-muted">SOL/trade</div>
             </div>
           </div>
 
@@ -230,26 +230,26 @@ export const PerformanceHistoryPanel = () => {
             <div className="grid grid-cols-2 gap-3 mb-4 flex-shrink-0">
               {stats.bestTrade && (
                 <div className="p-2 bg-bg-inner border border-positive/10">
-                  <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+                  <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                     Best Trade
                   </div>
                   <div className="text-[11px] font-mono text-positive font-bold">
                     +{stats.bestTrade.pnl.toFixed(4)} SOL
                   </div>
-                  <div className="text-[9px] font-mono text-text-muted">
+                  <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                     {stats.bestTrade.action} {stats.bestTrade.asset}
                   </div>
                 </div>
               )}
               {stats.worstTrade && (
                 <div className="p-2 bg-bg-inner border border-negative/10">
-                  <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+                  <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
                     Worst Trade
                   </div>
                   <div className="text-[11px] font-mono text-negative font-bold">
                     {stats.worstTrade.pnl.toFixed(4)} SOL
                   </div>
-                  <div className="text-[9px] font-mono text-text-muted">
+                  <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
                     {stats.worstTrade.action} {stats.worstTrade.asset}
                   </div>
                 </div>
@@ -259,17 +259,19 @@ export const PerformanceHistoryPanel = () => {
 
           {/* Cumulative P&L Chart */}
           <div className="mb-4 flex-shrink-0">
-            <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-2">
+            <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-2">
               Cumulative P&L (last 50 trades)
             </div>
-            <div className="h-[80px] bg-bg-inner border border-cursed/8 p-1">
-              <CumulativePnLChart trades={trades} />
+            <div className="w-full overflow-x-auto">
+              <div className="h-[80px] bg-bg-inner border border-cursed/8 p-1 min-w-0">
+                <CumulativePnLChart trades={trades} />
+              </div>
             </div>
           </div>
 
           {/* Recent trades list */}
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-2 flex-shrink-0">
+            <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-2 flex-shrink-0">
               Recent Trades ({recentTrades.length})
             </div>
             <div className="flex-1 overflow-y-auto space-y-1 pr-1 min-h-0">
@@ -289,7 +291,7 @@ export const PerformanceHistoryPanel = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
+                        <span className={`text-[11px] md:text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
                           trade.mode === 'PERPS'
                             ? 'text-shadow-purple border-shadow-purple/20 bg-shadow-purple/5'
                             : 'text-cursed border-cursed/20 bg-cursed/5'
@@ -308,15 +310,15 @@ export const PerformanceHistoryPanel = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="text-[9px] text-text-muted font-mono">
+                      <span className="text-[11px] md:text-[9px] text-text-muted font-mono">
                         {formatDate(trade.timestamp)} {formatTime(trade.timestamp)}
                       </span>
-                      <span className="text-[9px] text-text-muted font-mono">
+                      <span className="text-[11px] md:text-[9px] text-text-muted font-mono">
                         {trade.amount.toFixed(4)} @ {trade.price.toFixed(2)}
                       </span>
                     </div>
                     {trade.reasoning && (
-                      <div className="mt-1 text-[9px] text-text-muted/60 font-mono truncate">
+                      <div className="mt-1 text-[11px] md:text-[9px] text-text-muted/60 font-mono truncate">
                         {trade.reasoning}
                       </div>
                     )}

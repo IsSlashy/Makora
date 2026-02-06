@@ -42,7 +42,7 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
                   : 'bg-text-muted/30'
             }`}
           />
-          <span className={`text-[9px] font-mono tracking-[0.15em] uppercase ${
+          <span className={`text-[11px] md:text-[9px] font-mono tracking-[0.15em] uppercase ${
             dailyLimitHalted ? 'text-negative' : isActive ? 'text-positive' : 'text-text-muted'
           }`}>
             {dailyLimitHalted ? 'HALTED' : isActive ? 'ACTIVE' : 'IDLE'}
@@ -51,20 +51,20 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
       </div>
 
       {/* Summary row */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div>
-          <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+          <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
             Session P&L
           </div>
           <div className={`text-lg font-bold font-mono ${pnlPositive ? 'text-positive' : 'text-negative'}`}>
             {pnlPositive ? '+' : ''}{pnlSol.toFixed(4)}
           </div>
-          <div className={`text-[9px] font-mono ${pnlPositive ? 'text-positive/70' : 'text-negative/70'}`}>
+          <div className={`text-[11px] md:text-[9px] font-mono ${pnlPositive ? 'text-positive/70' : 'text-negative/70'}`}>
             {pnlPositive ? '+' : ''}{pnlPct.toFixed(2)}%
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+          <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
             Trades
           </div>
           <div className="text-lg font-bold font-mono text-text-primary">
@@ -73,13 +73,13 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
+          <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider mb-1">
             Portfolio
           </div>
           <div className="text-lg font-bold font-mono text-text-primary">
             {currentValue.toFixed(4)}
           </div>
-          <div className="text-[9px] font-mono text-text-muted">
+          <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
             SOL
           </div>
         </div>
@@ -88,10 +88,10 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
       {/* Daily loss limit bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] font-mono text-text-muted uppercase tracking-wider">
+          <span className="text-[11px] md:text-[9px] font-mono text-text-muted uppercase tracking-wider">
             Daily Loss Limit
           </span>
-          <span className={`text-[9px] font-mono ${dailyLimitHalted ? 'text-negative' : 'text-text-muted'}`}>
+          <span className={`text-[11px] md:text-[9px] font-mono ${dailyLimitHalted ? 'text-negative' : 'text-text-muted'}`}>
             {Math.abs(Math.min(0, pnlPct)).toFixed(1)}% / {config.maxDailyLossPct}%
           </span>
         </div>
@@ -108,10 +108,10 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
       {/* Trade count bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] font-mono text-text-muted uppercase tracking-wider">
+          <span className="text-[11px] md:text-[9px] font-mono text-text-muted uppercase tracking-wider">
             Trade Count
           </span>
-          <span className="text-[9px] font-mono text-text-muted">
+          <span className="text-[11px] md:text-[9px] font-mono text-text-muted">
             {dailyTradeCount}/{config.maxDailyTrades}
           </span>
         </div>
@@ -127,7 +127,7 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
 
       {/* Tracked positions */}
       <div className="space-y-1.5">
-        <div className="text-[9px] text-text-muted font-mono uppercase tracking-wider">
+        <div className="text-[11px] md:text-[9px] text-text-muted font-mono uppercase tracking-wider">
           Tracked Positions ({trackedPositions.length})
         </div>
 
@@ -152,12 +152,12 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
                       {pos.symbol}
                     </span>
                     {isTriggered && (
-                      <span className="text-[8px] font-mono text-negative uppercase tracking-wider">
+                      <span className="text-[9px] md:text-[8px] font-mono text-negative uppercase tracking-wider">
                         STOP-LOSS
                       </span>
                     )}
                     {onCooldown && (
-                      <span className="text-[8px] font-mono text-text-muted uppercase tracking-wider">
+                      <span className="text-[9px] md:text-[8px] font-mono text-text-muted uppercase tracking-wider">
                         CD {Math.ceil((cooldownExp - now) / 1000)}s
                       </span>
                     )}
@@ -167,10 +167,10 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-[9px] font-mono text-text-muted">
+                  <span className="text-[11px] md:text-[9px] font-mono text-text-muted">
                     Entry: {pos.entryPriceSol.toFixed(4)} SOL
                   </span>
-                  <span className="text-[9px] font-mono text-text-muted">
+                  <span className="text-[11px] md:text-[9px] font-mono text-text-muted">
                     Now: {pos.currentValueSol.toFixed(4)} SOL
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
                   />
                 </div>
                 <div className="flex items-center justify-end mt-0.5">
-                  <span className="text-[8px] font-mono text-text-muted/50">
+                  <span className="text-[9px] md:text-[8px] font-mono text-text-muted/50">
                     stop @ -{config.stopLossPct}%
                   </span>
                 </div>
@@ -198,7 +198,7 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
             <div className="text-[10px] text-text-muted font-mono">
               No positions tracked yet
             </div>
-            <div className="text-[9px] text-text-muted/60 font-mono mt-1">
+            <div className="text-[11px] md:text-[9px] text-text-muted/60 font-mono mt-1">
               Positions appear after the agent executes trades
             </div>
           </div>
@@ -209,20 +209,20 @@ export const TradeGuardPanel = ({ state, config }: TradeGuardPanelProps) => {
       <div className="ink-divider mt-4 mb-3" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         <div className="flex justify-between">
-          <span className="text-[8px] font-mono text-text-muted/50 uppercase">Stop-Loss</span>
-          <span className="text-[8px] font-mono text-text-muted">{config.stopLossPct}%</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted/50 uppercase">Stop-Loss</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted">{config.stopLossPct}%</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-[8px] font-mono text-text-muted/50 uppercase">Min Trade</span>
-          <span className="text-[8px] font-mono text-text-muted">{config.minTradeSizeSol} SOL</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted/50 uppercase">Min Trade</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted">{config.minTradeSizeSol} SOL</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-[8px] font-mono text-text-muted/50 uppercase">Cooldown</span>
-          <span className="text-[8px] font-mono text-text-muted">{Math.round(config.cooldownMs / 60000)}min</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted/50 uppercase">Cooldown</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted">{Math.round(config.cooldownMs / 60000)}min</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-[8px] font-mono text-text-muted/50 uppercase">Daily Limit</span>
-          <span className="text-[8px] font-mono text-text-muted">{config.maxDailyLossPct}%</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted/50 uppercase">Daily Limit</span>
+          <span className="text-[9px] md:text-[8px] font-mono text-text-muted">{config.maxDailyLossPct}%</span>
         </div>
       </div>
     </div>

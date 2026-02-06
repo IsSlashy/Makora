@@ -141,7 +141,7 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
               x
             </button>
           </div>
-          <div className="text-[9px] font-mono text-text-muted mb-6">
+          <div className="text-[11px] md:text-[9px] font-mono text-text-muted mb-6">
             Configure at least one LLM source. <span className="text-cursed">Cloud API keys work without local model.</span>
           </div>
 
@@ -155,11 +155,11 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
                 Local Model
               </span>
               {isLocalConnected && (
-                <span className="text-[9px] font-mono text-positive ml-auto">{localLatency}ms</span>
+                <span className="text-[11px] md:text-[9px] font-mono text-positive ml-auto">{localLatency}ms</span>
               )}
             </div>
 
-            <div className="text-[9px] font-mono text-text-muted mb-3">
+            <div className="text-[11px] md:text-[9px] font-mono text-text-muted mb-3">
               If you have a model running locally (LM Studio, Ollama, vLLM), enter the endpoint below. No API key needed.
             </div>
 
@@ -193,7 +193,7 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
           {/* Divider — OR */}
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 border-t border-cursed/15" />
-            <span className="text-[9px] font-mono text-text-muted tracking-widest">AND / OR</span>
+            <span className="text-[11px] md:text-[9px] font-mono text-text-muted tracking-widest">AND / OR</span>
             <div className="flex-1 border-t border-cursed/15" />
           </div>
 
@@ -207,11 +207,11 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
                 Cloud API Keys
               </span>
               {keyCount > 0 && (
-                <span className="text-[9px] font-mono text-positive ml-auto">{keyCount} active</span>
+                <span className="text-[11px] md:text-[9px] font-mono text-positive ml-auto">{keyCount} active</span>
               )}
             </div>
 
-            <div className="text-[9px] font-mono text-text-muted mb-3">
+            <div className="text-[11px] md:text-[9px] font-mono text-text-muted mb-3">
               Add API keys for cloud LLM providers. The agent will use the first available key for reasoning.
             </div>
 
@@ -222,7 +222,7 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
                     {PROVIDER_INFO[id].label}
                   </label>
                   {keyStatus[id] === 'ok' && (
-                    <span className="text-[9px] font-mono text-positive">✓ Connected</span>
+                    <span className="text-[11px] md:text-[9px] font-mono text-positive">✓ Connected</span>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -244,18 +244,18 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
                   <button
                     onClick={() => handleTestKey(id)}
                     disabled={!llmKeys[id] || keyStatus[id] === 'testing'}
-                    className="px-3 py-2 text-[9px] font-mono tracking-wider uppercase border border-cursed/30 text-cursed hover:bg-cursed/10 transition-colors disabled:opacity-40"
+                    className="px-3 py-2 min-h-[44px] md:min-h-0 text-[11px] md:text-[9px] font-mono tracking-wider uppercase border border-cursed/30 text-cursed hover:bg-cursed/10 transition-colors disabled:opacity-40"
                   >
                     {keyStatus[id] === 'testing' ? '...' : 'Test'}
                   </button>
                 </div>
                 {keyStatus[id] === 'error' && keyError[id] && (
-                  <div className="mt-1 text-[9px] font-mono text-negative">{keyError[id]}</div>
+                  <div className="mt-1 text-[11px] md:text-[9px] font-mono text-negative">{keyError[id]}</div>
                 )}
               </div>
             ))}
 
-            <div className="text-[9px] font-mono text-text-muted">
+            <div className="text-[11px] md:text-[9px] font-mono text-text-muted">
               Keys stored in your browser only. Sent directly to provider APIs for inference.
             </div>
           </div>
@@ -290,7 +290,7 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
                 Polymarket Prediction Markets
               </span>
             </label>
-            <div className="mt-1 text-[9px] font-mono text-text-muted ml-[52px]">
+            <div className="mt-1 text-[11px] md:text-[9px] font-mono text-text-muted ml-[52px]">
               Feed crypto prediction market signals into agent analysis.
             </div>
           </div>
@@ -315,13 +315,13 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
           </div>
 
           {!canSave && (
-            <div className="mt-3 text-[9px] font-mono text-text-muted text-center">
+            <div className="mt-3 text-[11px] md:text-[9px] font-mono text-text-muted text-center">
               Add at least one API key to enable MoltBot intelligence.
             </div>
           )}
 
           {canSave && !isLocalConnected && keyCount > 0 && (
-            <div className="mt-3 p-2 bg-positive/10 border border-positive/20 text-[9px] font-mono text-positive text-center">
+            <div className="mt-3 p-2 bg-positive/10 border border-positive/20 text-[11px] md:text-[9px] font-mono text-positive text-center">
               MoltBot will use cloud LLM ({keyCount} key{keyCount > 1 ? 's' : ''} configured)
             </div>
           )}

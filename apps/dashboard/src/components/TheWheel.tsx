@@ -93,7 +93,7 @@ export const TheWheel = ({
           MAKORA
         </h2>
         <div
-          className="text-[8px] tracking-[0.4em] uppercase mt-0.5 flex items-center justify-center gap-2"
+          className="text-[10px] md:text-[8px] tracking-[0.4em] uppercase mt-0.5 flex items-center justify-center gap-2"
           style={{
             background: 'linear-gradient(90deg, #4a4740, #d4a829 40%, #e8c44a 50%, #d4a829 60%, #4a4740)',
             WebkitBackgroundClip: 'text',
@@ -113,7 +113,7 @@ export const TheWheel = ({
 
       {/* ── The Wheel — centered in remaining space ── */}
       <div className="flex-1 flex items-center justify-center w-full">
-        <div className="relative w-56 h-56 lg:w-64 lg:h-64">
+        <div className="relative w-44 h-44 sm:w-56 sm:h-56 lg:w-64 lg:h-64">
           {/* Outer glow ring */}
           <div
             className="absolute inset-[-16px] rounded-full transition-all duration-700"
@@ -179,7 +179,7 @@ export const TheWheel = ({
                     {phase.kanji}
                   </span>
                   <span
-                    className="text-[8px] font-mono tracking-[0.15em] uppercase"
+                    className="text-[10px] md:text-[8px] font-mono tracking-[0.15em] uppercase"
                     style={{ color: isActive ? '#d4a829' : '#4a4740' }}
                   >
                     {phase.name}
@@ -204,7 +204,7 @@ export const TheWheel = ({
       {sessionActive && sessionPnlSol !== undefined && (
         <div className="w-full max-w-xs mb-2">
           <div className="ink-divider mb-2" />
-          <div className="flex items-center justify-between text-[10px] font-mono">
+          <div className="flex items-center justify-between text-xs md:text-[10px] font-mono">
             <div>
               <div className="text-text-muted tracking-wider uppercase">Session P&L</div>
               <div className={`font-bold text-base ${(sessionPnlPct ?? 0) >= 0 ? 'text-positive' : 'text-negative'}`}>
@@ -230,7 +230,7 @@ export const TheWheel = ({
       {/* ── Stats bar ── */}
       <div className="w-full max-w-xs">
         <div className="ink-divider mb-2" />
-        <div className="flex items-center justify-between text-[10px] font-mono">
+        <div className="flex items-center justify-between text-xs md:text-[10px] font-mono">
           <div className="text-center">
             <div className="text-text-muted tracking-wider uppercase mb-0.5">Cycles</div>
             <div className="text-cursed font-bold text-sm">{ooda.adaptations.toLocaleString()}</div>
@@ -259,7 +259,7 @@ export const TheWheel = ({
 
       {/* ── Current phase description ── */}
       <div className="mt-2 text-center">
-        <div className="text-[9px] text-text-muted font-mono tracking-wider">
+        <div className="text-[11px] md:text-[9px] text-text-muted font-mono tracking-wider">
           {ooda.phaseDescription}
         </div>
       </div>

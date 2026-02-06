@@ -144,7 +144,7 @@ export const PortfolioCard = () => {
           <div className="text-text-muted text-xs font-mono tracking-wider uppercase mb-2">
             No wallet connected
           </div>
-          <div className="text-[10px] text-text-muted font-mono">
+          <div className="text-xs md:text-[10px] text-text-muted font-mono">
             Connect Phantom or Solflare to begin
           </div>
         </div>
@@ -161,7 +161,7 @@ export const PortfolioCard = () => {
           <button
             onClick={handleAirdrop}
             disabled={airdropping}
-            className="text-[9px] font-mono tracking-wider px-2 py-1 border border-cursed/20 text-cursed hover:bg-cursed/10 transition-colors uppercase disabled:opacity-50"
+            className="text-[11px] md:text-[9px] font-mono tracking-wider px-3 py-2 border border-cursed/20 text-cursed hover:bg-cursed/10 transition-colors uppercase disabled:opacity-50"
           >
             {airdropping ? 'AIRDROPPING...' : 'AIRDROP 2 SOL'}
           </button>
@@ -173,21 +173,21 @@ export const PortfolioCard = () => {
           {totalValue.toFixed(4)} SOL
         </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-text-muted text-[10px] font-mono">
+          <span className="text-text-muted text-xs md:text-[10px] font-mono">
             Wallet: {freeSol.toFixed(4)}
           </span>
           {availableBalance > 0 && (
             <>
-              <span className="text-text-muted text-[10px]">&middot;</span>
-              <span className="text-cursed text-[10px] font-mono">
+              <span className="text-text-muted text-xs md:text-[10px]">&middot;</span>
+              <span className="text-cursed text-xs md:text-[10px] font-mono">
                 Vault: {availableBalance.toFixed(4)}
               </span>
             </>
           )}
           {inSessionAmount > 0 && (
             <>
-              <span className="text-text-muted text-[10px]">&middot;</span>
-              <span className="text-positive text-[10px] font-mono">
+              <span className="text-text-muted text-xs md:text-[10px]">&middot;</span>
+              <span className="text-positive text-xs md:text-[10px] font-mono">
                 Session: {inSessionAmount.toFixed(4)}
               </span>
             </>
@@ -202,12 +202,12 @@ export const PortfolioCard = () => {
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-text-primary">{token.symbol}</span>
-                <span className="text-[10px] text-text-muted font-mono">
+                <span className="text-xs md:text-[10px] text-text-muted font-mono">
                   {token.amount.toFixed(4)}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-text-muted ml-2">{token.percentage}%</span>
+                <span className="text-xs md:text-[10px] text-text-muted ml-2">{token.percentage}%</span>
               </div>
             </div>
             <div className="relative h-[3px] bg-bg-inner">
@@ -231,7 +231,7 @@ export const PortfolioCard = () => {
           </div>
         ))}
         {tokens.length === 0 && (
-          <div className="text-[10px] text-text-muted font-mono text-center py-2">
+          <div className="text-xs md:text-[10px] text-text-muted font-mono text-center py-2">
             No balance — airdrop SOL to get started
           </div>
         )}
@@ -243,7 +243,7 @@ export const PortfolioCard = () => {
         <button
           onClick={handleInitVault}
           disabled={loading}
-          className="w-full px-3 py-2 text-[10px] font-mono tracking-[0.15em] uppercase bg-cursed/10 border border-cursed/30 text-cursed hover:bg-cursed/20 transition-colors font-bold disabled:opacity-50"
+          className="w-full px-3 py-2 text-xs md:text-[10px] font-mono tracking-[0.15em] uppercase bg-cursed/10 border border-cursed/30 text-cursed hover:bg-cursed/20 transition-colors font-bold disabled:opacity-50"
         >
           {loading ? 'INITIALIZING...' : 'INITIALIZE VAULT'}
         </button>
@@ -251,7 +251,7 @@ export const PortfolioCard = () => {
         <>
           <button
             onClick={() => setShowActions(!showActions)}
-            className="w-full flex items-center justify-between text-[10px] font-mono text-text-muted tracking-wider uppercase hover:text-cursed transition-colors"
+            className="w-full flex items-center justify-between text-xs md:text-[10px] font-mono text-text-muted tracking-wider uppercase hover:text-cursed transition-colors"
           >
             <span>Vault Actions</span>
             <span>{showActions ? '−' : '+'}</span>
@@ -266,12 +266,12 @@ export const PortfolioCard = () => {
                   placeholder="SOL amount"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  className="flex-1 px-2 py-1.5 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
+                  className="flex-1 px-3 py-2 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
                 />
                 <button
                   onClick={handleDeposit}
                   disabled={loading || !depositAmount}
-                  className="px-3 py-1.5 text-[9px] font-mono tracking-wider uppercase bg-positive/10 border border-positive/30 text-positive hover:bg-positive/20 transition-colors disabled:opacity-50"
+                  className="px-3 py-2 text-[11px] md:text-[9px] font-mono tracking-wider uppercase bg-positive/10 border border-positive/30 text-positive hover:bg-positive/20 transition-colors disabled:opacity-50"
                 >
                   DEPOSIT
                 </button>
@@ -284,12 +284,12 @@ export const PortfolioCard = () => {
                     placeholder="SOL amount"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full px-2 py-1.5 pr-12 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
+                    className="w-full px-3 py-2 pr-12 bg-bg-inner border border-cursed/15 text-text-primary text-[11px] font-mono focus:border-cursed/40 outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setWithdrawAmount(currentBalance > 0 ? currentBalance.toFixed(4) : '0')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[8px] font-mono tracking-wider text-cursed hover:bg-cursed/10 transition-colors uppercase"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] md:text-[8px] font-mono tracking-wider text-cursed hover:bg-cursed/10 transition-colors uppercase"
                   >
                     MAX
                   </button>
@@ -297,13 +297,13 @@ export const PortfolioCard = () => {
                 <button
                   onClick={handleWithdraw}
                   disabled={loading || !withdrawAmount}
-                  className="px-3 py-1.5 text-[9px] font-mono tracking-wider uppercase bg-negative/10 border border-negative/30 text-negative hover:bg-negative/20 transition-colors disabled:opacity-50"
+                  className="px-3 py-2 text-[11px] md:text-[9px] font-mono tracking-wider uppercase bg-negative/10 border border-negative/30 text-negative hover:bg-negative/20 transition-colors disabled:opacity-50"
                 >
                   WITHDRAW
                 </button>
               </div>
               {currentBalance > 0 && (
-                <div className="text-[9px] text-text-muted font-mono mt-1">
+                <div className="text-[11px] md:text-[9px] text-text-muted font-mono mt-1">
                   Max withdrawable: {currentBalance.toFixed(4)} SOL
                 </div>
               )}
@@ -313,7 +313,7 @@ export const PortfolioCard = () => {
       )}
 
       {error && (
-        <div className="mt-2 text-[9px] text-negative font-mono truncate">{error}</div>
+        <div className="mt-2 text-[11px] md:text-[9px] text-negative font-mono truncate">{error}</div>
       )}
       {lastTxSig && (
         <div className="mt-2">
@@ -321,7 +321,7 @@ export const PortfolioCard = () => {
             href={`https://explorer.solana.com/tx/${lastTxSig}?cluster=devnet`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[9px] font-mono text-cursed/70 hover:text-cursed transition-colors truncate block"
+            className="text-[11px] md:text-[9px] font-mono text-cursed/70 hover:text-cursed transition-colors truncate block"
           >
             Last tx: {lastTxSig.slice(0, 20)}...
           </a>

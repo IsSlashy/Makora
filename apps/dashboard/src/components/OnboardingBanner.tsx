@@ -106,7 +106,7 @@ export const OnboardingBanner = ({ walletConnected, llmConfigured, onDismiss }: 
             </span>
           </div>
         )}
-        <p className="text-[9px] font-mono text-text-muted mt-0.5 tracking-wider">
+        <p className="text-[11px] md:text-[9px] font-mono text-text-muted mt-0.5 tracking-wider">
           {showWalletPrompt
             ? 'Phantom or Solflare recommended — this is devnet, no real funds required'
             : 'Supports Anthropic, OpenAI, or a local model (LM Studio / Ollama)'}
@@ -130,7 +130,7 @@ export const OnboardingBanner = ({ walletConnected, llmConfigured, onDismiss }: 
       {/* Dismiss button */}
       <button
         onClick={handleDismiss}
-        className="flex-shrink-0 p-1 text-text-muted hover:text-cursed transition-colors"
+        className="flex-shrink-0 p-3 md:p-1 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center text-text-muted hover:text-cursed transition-colors"
         title="Dismiss"
         aria-label="Dismiss onboarding banner"
       >

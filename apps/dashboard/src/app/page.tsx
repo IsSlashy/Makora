@@ -560,7 +560,7 @@ export default function Home() {
 
       {/* ── Main content: Wheel (left) + Chat (right) — always visible ── */}
       <main className="flex-1 min-h-0 overflow-hidden">
-        <div className="max-w-[1600px] mx-auto px-4 py-2 h-full flex flex-col">
+        <div className="max-w-[1600px] 2xl:max-w-[2200px] mx-auto px-4 py-2 h-full flex flex-col">
 
           {/* Onboarding banner for edge cases */}
           {!bannerDismissed && (
@@ -576,9 +576,9 @@ export default function Home() {
           )}
 
           {/* Top row: Wheel + Chat */}
-          <div className="flex gap-3 min-h-0" style={{ flex: secondaryOpen ? '0 0 55%' : '1 1 auto' }}>
+          <div className="flex flex-col lg:flex-row gap-3 min-h-0" style={{ flex: secondaryOpen ? '0 0 55%' : '1 1 auto' }}>
             {/* Left: Wheel column */}
-            <div className="w-[35%] min-w-[300px] flex-shrink-0 min-h-0">
+            <div className="w-full lg:w-[35%] min-w-0 lg:min-w-[300px] max-h-[50vh] lg:max-h-none flex-shrink-0 min-h-0">
               <TheWheel
                 oodaState={ooda}
                 sessionActive={tradingSession.isActive}

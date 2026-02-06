@@ -173,3 +173,43 @@ input[type='range']::-moz-range-thumb {
   user-select: none;
   line-height: 1;
 }
+
+/* ── Responsive font scale (mobile-first) ────────────────────────────── */
+@layer utilities {
+  /* Mobile: readable sizes → Desktop: compact dashboard sizes */
+  .text-ui-xs {
+    font-size: 0.6875rem; /* 11px mobile */
+    line-height: 1rem;
+  }
+  .text-ui-sm {
+    font-size: 0.75rem; /* 12px mobile */
+    line-height: 1.125rem;
+  }
+  .text-ui-base {
+    font-size: 0.8125rem; /* 13px mobile */
+    line-height: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .text-ui-xs {
+    font-size: 0.5625rem; /* 9px desktop */
+    line-height: 0.875rem;
+  }
+  .text-ui-sm {
+    font-size: 0.625rem; /* 10px desktop */
+    line-height: 1rem;
+  }
+  .text-ui-base {
+    font-size: 0.6875rem; /* 11px desktop */
+    line-height: 1.125rem;
+  }
+}
+
+/* Touch-friendly targets */
+@layer utilities {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

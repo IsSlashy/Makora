@@ -151,7 +151,7 @@ export function PositionsPanel({ className = '' }: PositionsPanelProps) {
     <div className={`space-y-4 ${className}`}>
       {/* Market Tickers - Compact horizontal strip */}
       <div className="bg-bg-abyss/80 border-b border-cursed/10">
-        <div className="flex items-stretch divide-x divide-cursed/10">
+        <div className="flex flex-col sm:flex-row items-stretch divide-y sm:divide-y-0 sm:divide-x divide-cursed/10">
           {tickers.map(t => {
             const isUp = t.changePct24h >= 0;
             return (
@@ -170,7 +170,7 @@ export function PositionsPanel({ className = '' }: PositionsPanelProps) {
                     {Math.abs(t.changePct24h).toFixed(2)}%
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5 text-[9px] text-text-muted/60 font-mono">
+                <div className="flex items-center gap-2 mt-0.5 text-[11px] md:text-[9px] text-text-muted/60 font-mono">
                   <span>H {t.market === 'BTC-PERP' ? t.high24h.toLocaleString(undefined, {maximumFractionDigits: 0}) : t.high24h.toFixed(0)}</span>
                   <span className="text-cursed/30">|</span>
                   <span>L {t.market === 'BTC-PERP' ? t.low24h.toLocaleString(undefined, {maximumFractionDigits: 0}) : t.low24h.toFixed(0)}</span>
@@ -214,17 +214,17 @@ export function PositionsPanel({ className = '' }: PositionsPanelProps) {
           <div className="flex items-center justify-between text-xs font-mono">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <span className="text-text-muted/60 uppercase text-[9px]">Collateral</span>
+                <span className="text-text-muted/60 uppercase text-[11px] md:text-[9px]">Collateral</span>
                 <span className="text-text-primary">${positions.reduce((sum, p) => sum + p.collateralUsd, 0).toFixed(2)}</span>
               </div>
               <div className="text-cursed/20">|</div>
               <div className="flex items-center gap-1.5">
-                <span className="text-text-muted/60 uppercase text-[9px]">Exposure</span>
+                <span className="text-text-muted/60 uppercase text-[11px] md:text-[9px]">Exposure</span>
                 <span className="text-text-primary">${positions.reduce((sum, p) => sum + p.collateralUsd * p.leverage, 0).toFixed(2)}</span>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-text-muted/60 uppercase text-[9px]">P&L</span>
+              <span className="text-text-muted/60 uppercase text-[11px] md:text-[9px]">P&L</span>
               <span className={`font-medium ${
                 positions.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0) >= 0
                   ? 'text-green-400'

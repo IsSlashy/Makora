@@ -24,7 +24,7 @@ export const ActivityFeed = () => {
         <div className="section-title">Activity</div>
         <div className="flex items-center gap-1.5">
           <div className={`w-1.5 h-1.5 ${publicKey ? 'bg-positive animate-pulse' : 'bg-text-muted'}`} />
-          <span className="text-[10px] font-mono text-text-muted tracking-wider uppercase">
+          <span className="text-[12px] md:text-[10px] font-mono text-text-muted tracking-wider uppercase">
             {publicKey ? 'Live' : 'Offline'}
           </span>
         </div>
@@ -33,7 +33,7 @@ export const ActivityFeed = () => {
       <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
         {activities.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-[10px] text-text-muted font-mono tracking-wider text-center">
+            <div className="text-[12px] md:text-[10px] text-text-muted font-mono tracking-wider text-center">
               {publicKey
                 ? 'Waiting for first OODA cycle...'
                 : 'Connect wallet to see live activity'}
@@ -54,7 +54,7 @@ export const ActivityFeed = () => {
                     {activity.action}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[9px] text-text-muted font-mono">
+                    <span className="text-[11px] md:text-[9px] text-text-muted font-mono">
                       {activity.time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {activity.txSig && (
@@ -62,7 +62,7 @@ export const ActivityFeed = () => {
                         href={`https://explorer.solana.com/tx/${activity.txSig}?cluster=devnet`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[9px] font-mono text-cursed/60 hover:text-cursed transition-colors"
+                        className="text-[11px] md:text-[9px] font-mono text-cursed/60 hover:text-cursed transition-colors"
                       >
                         {activity.txSig.slice(0, 8)}...
                       </a>
