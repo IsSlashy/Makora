@@ -143,6 +143,27 @@ function detectIntent(input: string): BridgeIntent {
     }
   }
 
+  // ── Broad "trade my vault" / "trade everything" catch-all ──────────────────
+  // Catches natural language like: "trade what I have", "trade my vault", "trade everything",
+  // "make profit", "start making money", "trade all my SOL", "trade indefinitely"
+  if (/\btrad(?:e|ing)\b/.test(lower) && /\b(vault|everything|all|what\s+i\s+have|100\s*%|indefinit|profit|money|make\s+(?:me\s+)?(?:some\s+)?(?:profit|money|gains))\b/.test(lower)) {
+    // Extract % if present, default 100%
+    const pctM = lower.match(/(\d+)\s*%/);
+    const walletPct = pctM ? parseInt(pctM[1], 10) : 100;
+    return {
+      type: 'start_session' as const,
+      sessionParams: {
+        walletPct,
+        durationMs: 24 * 60 * 60 * 1000, // Default 24h for "indefinitely" type requests
+        strategy: parseStrategy(input),
+        targetProfitPct: parseProfitTarget(input),
+        focusTokens: parseFocusTokens(input),
+        useVaultOnly: true, // If they mention vault or "everything", use vault
+      },
+      raw: input,
+    };
+  }
+
   // ── Legacy intents ─────────────────────────────────────────────────────────
 
   // Aggression / style commands
@@ -166,8 +187,8 @@ function detectIntent(input: string): BridgeIntent {
     return { type: 'mode_advisory', raw: input };
   }
 
-  // Start trading (short commands)
-  if (/\b(start|go|run|trade|execute)\b/.test(lower) && lower.length < 20) {
+  // Start trading (short commands) — also catch "yes", "do it", "let's go", "ok trade"
+  if (/\b(start|go|run|trade|execute|let.?s\s+go|do\s+it|yes.*trad|ok.*trad)\b/.test(lower) && lower.length < 30) {
     return { type: 'mode_auto', raw: input };
   }
 
@@ -572,6 +593,16 @@ export function useChatBridge(config: {
       }
 
       default: {
+        // Check if the message sounds like the user wants trading action
+        const lc = content.toLowerCase();
+        const wantsTrade = /\b(trade|trad(?:e|ing)|open|position|profit|execute|perp|long|short|buy|sell)\b/.test(lc)
+          && /\b(my|vault|start|now|please|go|do|make|100|all|everything)\b/.test(lc);
+
+        if (wantsTrade && cb.onSetMode) {
+          // Auto-start the OODA loop when user clearly wants trading
+          try { await cb.onSetMode('auto'); } catch { /* non-critical */ }
+        }
+
         // Always include live portfolio for general messages so the LLM never hallucinates
         let portfolioCtx: string | undefined;
         if (cb.onGetPortfolio) {
@@ -580,7 +611,11 @@ export function useChatBridge(config: {
             if (info) portfolioCtx = `Current portfolio:\n${info}`;
           } catch { /* non-critical */ }
         }
-        openclaw.sendMessage(content, portfolioCtx);
+
+        const extraCtx = wantsTrade
+          ? `${portfolioCtx ? portfolioCtx + '\n\n' : ''}SYSTEM: The OODA loop has been activated in AUTO mode. Trades will execute on the next cycle. Tell the user their request is being processed and to watch the Activity feed.`
+          : portfolioCtx;
+        openclaw.sendMessage(content, extraCtx);
       }
     }
   }, [openclaw]);
