@@ -3,6 +3,7 @@
  */
 
 const JUPITER_PRICE_API = 'https://api.jup.ag/price/v2';
+const JUPITER_API_KEY = process.env.JUPITER_API_KEY || process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
 
 // Known mints
 const MINT_MAP: Record<string, string> = {
@@ -141,7 +142,9 @@ export async function fetchTokenPrices(
 
   try {
     const url = `${JUPITER_PRICE_API}?ids=${mints.join(',')}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const headers: Record<string, string> = { 'Accept': 'application/json' };
+    if (JUPITER_API_KEY) headers['x-api-key'] = JUPITER_API_KEY;
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(5000) });
 
     if (!res.ok) {
       console.warn(`Jupiter Price API ${res.status}, using fallback prices`);

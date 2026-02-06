@@ -44,11 +44,17 @@ async function fetchPrices(): Promise<{ SOL: number; ETH: number; BTC: number }>
       '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh', // WBTC
     ];
 
+    const jupKey = process.env.JUPITER_API_KEY || process.env.NEXT_PUBLIC_JUPITER_API_KEY || '';
+    const hdrs: Record<string, string> = { 'Accept': 'application/json' };
+    if (jupKey) hdrs['x-api-key'] = jupKey;
     const res = await fetch(`https://api.jup.ag/price/v2?ids=${ids.join(',')}`, {
-      headers: { 'Accept': 'application/json' },
+      headers: hdrs,
     });
 
-    if (!res.ok) throw new Error('Jupiter price fetch failed');
+    if (!res.ok) {
+      console.warn(`Jupiter price API ${res.status}, using fallback prices`);
+      return { SOL: 200, ETH: 3200, BTC: 97000 };
+    }
 
     const data = await res.json();
 
