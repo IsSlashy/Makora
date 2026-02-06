@@ -10,6 +10,7 @@ import {
   closeSimulatedPosition,
   getSimulatedPositions,
   clearAllSimulatedPositions,
+  setRealPrices,
 } from '@/lib/simulated-perps';
 import { fetchTokenPrices } from '@/lib/price-feed';
 
@@ -93,7 +94,20 @@ CRITICAL RULES:
 - Never say "I cannot execute trades" — you DO execute via the OODA loop.
 - Never fabricate data. Use only injected context.
 
-You have access to trading tools. When the user asks you to trade, USE THE TOOLS to actually execute. Do not just describe what you would do — call the tools to open positions, close positions, or check your portfolio. Act decisively.`;
+You have access to trading tools. When the user asks you to trade, USE THE TOOLS to actually execute. Do not just describe what you would do — call the tools to open positions, close positions, or check your portfolio. Act decisively.
+
+DIRECTION SELECTION:
+When the user asks you to trade without specifying long/short:
+1. FIRST call get_positions to check existing positions
+2. THEN analyze the user's message context for any market bias clues
+3. If no clear direction is given, DEFAULT TO SHORT in uncertain/neutral markets (capital preservation)
+4. Only go LONG if you have clear bullish signal or user explicitly asks for it
+5. NEVER just default to LONG — always consider both directions
+
+PROFIT-TAKING:
+- When the user says "close when profitable" or "take profit", that means close as soon as PnL > 0.1%
+- The OODA loop handles continuous monitoring — you open the position, the loop closes it when profitable
+- Tell the user the OODA loop will auto-manage the position`;
 
 // ─── Cloud LLM API URLs ──────────────────────────────────────────────────────
 
@@ -238,6 +252,13 @@ async function executeTool(
         const prices = await fetchTokenPrices([priceSymbol, 'SOL']);
         const entryPrice = prices[priceSymbol] || 0;
         const solPrice = prices.SOL || 77;
+
+        // Feed real prices to simulated positions
+        const priceUpdate: Record<string, number> = {};
+        if (prices.SOL) priceUpdate.SOL = prices.SOL;
+        if (prices.WETH) priceUpdate.ETH = prices.WETH;
+        if (prices.WBTC) priceUpdate.BTC = prices.WBTC;
+        setRealPrices(priceUpdate);
 
         if (entryPrice <= 0) {
           return `Error: Could not fetch price for ${priceSymbol}. Try again.`;

@@ -9,7 +9,7 @@ import { useActivityFeed } from './useActivityFeed';
 import type { YieldOpportunity, StrategyTag } from './useYieldData';
 import { computeAllocationDiff } from '@/lib/allocation-diff';
 import { sendTransactionViaJito, isJitoSupported, DEFAULT_JITO_CONFIG, URGENT_JITO_CONFIG } from '@/lib/jito';
-import { formatSimulatedPositionsForLLM, getSimulatedPositions } from '@/lib/simulated-perps';
+import { formatSimulatedPositionsForLLM, getSimulatedPositions, setRealPrices } from '@/lib/simulated-perps';
 import { observeMarket, formatMarketObservationForLLM, type MarketObservation } from '@/lib/market-observer';
 
 export type OODAPhase = 'IDLE' | 'OBSERVE' | 'ORIENT' | 'DECIDE' | 'ACT';
@@ -612,6 +612,12 @@ export function useOODALoop() {
       // Store SOL price for P&L calculations
       if (marketObs) {
         observation.solPrice = marketObs.prices.SOL;
+        // Feed real prices to simulated positions so they use actual market data
+        setRealPrices({
+          SOL: marketObs.prices.SOL,
+          ETH: marketObs.prices.ETH,
+          BTC: marketObs.prices.BTC,
+        });
         // Update state with solPrice
         setState(prev => ({ ...prev, lastObservation: observation }));
       }
@@ -725,6 +731,30 @@ export function useOODALoop() {
         const simPositions = getSimulatedPositions();
         const hasOpenPositions = simPositions.length > 0;
 
+        // Build position management advice
+        let positionAdvice: string;
+        if (hasOpenPositions) {
+          const losingPositions = simPositions.filter(p => (p.unrealizedPnlPct ?? 0) < -5);
+          const profitablePositions = simPositions.filter(p => (p.unrealizedPnlPct ?? 0) > 1);
+          const adviceLines = ['**YOU HAVE OPEN POSITIONS:**'];
+          if (profitablePositions.length > 0) {
+            adviceLines.push('PROFITABLE positions — CLOSE THEM NOW to lock in profits:');
+            for (const p of profitablePositions) {
+              adviceLines.push('  -> CLOSE ' + p.market + ' (P&L: +' + (p.unrealizedPnlPct ?? 0).toFixed(1) + '%)');
+            }
+          }
+          if (losingPositions.length > 0) {
+            adviceLines.push('LOSING positions — CLOSE THEM to cut losses:');
+            for (const p of losingPositions) {
+              adviceLines.push('  -> CLOSE ' + p.market + ' (P&L: ' + (p.unrealizedPnlPct ?? 0).toFixed(1) + '%)');
+            }
+          }
+          adviceLines.push('- Do NOT open duplicate positions in the same market');
+          positionAdvice = adviceLines.join('\n');
+        } else {
+          positionAdvice = 'No open positions. Look for entry opportunities based on market conditions.';
+        }
+
         contextParts.push(`## TRADING MODE: PERPS (Fast Perpetual Futures Trading)
 ${tradingModeConfig.description}
 
@@ -740,10 +770,7 @@ ONLY USE THESE ACTIONS:
 
 AVAILABLE MARKETS: SOL-PERP, ETH-PERP, BTC-PERP
 
-${hasOpenPositions ? `**YOU ALREADY HAVE OPEN POSITIONS. Consider:**
-- If profitable: hold or take profits (close)
-- If losing: hold, cut losses (close), or average down
-- Do NOT open duplicate positions in the same market` : `No open positions. Look for entry opportunities based on market conditions.`}
+${positionAdvice}
 
 Use leverage 2-5x for safety. Set percentOfPortfolio as collateral amount.
 Cycle time: ${tradingModeConfig.cycleIntervalMs / 1000}s — make quick, decisive calls.
@@ -768,10 +795,28 @@ The market sentiment is RISK-ON / BULLISH. You MUST:
 - Do NOT open new SHORT positions unless you see clear topping signals
 - If you have open SHORT positions that are losing, CLOSE them immediately`);
         } else {
-          contextParts.push(`## DIRECTIONAL BIAS: NEUTRAL
-Market sentiment is NEUTRAL. Both LONG and SHORT are acceptable.
-- Follow the short-term momentum of each individual market
+          // In neutral sentiment, use individual asset momentum for direction
+          const solMomentum = marketObs2?.momentum?.SOL;
+          const btcMomentum = marketObs2?.momentum?.BTC;
+          if (solMomentum === 'bearish' || btcMomentum === 'bearish') {
+            contextParts.push(`## DIRECTIONAL BIAS: LEAN SHORT
+Market sentiment is NEUTRAL but SOL momentum is ${solMomentum?.toUpperCase()}, BTC is ${btcMomentum?.toUpperCase()}.
+- PREFER SHORT positions when individual asset momentum is bearish
+- Use smaller position sizes in neutral conditions
+- Close any losing LONG positions`);
+          } else if (solMomentum === 'bullish') {
+            contextParts.push(`## DIRECTIONAL BIAS: LEAN LONG
+Market sentiment is NEUTRAL but SOL momentum is BULLISH.
+- PREFER LONG positions on SOL when momentum is bullish
 - Use smaller position sizes in neutral conditions`);
+          } else {
+            contextParts.push(`## DIRECTIONAL BIAS: NEUTRAL — HOLD OR SCALP
+Market sentiment is NEUTRAL. Momentum is mixed.
+- If you have open profitable positions, CLOSE them to take profit
+- If you have losing positions, CLOSE them to cut losses
+- Only open new positions if you see clear momentum in one direction
+- Prefer SHORT in uncertain conditions (capital preservation)`);
+          }
         }
         if (volatilityLevel === 'high') {
           contextParts.push(`⚠ HIGH VOLATILITY: Use lower leverage (2-3x max) and tighter stops.`);

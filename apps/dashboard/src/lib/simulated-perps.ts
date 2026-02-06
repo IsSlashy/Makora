@@ -43,12 +43,42 @@ function setPositions(positions: SimulatedPerpPosition[]): void {
   }
 }
 
-// Price simulation: slight random walk from entry
-function simulatePriceMovement(entryPrice: number, side: 'long' | 'short', hoursOpen: number): number {
-  // Random walk with slight mean reversion
-  const volatility = 0.02; // 2% per hour
-  const randomFactor = (Math.random() - 0.5) * 2 * volatility * Math.sqrt(hoursOpen);
-  return entryPrice * (1 + randomFactor);
+// Cache of real market prices updated by setRealPrices()
+const PRICE_CACHE_KEY = '__MAKORA_REAL_PRICES__';
+
+function getRealPrices(): Record<string, number> {
+  if (typeof globalThis !== 'undefined') {
+    return (globalThis as any)[PRICE_CACHE_KEY] || {};
+  }
+  return {};
+}
+
+/**
+ * Update real market prices so positions use actual data instead of random walks.
+ * Call this from the OODA loop or price feed after fetching real prices.
+ */
+export function setRealPrices(prices: Record<string, number>): void {
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any)[PRICE_CACHE_KEY] = { ...((globalThis as any)[PRICE_CACHE_KEY] || {}), ...prices };
+  }
+}
+
+// Map market names to price keys
+const MARKET_PRICE_KEY: Record<string, string> = {
+  'SOL-PERP': 'SOL',
+  'ETH-PERP': 'ETH',
+  'BTC-PERP': 'BTC',
+};
+
+// Get current price for a position — use real prices if available, fallback to entry
+function getCurrentPrice(market: string, entryPrice: number): number {
+  const realPrices = getRealPrices();
+  const key = MARKET_PRICE_KEY[market];
+  if (key && realPrices[key] && realPrices[key] > 0) {
+    return realPrices[key];
+  }
+  // No real price available — return entry (no simulated movement)
+  return entryPrice;
 }
 
 export function openSimulatedPosition(params: {
@@ -99,13 +129,11 @@ export function closeSimulatedPosition(market: string, percentToClose: number = 
 }
 
 export function getSimulatedPositions(): SimulatedPerpPosition[] {
-  // Update P&L for each position
-  const now = Date.now();
+  // Update P&L for each position using real market prices
   const positions = getPositions();
 
   return positions.map(p => {
-    const hoursOpen = (now - p.openedAt) / (1000 * 60 * 60);
-    const currentPrice = simulatePriceMovement(p.entryPrice, p.side, hoursOpen);
+    const currentPrice = getCurrentPrice(p.market, p.entryPrice);
 
     const priceChange = currentPrice - p.entryPrice;
     const pnlMultiplier = p.side === 'long' ? 1 : -1;

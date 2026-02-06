@@ -458,7 +458,10 @@ export async function POST(req: NextRequest) {
     for (const slot of allocation) {
       // ── PERPS EXECUTION: Handle perp-long, perp-short, perp-close ─────────────
       if (slot.strategyTag === 'perp-long' || slot.strategyTag === 'perp-short' || slot.strategyTag === 'perp-close') {
-        const perpRisk = validateAction(slot, riskLimits, actualPortfolioSol);
+        // Skip risk validation for close operations — closing is always safe
+        const perpRisk = slot.strategyTag === 'perp-close'
+          ? { approved: true, riskScore: 0, summary: 'Close operation — no risk check needed' }
+          : validateAction(slot, riskLimits, actualPortfolioSol);
 
         if (!perpRisk.approved) {
           totalVetoed++;
