@@ -107,18 +107,18 @@ export function getMarketConditions(): MarketConditions | null {
   };
 }
 
-// Fallback prices when Jupiter API is unreachable
+// Fallback prices when Jupiter API is unreachable (updated Feb 2026)
 const FALLBACK_PRICES: TokenPrices = {
-  SOL: 200,
+  SOL: 77,
   USDC: 1,
-  mSOL: 220,
-  JitoSOL: 220,
-  JLP: 3.5,
-  BONK: 0.000025,
-  RAY: 2.5,
-  JUPSOL: 215,
-  WBTC: 97000,
-  WETH: 3200,
+  mSOL: 82,
+  JitoSOL: 82,
+  JLP: 2.5,
+  BONK: 0.000012,
+  RAY: 1.8,
+  JUPSOL: 80,
+  WBTC: 64000,
+  WETH: 2130,
 };
 
 /**
@@ -140,45 +140,73 @@ export async function fetchTokenPrices(
 
   if (mints.length === 0) return FALLBACK_PRICES;
 
+  let prices: TokenPrices = {};
+  let gotLivePrices = false;
+
+  // 1) Try Jupiter Price API v2
   try {
     const url = `${JUPITER_PRICE_API}?ids=${mints.join(',')}`;
     const headers: Record<string, string> = { 'Accept': 'application/json' };
     if (JUPITER_API_KEY) headers['x-api-key'] = JUPITER_API_KEY;
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(5000) });
 
-    if (!res.ok) {
-      console.warn(`Jupiter Price API ${res.status}, using fallback prices`);
-      return FALLBACK_PRICES;
-    }
+    if (res.ok) {
+      const json = await res.json();
+      const data: Record<string, { price: string }> = json.data ?? {};
 
-    const json = await res.json();
-    const data: Record<string, { price: string }> = json.data ?? {};
-
-    const prices: TokenPrices = {};
-    for (const [symbol, mint] of Object.entries(MINT_MAP)) {
-      const entry = data[mint];
-      if (entry?.price) {
-        prices[symbol] = parseFloat(entry.price);
-      } else if (FALLBACK_PRICES[symbol]) {
-        prices[symbol] = FALLBACK_PRICES[symbol];
+      for (const [symbol, mint] of Object.entries(MINT_MAP)) {
+        const entry = data[mint];
+        if (entry?.price) {
+          prices[symbol] = parseFloat(entry.price);
+          gotLivePrices = true;
+        }
       }
     }
-
-    // Update cache
-    cachedPrices = prices;
-    cacheTimestamp = Date.now();
-
-    // Record to price history ring buffer
-    priceHistory.push({ timestamp: cacheTimestamp, prices: { ...prices } });
-    if (priceHistory.length > MAX_HISTORY) {
-      priceHistory.splice(0, priceHistory.length - MAX_HISTORY);
-    }
-
-    return prices;
-  } catch (err) {
-    console.warn('Jupiter Price API failed, using fallback:', err);
-    return FALLBACK_PRICES;
+  } catch {
+    // Jupiter failed, try CoinGecko
   }
+
+  // 2) If Jupiter failed, try CoinGecko (free, no key required)
+  if (!gotLivePrices) {
+    try {
+      const geckoRes = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,bitcoin&vs_currencies=usd',
+        { signal: AbortSignal.timeout(5000) },
+      );
+      if (geckoRes.ok) {
+        const geckoData = await geckoRes.json();
+        if (geckoData.solana?.usd) { prices.SOL = geckoData.solana.usd; gotLivePrices = true; }
+        if (geckoData.ethereum?.usd) { prices.WETH = geckoData.ethereum.usd; gotLivePrices = true; }
+        if (geckoData.bitcoin?.usd) { prices.WBTC = geckoData.bitcoin.usd; gotLivePrices = true; }
+        // Derive staked SOL prices from SOL
+        if (prices.SOL) {
+          prices.mSOL = prices.SOL * 1.06;
+          prices.JitoSOL = prices.SOL * 1.06;
+          prices.JUPSOL = prices.SOL * 1.04;
+        }
+        prices.USDC = 1;
+      }
+    } catch {
+      console.warn('CoinGecko also failed');
+    }
+  }
+
+  // 3) Fill any missing with fallback
+  for (const [symbol, fallback] of Object.entries(FALLBACK_PRICES)) {
+    if (!prices[symbol]) prices[symbol] = fallback;
+  }
+
+  // Update cache
+  cachedPrices = prices;
+  cacheTimestamp = Date.now();
+
+  // Record to price history ring buffer
+  priceHistory.push({ timestamp: cacheTimestamp, prices: { ...prices } });
+  if (priceHistory.length > MAX_HISTORY) {
+    priceHistory.splice(0, priceHistory.length - MAX_HISTORY);
+  }
+
+  return prices;
 }
 
 /**

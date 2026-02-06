@@ -35,9 +35,33 @@ const CACHE_TTL = 3000; // 3 seconds
 /**
  * Fetch current market prices from Jupiter
  */
-async function fetchPrices(): Promise<{ SOL: number; ETH: number; BTC: number }> {
+// Last-resort fallback prices (updated Feb 2026)
+const FALLBACK = { SOL: 77, ETH: 2130, BTC: 64000 };
+
+/**
+ * Try CoinGecko free API (no key required) as secondary price source
+ */
+async function fetchCoinGeckoPrices(): Promise<{ SOL: number; ETH: number; BTC: number } | null> {
   try {
-    // Jupiter Price API v2
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,bitcoin&vs_currencies=usd',
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const sol = data.solana?.usd;
+    const eth = data.ethereum?.usd;
+    const btc = data.bitcoin?.usd;
+    if (!sol || !eth || !btc) return null;
+    return { SOL: sol, ETH: eth, BTC: btc };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPrices(): Promise<{ SOL: number; ETH: number; BTC: number }> {
+  // 1) Try Jupiter Price API v2
+  try {
     const ids = [
       'So11111111111111111111111111111111111111112', // SOL
       '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs', // WETH
@@ -49,25 +73,27 @@ async function fetchPrices(): Promise<{ SOL: number; ETH: number; BTC: number }>
     if (jupKey) hdrs['x-api-key'] = jupKey;
     const res = await fetch(`https://api.jup.ag/price/v2?ids=${ids.join(',')}`, {
       headers: hdrs,
+      signal: AbortSignal.timeout(5000),
     });
 
-    if (!res.ok) {
-      console.warn(`Jupiter price API ${res.status}, using fallback prices`);
-      return { SOL: 200, ETH: 3200, BTC: 97000 };
+    if (res.ok) {
+      const data = await res.json();
+      const sol = data.data?.[ids[0]]?.price;
+      const eth = data.data?.[ids[1]]?.price;
+      const btc = data.data?.[ids[2]]?.price;
+      if (sol && eth && btc) return { SOL: Number(sol), ETH: Number(eth), BTC: Number(btc) };
     }
-
-    const data = await res.json();
-
-    return {
-      SOL: data.data?.[ids[0]]?.price || 180,
-      ETH: data.data?.[ids[1]]?.price || 3200,
-      BTC: data.data?.[ids[2]]?.price || 98000,
-    };
-  } catch (err) {
-    console.warn('Price fetch error, using estimates:', err);
-    // Return reasonable estimates if API fails
-    return { SOL: 178, ETH: 3150, BTC: 97500 };
+  } catch {
+    // Jupiter failed, try next
   }
+
+  // 2) Try CoinGecko (free, no API key)
+  const geckoResult = await fetchCoinGeckoPrices();
+  if (geckoResult) return geckoResult;
+
+  // 3) Last resort: hardcoded fallback
+  console.warn('All price APIs failed, using hardcoded fallback');
+  return FALLBACK;
 }
 
 /**
