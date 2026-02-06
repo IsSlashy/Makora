@@ -99,24 +99,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Check cloud LLM keys (just verify they exist - don't test to save API costs) ──
+    // ── Check cloud LLM keys (actually test them) ──
     if (llmKeys && typeof llmKeys === 'object') {
       const providerOrder = ['anthropic', 'openai', 'qwen'];
 
       for (const provider of providerOrder) {
         const key = llmKeys[provider];
-        if (!key || key.length === 0) continue;
+        if (!key || key.length < 10) continue;
 
-        // Key exists and has reasonable length - consider it valid
-        // (actual validation happens on first use, with proper error handling)
-        if (key.length > 10) {
+        const valid = await checkCloudKey(provider, key);
+        if (valid) {
           return NextResponse.json({
             ok: true,
             provider,
             latencyMs: Date.now() - start,
-            note: 'Key configured (will validate on first use)',
           });
         }
+      }
+
+      // Keys exist but all failed validation
+      const tried = providerOrder.filter(p => llmKeys[p]?.length > 0);
+      if (tried.length > 0) {
+        return NextResponse.json({
+          ok: false,
+          error: `API key(s) invalid for: ${tried.join(', ')}. Check your keys.`,
+          latencyMs: Date.now() - start,
+        });
       }
     }
 

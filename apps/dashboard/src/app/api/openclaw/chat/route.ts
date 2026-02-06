@@ -56,6 +56,8 @@ const CLOUD_MODELS: Record<string, string> = {
 
 // ─── Cloud LLM Call ──────────────────────────────────────────────────────────
 
+let lastCloudError = '';
+
 async function callCloudLLM(
   provider: string,
   apiKey: string,
@@ -87,7 +89,7 @@ async function callCloudLLM(
 
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
-        console.error(`[Cloud LLM] anthropic error ${res.status}: ${errText.slice(0, 200)}`);
+        lastCloudError = `${provider} ${res.status}: ${errText.slice(0, 150)}`;
         return null;
       }
       const data = await res.json();
@@ -109,7 +111,7 @@ async function callCloudLLM(
 
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
-        console.error(`[Cloud LLM] ${provider} error ${res.status}: ${errText.slice(0, 200)}`);
+        lastCloudError = `${provider} ${res.status}: ${errText.slice(0, 150)}`;
         return null;
       }
       const data = await res.json();
@@ -204,7 +206,7 @@ export async function POST(req: NextRequest) {
     // ── No LLM available ─────────────────────────────────────────────────────
     const triedProviders = llmKeys ? Object.keys(llmKeys).filter((k: string) => llmKeys[k]?.length > 0) : [];
     return NextResponse.json(
-      { error: `No LLM available. Tried providers: [${triedProviders.join(', ') || 'none'}]. Check your API keys in Settings.` },
+      { error: lastCloudError || `No LLM available. Tried: [${triedProviders.join(', ') || 'none'}]. Check your API keys in Settings.` },
       { status: 502 },
     );
   } catch (err) {
