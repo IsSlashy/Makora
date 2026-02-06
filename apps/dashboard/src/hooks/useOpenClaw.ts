@@ -2,11 +2,23 @@
 
 import { useState, useCallback, useRef } from 'react';
 
+export interface ToolResult {
+  tool: string;
+  result: string;
+}
+
+export interface ActionPayload {
+  type: string;
+  [key: string]: unknown;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  actions?: ActionPayload[];
+  toolResults?: ToolResult[];
 }
 
 export interface OpenClawState {
@@ -21,6 +33,9 @@ interface OpenClawConfig {
   token?: string;
   sessionId: string;
   llmKeys?: Partial<Record<string, string>>; // Cloud API keys fallback
+  walletPublicKey?: string;
+  vaultBalance?: number;
+  onAction?: (action: ActionPayload) => void;
 }
 
 export function useOpenClaw(config: OpenClawConfig) {
@@ -103,6 +118,8 @@ export function useOpenClaw(config: OpenClawConfig) {
           token: config.token,
           sessionId: config.sessionId,
           llmKeys: config.llmKeys, // Cloud API keys fallback
+          walletPublicKey: config.walletPublicKey,
+          vaultBalance: config.vaultBalance,
         }),
         signal: abortRef.current.signal,
       });
@@ -113,17 +130,34 @@ export function useOpenClaw(config: OpenClawConfig) {
       }
 
       const data = await res.json();
-      const responseContent = data.content || '';
+      let responseContent = data.content || '';
+      const actions: ActionPayload[] = data.actions ?? [];
+      const toolResults: ToolResult[] = data.toolResults ?? [];
 
-      // Set the full response at once
+      // Append tool execution summary so the user sees what was executed
+      if (toolResults.length > 0) {
+        const summaryLines = toolResults.map(
+          (tr: ToolResult) => `[${tr.tool}] ${tr.result}`
+        );
+        responseContent += '\n\n--- Tool Execution ---\n' + summaryLines.join('\n');
+      }
+
+      // Set the full response at once (including actions/toolResults metadata)
       setState(prev => {
         const msgs = [...prev.messages];
         const last = msgs[msgs.length - 1];
         if (last && last.role === 'assistant') {
-          msgs[msgs.length - 1] = { ...last, content: responseContent };
+          msgs[msgs.length - 1] = { ...last, content: responseContent, actions, toolResults };
         }
         return { ...prev, messages: msgs, isStreaming: false, isConnected: true };
       });
+
+      // Dispatch actions to the onAction callback
+      if (config.onAction && actions.length > 0) {
+        for (const action of actions) {
+          config.onAction(action);
+        }
+      }
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
         setState(prev => ({ ...prev, isStreaming: false }));
@@ -135,7 +169,7 @@ export function useOpenClaw(config: OpenClawConfig) {
         error: err instanceof Error ? err.message : 'Request error',
       }));
     }
-  }, [state.messages, config.gatewayUrl, config.token, config.sessionId, config.llmKeys]);
+  }, [state.messages, config.gatewayUrl, config.token, config.sessionId, config.llmKeys, config.walletPublicKey, config.vaultBalance, config.onAction]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();

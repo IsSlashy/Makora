@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useOpenClaw, type ChatMessage } from './useOpenClaw';
+import { useOpenClaw, type ChatMessage, type ActionPayload } from './useOpenClaw';
 import type { SessionParams } from './useTradingSession';
 
 // ─── Intent Detection (pattern-matching, deterministic) ──────────────────────
@@ -363,13 +363,41 @@ export function useChatBridge(config: {
   sessionId: string;
   token?: string;
   llmKeys?: Partial<Record<string, string>>; // Cloud API keys fallback
+  walletPublicKey?: string;
+  vaultBalance?: number;
   callbacks: ChatBridgeCallbacks;
 }) {
+  const callbacksRefForAction = useRef(config.callbacks);
+  callbacksRefForAction.current = config.callbacks;
+
+  const handleAction = useCallback((action: ActionPayload) => {
+    const cb = callbacksRefForAction.current;
+    switch (action.type) {
+      case 'start_ooda':
+        if (cb.onSetMode) {
+          cb.onSetMode('auto').catch(() => {});
+        }
+        break;
+      case 'stop_ooda':
+        cb.onStopLoop?.();
+        break;
+      case 'refresh_positions':
+        // No-op: positions auto-refresh via polling
+        break;
+      default:
+        // Unknown action type — ignore gracefully
+        break;
+    }
+  }, []);
+
   const openclaw = useOpenClaw({
     gatewayUrl: config.gatewayUrl,
     sessionId: config.sessionId,
     token: config.token,
     llmKeys: config.llmKeys,
+    walletPublicKey: config.walletPublicKey,
+    vaultBalance: config.vaultBalance,
+    onAction: handleAction,
   });
 
   const callbacksRef = useRef(config.callbacks);

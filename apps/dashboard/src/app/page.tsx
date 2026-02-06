@@ -159,6 +159,8 @@ export default function Home() {
     gatewayUrl: localEndpoint,
     sessionId: 'makora-anon',
     llmKeys: config?.llmKeys, // Pass cloud API keys for fallback
+    walletPublicKey: publicKey?.toBase58(),
+    vaultBalance: vault.vaultBalance || 0,
     callbacks: {
       onSetMode: async (mode) => {
         ooda.setAutoMode(mode === 'auto');
