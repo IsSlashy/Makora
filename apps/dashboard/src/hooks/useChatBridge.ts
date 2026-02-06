@@ -140,10 +140,15 @@ function detectIntent(input: string): BridgeIntent {
   // ── Legacy intents ─────────────────────────────────────────────────────────
 
   // Aggression / style commands
-  if (/\b(be aggressive|trade aggressively|go aggressive|yolo)\b/.test(lower)) {
+  if (/\b(be aggressive|trade aggressively|go aggressive|yolo|mode degen|degen mode|mode perp|perp mode)\b/.test(lower)) {
     return { type: 'aggressive', raw: input };
   }
-  if (/\b(be conservative|play safe|be careful|go safe)\b/.test(lower)) {
+  if (/\b(be conservative|play safe|be careful|go safe|mode hedge|hedge mode|mode safe|safe mode)\b/.test(lower)) {
+    return { type: 'conservative', raw: input };
+  }
+
+  // Mode switches — trading modes
+  if (/\b(mode invest|invest mode|switch to invest|go invest)\b/.test(lower)) {
     return { type: 'conservative', raw: input };
   }
 
@@ -153,6 +158,11 @@ function detectIntent(input: string): BridgeIntent {
   }
   if (/\b(switch to advisory|advisory mode|disable auto|manual mode)\b/.test(lower)) {
     return { type: 'mode_advisory', raw: input };
+  }
+
+  // Start trading (short commands)
+  if (/\b(start|go|run|trade|execute)\b/.test(lower) && lower.length < 20) {
+    return { type: 'mode_auto', raw: input };
   }
 
   // Stop / halt (short commands only — not "stop trading" which is session stop)
@@ -391,41 +401,53 @@ export function useChatBridge(config: {
         }
         return;
 
-      case 'stake':
+      case 'stake': {
+        let stakeCtx = '';
         if (cb.onStake && intent.amount) {
           try {
             await cb.onStake(intent.amount, intent.fromToken ?? 'SOL');
-            openclaw.injectContext(`Queued: stake ${intent.amount} ${intent.fromToken ?? 'SOL'}`);
+            stakeCtx = `Successfully executed: stake ${intent.amount} ${intent.fromToken ?? 'SOL'}. The transaction has been submitted. Check the Activity feed for confirmation.`;
           } catch (e) {
-            openclaw.injectContext(`Stake failed: ${e instanceof Error ? e.message : 'unknown error'}`);
+            stakeCtx = `Stake failed: ${e instanceof Error ? e.message : 'unknown error'}`;
           }
+        } else {
+          stakeCtx = 'Stake command detected but wallet not connected or amount missing.';
         }
-        openclaw.sendMessage(content);
+        openclaw.sendMessage(content, stakeCtx);
         return;
+      }
 
-      case 'unstake':
+      case 'unstake': {
+        let unstakeCtx = '';
         if (cb.onUnstake && intent.amount) {
           try {
             await cb.onUnstake(intent.amount, intent.fromToken ?? 'mSOL');
-            openclaw.injectContext(`Queued: unstake ${intent.amount} ${intent.fromToken ?? 'mSOL'}`);
+            unstakeCtx = `Successfully executed: unstake ${intent.amount} ${intent.fromToken ?? 'mSOL'}. The transaction has been submitted. Check the Activity feed for confirmation.`;
           } catch (e) {
-            openclaw.injectContext(`Unstake failed: ${e instanceof Error ? e.message : 'unknown error'}`);
+            unstakeCtx = `Unstake failed: ${e instanceof Error ? e.message : 'unknown error'}`;
           }
+        } else {
+          unstakeCtx = 'Unstake command detected but wallet not connected or amount missing.';
         }
-        openclaw.sendMessage(content);
+        openclaw.sendMessage(content, unstakeCtx);
         return;
+      }
 
-      case 'swap':
+      case 'swap': {
+        let swapCtx = '';
         if (cb.onSwap && intent.amount && intent.fromToken && intent.toToken) {
           try {
             await cb.onSwap(intent.amount, intent.fromToken, intent.toToken);
-            openclaw.injectContext(`Queued: swap ${intent.amount} ${intent.fromToken} -> ${intent.toToken}`);
+            swapCtx = `Successfully executed: swap ${intent.amount} ${intent.fromToken} -> ${intent.toToken}. The transaction has been submitted via Jupiter. Check the Activity feed for confirmation.`;
           } catch (e) {
-            openclaw.injectContext(`Swap failed: ${e instanceof Error ? e.message : 'unknown error'}`);
+            swapCtx = `Swap failed: ${e instanceof Error ? e.message : 'unknown error'}`;
           }
+        } else {
+          swapCtx = 'Swap command detected but wallet not connected or parameters missing.';
         }
-        openclaw.sendMessage(content);
+        openclaw.sendMessage(content, swapCtx);
         return;
+      }
 
       default: {
         // Always include live portfolio for general messages so the LLM never hallucinates
