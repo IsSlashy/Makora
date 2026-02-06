@@ -13,24 +13,28 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@makora/types": "workspace:*",
-    "@makora/agent-core": "workspace:*",
-    "@makora/data-feed": "workspace:*",
-    "@makora/execution-engine": "workspace:*",
-    "@makora/strategy-engine": "workspace:*",
-    "@makora/risk-manager": "workspace:*",
-    "@makora/protocol-router": "workspace:*",
-    "@makora/privacy": "workspace:*",
     "@makora/adapters-jupiter": "workspace:*",
     "@makora/adapters-marinade": "workspace:*",
     "@makora/adapters-privacy": "workspace:*",
+    "@makora/agent-core": "workspace:*",
+    "@makora/data-feed": "workspace:*",
+    "@makora/execution-engine": "workspace:*",
+    "@makora/llm-provider": "workspace:*",
+    "@makora/privacy": "workspace:*",
+    "@makora/protocol-router": "workspace:*",
+    "@makora/risk-manager": "workspace:*",
+    "@makora/strategy-engine": "workspace:*",
+    "@makora/types": "workspace:*",
     "@solana/web3.js": "^1.98.4",
+    "circomlibjs": "^0.1.7",
+    "dotenv": "^16.4.0",
     "grammy": "^1.30.0",
-    "dotenv": "^16.4.0"
+    "poseidon-lite": "^0.3.0",
+    "snarkjs": "^0.7.6"
   },
   "devDependencies": {
+    "rimraf": "^5.0.0",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.0",
-    "rimraf": "^5.0.0"
+    "typescript": "^5.3.0"
   }
 }
