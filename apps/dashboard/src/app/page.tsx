@@ -204,6 +204,47 @@ export default function Home() {
         return lines.join('\n');
       },
       // ── Direct execution callbacks (chat commands) ────────────────────────
+      onOpenPosition: async (symbol: string, side: 'long' | 'short', leverage: number, pct: number) => {
+        if (!publicKey) throw new Error('Connect wallet first');
+        const market = `${symbol}-PERP`;
+        const strategyTag = side === 'long' ? 'perp-long' : 'perp-short';
+        const vaultBal = vault.vaultBalance || 0;
+        const portfolioSol = vaultBal > 0 ? vaultBal : (cachedBalanceRef.current || 1);
+
+        const res = await fetch('/api/agent/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allocation: [{
+              protocol: 'Jupiter Perps',
+              symbol: market,
+              pct,
+              expectedApy: 0,
+              strategyTag,
+              risk: leverage > 10 ? 'High' : leverage > 5 ? 'Medium' : 'Low',
+              leverage,
+            }],
+            walletPublicKey: publicKey.toBase58(),
+            riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+            confidence: 100,
+            portfolioValueSol: portfolioSol,
+            signingMode: ooda.signingMode,
+          }),
+        });
+        const data = await res.json();
+        const r = data.results?.[0];
+        if (r?.success) {
+          addActivity({
+            action: `Opened ${side.toUpperCase()} ${market} ${leverage}x (${pct}% vault)${r.simulated ? ' [SIM]' : ''}`,
+            status: 'success',
+          });
+          return `Position opened: ${side.toUpperCase()} ${market} at ${leverage}x leverage with ${pct}% of vault${r.simulated ? ' (simulated)' : ''}. Check the position chart and Activity feed.`;
+        } else {
+          const err = r?.error || data.error || 'unknown error';
+          addActivity({ action: `Open ${side} ${market} failed: ${err}`, status: 'warning' });
+          throw new Error(err);
+        }
+      },
       onSwap: async (amount: number, from: string, to: string) => {
         if (!publicKey) throw new Error('Connect wallet first');
         const res = await fetch('/api/agent/execute', {

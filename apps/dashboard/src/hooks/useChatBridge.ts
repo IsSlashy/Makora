@@ -11,6 +11,7 @@ export type BridgeIntentType =
   | 'stake'
   | 'unstake'
   | 'close_position'
+  | 'open_position'
   | 'mode_auto'
   | 'mode_advisory'
   | 'stop'
@@ -28,7 +29,10 @@ export interface BridgeIntent {
   amount?: number;
   fromToken?: string;
   toToken?: string;
-  symbol?: string; // For close_position: which market to close (e.g., "SOL", "ETH", "BTC")
+  symbol?: string; // Market symbol (e.g., "SOL", "ETH", "BTC")
+  side?: 'long' | 'short'; // For open_position
+  leverage?: number; // For open_position
+  pct?: number; // Percentage of vault to use
   sessionParams?: Partial<SessionParams>;
   raw: string;
 }
@@ -199,6 +203,69 @@ function detectIntent(input: string): BridgeIntent {
     };
   }
 
+  // Open position: "long SOL 5x", "short BTC x20", "open long ETH", "prend un short sur solana x20"
+  // Supports EN and FR patterns with optional leverage
+  {
+    // Normalize common French/English token names
+    const tokenMap: Record<string, string> = {
+      solana: 'SOL', sol: 'SOL', ethereum: 'ETH', eth: 'ETH',
+      bitcoin: 'BTC', btc: 'BTC',
+    };
+
+    // Pattern group 1: "long SOL 5x" / "short BTC x20" / "go long ETH" / "open short SOL"
+    const enMatch = lower.match(
+      /(?:open|go|take|prend(?:s|re)?)\s+(?:a\s+|une?\s+)?(?:position\s+)?(?:sur\s+)?(?:(long|short)\s+(?:(?:on|sur|de)\s+)?(\w+)|(\w+)\s+(long|short))(?:\s+(?:a\s+|at\s+|with\s+)?(?:(?:x|×|levier\s*(?:x|×)?)\s*(\d+)|(\d+)\s*x))?/
+    );
+    // Pattern group 2: direct "long SOL" / "short ETH" at start
+    const directMatch = !enMatch && lower.match(
+      /^(long|short)\s+(\w+)(?:\s+(?:(?:x|×)\s*(\d+)|(\d+)\s*x))?/
+    );
+    // Pattern group 3: "short agressif sur solana x20" (FR)
+    const frMatch = !enMatch && !directMatch && lower.match(
+      /(?:position|trade|met[s]?|ouvr[ei])\s+(?:une?\s+)?(?:position\s+)?(?:(?:sur|de|en)\s+)?(?:(\w+)\s+)?(long|short)(?:\s+(?:agressif|aggressif|aggressive))?(?:\s+(?:sur|on|de)\s+(\w+))?(?:\s+(?:a\s+|(?:x|×|levier\s*(?:x|×)?)\s*)(\d+)|\s+(\d+)\s*x)?/
+    );
+
+    const m = enMatch || directMatch || (frMatch || null);
+    if (m) {
+      let side: 'long' | 'short';
+      let rawSymbol: string;
+      let rawLeverage: string | undefined;
+
+      if (enMatch) {
+        side = (enMatch[1] || enMatch[4]) as 'long' | 'short';
+        rawSymbol = enMatch[2] || enMatch[3];
+        rawLeverage = enMatch[5] || enMatch[6];
+      } else if (directMatch) {
+        side = directMatch[1] as 'long' | 'short';
+        rawSymbol = directMatch[2];
+        rawLeverage = directMatch[3] || directMatch[4];
+      } else {
+        // frMatch
+        side = (m[2]) as 'long' | 'short';
+        rawSymbol = m[3] || m[1] || '';
+        rawLeverage = m[4] || m[5];
+      }
+
+      const symbol = tokenMap[rawSymbol.toLowerCase()] || rawSymbol.toUpperCase();
+      const validSymbols = ['SOL', 'ETH', 'BTC'];
+      if (validSymbols.includes(symbol)) {
+        const leverage = rawLeverage ? Math.min(Math.max(parseInt(rawLeverage, 10), 1), 50) : 5;
+        // Check for percentage in the message
+        const pctMatch = lower.match(/(\d+)\s*%/);
+        const pct = pctMatch ? parseInt(pctMatch[1], 10) : 100; // Default 100% of vault
+
+        return {
+          type: 'open_position',
+          symbol,
+          side,
+          leverage,
+          pct,
+          raw: input,
+        };
+      }
+    }
+  }
+
   // Close position: "close position", "close SOL", "close SOL-PERP", "exit long", "sell position", "close all"
   const closeMatch = lower.match(/(?:close|exit|liquidate|sell\s+out|cut)\s+(?:(?:the|my|this)\s+)?(?:(?:long|short|perp|perps)\s+)?(?:position\s+)?(?:in\s+|on\s+)?(\w+)?(?:\s*-?\s*perp)?/);
   if (closeMatch || /\b(close\s+(?:position|all|it)|exit\s+(?:position|trade|all)|sell\s+position|cut\s+(?:loss|losses)|take\s+profit)\b/.test(lower)) {
@@ -236,6 +303,7 @@ export function getIntentBadge(type: BridgeIntentType): string | null {
     case 'stake': return 'STAKE';
     case 'unstake': return 'UNSTAKE';
     case 'close_position': return 'CLOSE POSITION';
+    case 'open_position': return 'OPEN POSITION';
     case 'mode_auto': return 'AUTO MODE';
     case 'mode_advisory': return 'ADVISORY';
     case 'stop': return 'HALT';
@@ -259,6 +327,7 @@ export interface ChatBridgeCallbacks {
   onStake?: (amount: number, token: string) => Promise<void>;
   onUnstake?: (amount: number, token: string) => Promise<void>;
   onClosePosition?: (symbol?: string) => Promise<string>;
+  onOpenPosition?: (symbol: string, side: 'long' | 'short', leverage: number, pct: number) => Promise<string>;
   onSetAggressive?: () => void;
   onSetConservative?: () => void;
   onGetPortfolio?: () => string | Promise<string>;
@@ -448,6 +517,26 @@ export function useChatBridge(config: {
           unstakeCtx = 'Unstake command detected but wallet not connected or amount missing.';
         }
         openclaw.sendMessage(content, unstakeCtx);
+        return;
+      }
+
+      case 'open_position': {
+        let openCtx = '';
+        if (cb.onOpenPosition && intent.symbol && intent.side) {
+          try {
+            openCtx = await cb.onOpenPosition(
+              intent.symbol,
+              intent.side,
+              intent.leverage ?? 5,
+              intent.pct ?? 100,
+            );
+          } catch (e) {
+            openCtx = `Failed to open position: ${e instanceof Error ? e.message : 'unknown error'}`;
+          }
+        } else {
+          openCtx = 'Open position command detected but wallet not connected or parameters missing.';
+        }
+        openclaw.sendMessage(content, openCtx);
         return;
       }
 
