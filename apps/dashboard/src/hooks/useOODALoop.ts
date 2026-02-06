@@ -1231,7 +1231,9 @@ DO NOT suggest perp-long, perp-short, or perp-close actions in INVEST mode.`);
     const latestVault = latestDeps.vaultState;
     const onChainAuto = latestVault && 'auto' in latestVault.mode;
     const isAutoMode = onChainAuto || localAutoModeRef.current;
-    const meetsThreshold = confidence >= (currentDeps.strategyState?.confidenceThreshold ?? 50);
+    // Cap threshold at 55% so neutral-sentiment (60%) can still execute on demo
+    const rawThreshold = currentDeps.strategyState?.confidenceThreshold ?? 45;
+    const meetsThreshold = confidence >= Math.min(rawThreshold, 55);
 
     // ── TRADE GUARD CHECKS ──────────────────────────────────────────────────
     const guard = tradeGuardRef.current;
