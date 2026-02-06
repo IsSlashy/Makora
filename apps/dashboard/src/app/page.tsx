@@ -264,6 +264,51 @@ export default function Home() {
           throw new Error(r?.error || data.error || 'Stake failed');
         }
       },
+      onClosePosition: async (symbol?: string) => {
+        if (!publicKey) throw new Error('Connect wallet first');
+        // Close all positions or a specific market
+        const markets = symbol && symbol !== 'ALL'
+          ? [`${symbol}-PERP`]
+          : ['SOL-PERP', 'ETH-PERP', 'BTC-PERP']; // close all
+
+        const closedResults: string[] = [];
+        for (const market of markets) {
+          try {
+            const res = await fetch('/api/agent/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                allocation: [{
+                  protocol: 'Jupiter Perps',
+                  symbol: market,
+                  pct: 100,
+                  expectedApy: 0,
+                  strategyTag: 'perp-close',
+                  risk: 'Low',
+                }],
+                walletPublicKey: publicKey.toBase58(),
+                riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+                confidence: 100,
+                portfolioValueSol: 1, // Placeholder, not used for close
+                signingMode: ooda.signingMode,
+              }),
+            });
+            const data = await res.json();
+            const r = data.results?.[0];
+            if (r?.success) {
+              closedResults.push(`Closed ${market} position${r.simulated ? ' (simulated)' : ''}`);
+              addActivity({ action: `Closed ${market} position${r.simulated ? ' [SIM]' : ''}`, status: 'success' });
+            } else if (r?.error?.includes('No position')) {
+              closedResults.push(`No open position in ${market}`);
+            } else {
+              closedResults.push(`Failed to close ${market}: ${r?.error || 'unknown'}`);
+            }
+          } catch (e) {
+            closedResults.push(`Error closing ${market}: ${e instanceof Error ? e.message : 'unknown'}`);
+          }
+        }
+        return closedResults.join('. ');
+      },
       onUnstake: async (amount: number, token: string) => {
         if (!publicKey) throw new Error('Connect wallet first');
         const res = await fetch('/api/agent/execute', {

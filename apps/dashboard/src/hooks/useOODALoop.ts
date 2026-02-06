@@ -749,6 +749,33 @@ Use leverage 2-5x for safety. Set percentOfPortfolio as collateral amount.
 Cycle time: ${tradingModeConfig.cycleIntervalMs / 1000}s — make quick, decisive calls.
 
 **FORBIDDEN IN PERPS MODE: stake, lend, lp, loop, swap to mSOL/USDC/JLP. These are INVEST mode actions.**`);
+
+        // MARKET SENTIMENT DIRECTIONAL BIAS (tells LLM to match sentiment)
+        const marketObs2 = (observation as any).marketObservation as MarketObservation | null;
+        const sentiment = marketObs2?.marketSentiment;
+        const volatilityLevel = marketObs2?.volatility;
+        if (sentiment === 'risk-off') {
+          contextParts.push(`## DIRECTIONAL BIAS: BEARISH
+The market sentiment is RISK-OFF / BEARISH. You MUST:
+- PREFER SHORT positions (bet price goes DOWN)
+- Do NOT open new LONG positions unless you see very strong reversal signals
+- If you have open LONG positions that are losing, CLOSE them immediately
+- If LONG positions are profitable, consider taking profits now before reversal deepens`);
+        } else if (sentiment === 'risk-on') {
+          contextParts.push(`## DIRECTIONAL BIAS: BULLISH
+The market sentiment is RISK-ON / BULLISH. You MUST:
+- PREFER LONG positions (bet price goes UP)
+- Do NOT open new SHORT positions unless you see clear topping signals
+- If you have open SHORT positions that are losing, CLOSE them immediately`);
+        } else {
+          contextParts.push(`## DIRECTIONAL BIAS: NEUTRAL
+Market sentiment is NEUTRAL. Both LONG and SHORT are acceptable.
+- Follow the short-term momentum of each individual market
+- Use smaller position sizes in neutral conditions`);
+        }
+        if (volatilityLevel === 'high') {
+          contextParts.push(`⚠ HIGH VOLATILITY: Use lower leverage (2-3x max) and tighter stops.`);
+        }
       } else {
         contextParts.push(`## TRADING MODE: INVEST (Long-Term Yield)
 ${tradingModeConfig.description}

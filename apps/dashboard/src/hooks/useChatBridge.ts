@@ -10,6 +10,7 @@ export type BridgeIntentType =
   | 'swap'
   | 'stake'
   | 'unstake'
+  | 'close_position'
   | 'mode_auto'
   | 'mode_advisory'
   | 'stop'
@@ -27,6 +28,7 @@ export interface BridgeIntent {
   amount?: number;
   fromToken?: string;
   toToken?: string;
+  symbol?: string; // For close_position: which market to close (e.g., "SOL", "ETH", "BTC")
   sessionParams?: Partial<SessionParams>;
   raw: string;
 }
@@ -197,6 +199,20 @@ function detectIntent(input: string): BridgeIntent {
     };
   }
 
+  // Close position: "close position", "close SOL", "close SOL-PERP", "exit long", "sell position", "close all"
+  const closeMatch = lower.match(/(?:close|exit|liquidate|sell\s+out|cut)\s+(?:(?:the|my|this)\s+)?(?:(?:long|short|perp|perps)\s+)?(?:position\s+)?(?:in\s+|on\s+)?(\w+)?(?:\s*-?\s*perp)?/);
+  if (closeMatch || /\b(close\s+(?:position|all|it)|exit\s+(?:position|trade|all)|sell\s+position|cut\s+(?:loss|losses)|take\s+profit)\b/.test(lower)) {
+    const sym = closeMatch?.[1]?.toUpperCase();
+    // Filter out generic words that aren't market symbols
+    const validSymbols = ['SOL', 'ETH', 'BTC', 'ALL'];
+    const symbol = sym && validSymbols.includes(sym) ? sym : undefined;
+    return {
+      type: 'close_position',
+      symbol,
+      raw: input,
+    };
+  }
+
   // Swap command: "swap 0.5 SOL to USDC"
   const swapMatch = lower.match(/swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|for|into)\s+(\w+)/);
   if (swapMatch) {
@@ -219,6 +235,7 @@ export function getIntentBadge(type: BridgeIntentType): string | null {
     case 'swap': return 'SWAP';
     case 'stake': return 'STAKE';
     case 'unstake': return 'UNSTAKE';
+    case 'close_position': return 'CLOSE POSITION';
     case 'mode_auto': return 'AUTO MODE';
     case 'mode_advisory': return 'ADVISORY';
     case 'stop': return 'HALT';
@@ -241,6 +258,7 @@ export interface ChatBridgeCallbacks {
   onSwap?: (amount: number, from: string, to: string) => Promise<void>;
   onStake?: (amount: number, token: string) => Promise<void>;
   onUnstake?: (amount: number, token: string) => Promise<void>;
+  onClosePosition?: (symbol?: string) => Promise<string>;
   onSetAggressive?: () => void;
   onSetConservative?: () => void;
   onGetPortfolio?: () => string | Promise<string>;
@@ -430,6 +448,21 @@ export function useChatBridge(config: {
           unstakeCtx = 'Unstake command detected but wallet not connected or amount missing.';
         }
         openclaw.sendMessage(content, unstakeCtx);
+        return;
+      }
+
+      case 'close_position': {
+        let closeCtx = '';
+        if (cb.onClosePosition) {
+          try {
+            closeCtx = await cb.onClosePosition(intent.symbol);
+          } catch (e) {
+            closeCtx = `Close position failed: ${e instanceof Error ? e.message : 'unknown error'}`;
+          }
+        } else {
+          closeCtx = 'Close position command detected but wallet not connected.';
+        }
+        openclaw.sendMessage(content, closeCtx);
         return;
       }
 
