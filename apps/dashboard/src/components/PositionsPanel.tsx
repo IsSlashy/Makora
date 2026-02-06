@@ -23,9 +23,9 @@ let lastFetchTime = 0;
 // Simulated market data (would be WebSocket in production)
 function useMarketTickers(): MarketTicker[] {
   const [tickers, setTickers] = useState<MarketTicker[]>([
-    { market: 'SOL-PERP', price: 178.50, change24h: -3.20, changePct24h: -1.76, high24h: 185.00, low24h: 175.00, volume24h: 125000000 },
-    { market: 'ETH-PERP', price: 3150.00, change24h: -45.00, changePct24h: -1.41, high24h: 3250.00, low24h: 3100.00, volume24h: 85000000 },
-    { market: 'BTC-PERP', price: 97500.00, change24h: -1200.00, changePct24h: -1.22, high24h: 99500.00, low24h: 96000.00, volume24h: 250000000 },
+    { market: 'SOL-PERP', price: 77.00, change24h: -8.50, changePct24h: -9.94, high24h: 93.00, low24h: 71.00, volume24h: 125000000 },
+    { market: 'ETH-PERP', price: 2130.00, change24h: -290.00, changePct24h: -11.98, high24h: 2600.00, low24h: 2050.00, volume24h: 85000000 },
+    { market: 'BTC-PERP', price: 64000.00, change24h: -6500.00, changePct24h: -9.22, high24h: 72000.00, low24h: 60000.00, volume24h: 250000000 },
   ]);
 
   useEffect(() => {
@@ -59,6 +59,45 @@ export function PositionsPanel({ className = '' }: PositionsPanelProps) {
   // Initialize with cached positions to prevent flash of "No Open Positions"
   const [positions, setPositions] = useState<SimulatedPerpPosition[]>(cachedPositions);
   const [isLoading, setIsLoading] = useState(cachedPositions.length === 0);
+  const [closingMarket, setClosingMarket] = useState<string | null>(null);
+
+  // Close a position via API
+  const handleClosePosition = async (market: string) => {
+    if (!publicKey || closingMarket) return;
+    setClosingMarket(market);
+    try {
+      const res = await fetch('/api/agent/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocation: [{
+            protocol: 'Jupiter Perps',
+            symbol: market,
+            pct: 100,
+            expectedApy: 0,
+            strategyTag: 'perp-close',
+            risk: 'Low',
+          }],
+          walletPublicKey: publicKey.toBase58(),
+          riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+          confidence: 100,
+          portfolioValueSol: 1,
+          signingMode: 'agent',
+        }),
+      });
+      const data = await res.json();
+      const r = data.results?.[0];
+      if (r?.success) {
+        // Remove from local state immediately for instant feedback
+        setPositions(prev => prev.filter(p => p.market !== market));
+        cachedPositions = cachedPositions.filter(p => p.market !== market);
+      }
+    } catch (e) {
+      console.error('[PositionsPanel] Close error:', e);
+    } finally {
+      setClosingMarket(null);
+    }
+  };
   const tickers = useMarketTickers();
   const tickersRef = useRef(tickers);
   tickersRef.current = tickers;
@@ -204,6 +243,8 @@ export function PositionsPanel({ className = '' }: PositionsPanelProps) {
             liquidationPrice={calculateLiquidationPrice(p.entryPrice, p.leverage, p.side)}
             unrealizedPnl={p.unrealizedPnl}
             unrealizedPnlPct={p.unrealizedPnlPct}
+            onClose={handleClosePosition}
+            isClosing={closingMarket === p.market}
           />
         ))
       )}

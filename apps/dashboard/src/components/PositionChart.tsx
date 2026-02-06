@@ -14,6 +14,8 @@ interface PositionChartProps {
   liquidationPrice?: number;
   unrealizedPnl?: number;
   unrealizedPnlPct?: number;
+  onClose?: (market: string) => void;
+  isClosing?: boolean;
 }
 
 // Generate smooth price curve points
@@ -55,6 +57,8 @@ export function PositionChart({
   liquidationPrice,
   unrealizedPnl = 0,
   unrealizedPnlPct = 0,
+  onClose,
+  isClosing = false,
 }: PositionChartProps) {
   // Track price history for smooth animation
   const [priceHistory, setPriceHistory] = useState<number[]>([]);
@@ -140,8 +144,23 @@ export function PositionChart({
             {side.toUpperCase()} {leverage}x
           </span>
         </div>
-        <div className={`font-mono text-sm font-medium ${isProfitable ? 'text-green-400' : 'text-red-400'}`}>
-          {unrealizedPnl >= 0 ? '+' : ''}{unrealizedPnl.toFixed(2)} ({unrealizedPnlPct >= 0 ? '+' : ''}{unrealizedPnlPct.toFixed(1)}%)
+        <div className="flex items-center gap-2">
+          <div className={`font-mono text-sm font-medium ${isProfitable ? 'text-green-400' : 'text-red-400'}`}>
+            {unrealizedPnl >= 0 ? '+' : ''}{unrealizedPnl.toFixed(2)} ({unrealizedPnlPct >= 0 ? '+' : ''}{unrealizedPnlPct.toFixed(1)}%)
+          </div>
+          {onClose && (
+            <button
+              onClick={() => onClose(market)}
+              disabled={isClosing}
+              className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded border transition-colors ${
+                isClosing
+                  ? 'border-cursed/20 text-text-muted/40 cursor-wait'
+                  : 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 active:bg-red-500/20'
+              }`}
+            >
+              {isClosing ? 'Closing...' : 'Close'}
+            </button>
+          )}
         </div>
       </div>
 
