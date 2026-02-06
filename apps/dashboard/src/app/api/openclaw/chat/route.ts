@@ -85,7 +85,11 @@ async function callCloudLLM(
         }),
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.error(`[Cloud LLM] anthropic error ${res.status}: ${errText.slice(0, 200)}`);
+        return null;
+      }
       const data = await res.json();
       return { content: data.content?.[0]?.text ?? '', model };
     } else {
@@ -103,11 +107,16 @@ async function callCloudLLM(
         }),
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.error(`[Cloud LLM] ${provider} error ${res.status}: ${errText.slice(0, 200)}`);
+        return null;
+      }
       const data = await res.json();
       return { content: data.choices?.[0]?.message?.content ?? '', model };
     }
-  } catch {
+  } catch (e) {
+    console.error(`[Cloud LLM] ${provider} exception:`, e);
     return null;
   }
 }
@@ -193,8 +202,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── No LLM available ─────────────────────────────────────────────────────
+    const triedProviders = llmKeys ? Object.keys(llmKeys).filter((k: string) => llmKeys[k]?.length > 0) : [];
     return NextResponse.json(
-      { error: 'Gateway unreachable and no cloud LLM keys configured' },
+      { error: `No LLM available. Tried providers: [${triedProviders.join(', ') || 'none'}]. Check your API keys in Settings.` },
       { status: 502 },
     );
   } catch (err) {
