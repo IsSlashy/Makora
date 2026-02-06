@@ -56,3 +56,5 @@ vercel-debug.txt
 vercel-ls.txt
 *.b64
 temp_pkg*
+
+.vercel
