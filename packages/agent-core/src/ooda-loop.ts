@@ -595,7 +595,7 @@ export class OODALoop {
 
     for (const action of actions) {
       try {
-        const sessionKeypair = this.sessionManager.getSessionKeypairForTrade(action.amount ?? 0);
+        const sessionKeypair = this.sessionManager.getSessionKeypairForTrade(Number(action.amount ?? 0));
         const signerToUse = sessionKeypair ?? this.signer;
 
         const routeRequest: RouteRequest = {
@@ -622,7 +622,7 @@ export class OODALoop {
             this.sessionManager.recordTrade(session.id, {
               signature: result.signature,
               action: action.type,
-              amount: action.amount ?? 0,
+              amount: Number(action.amount ?? 0),
               timestamp: Date.now(),
               success: result.success,
               error: result.error,

@@ -15,7 +15,7 @@
   },
   "files": ["dist", "src"],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "build": "tsup src/index.ts --format cjs,esm --clean",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
