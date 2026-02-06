@@ -203,6 +203,97 @@ export default function Home() {
         }
         return lines.join('\n');
       },
+      // ── Direct execution callbacks (chat commands) ────────────────────────
+      onSwap: async (amount: number, from: string, to: string) => {
+        if (!publicKey) throw new Error('Connect wallet first');
+        const res = await fetch('/api/agent/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allocation: [{
+              protocol: 'Jupiter',
+              symbol: `${from}->${to}`,
+              pct: 100,
+              expectedApy: 0,
+              strategyTag: 'swap',
+              risk: 'Low',
+            }],
+            walletPublicKey: publicKey.toBase58(),
+            riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+            confidence: 100,
+            portfolioValueSol: amount,
+            signingMode: ooda.signingMode,
+          }),
+        });
+        const data = await res.json();
+        const r = data.results?.[0];
+        if (r?.success) {
+          addActivity({ action: `Swap ${amount} ${from} -> ${to}${r.simulated ? ' (simulated)' : ''}`, status: 'success' });
+        } else {
+          addActivity({ action: `Swap failed: ${r?.error || data.error || 'unknown'}`, status: 'warning' });
+          throw new Error(r?.error || data.error || 'Swap failed');
+        }
+      },
+      onStake: async (amount: number, token: string) => {
+        if (!publicKey) throw new Error('Connect wallet first');
+        const res = await fetch('/api/agent/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allocation: [{
+              protocol: 'Marinade',
+              symbol: `${token}->mSOL`,
+              pct: 100,
+              expectedApy: 7.5,
+              strategyTag: 'stake',
+              risk: 'Low',
+            }],
+            walletPublicKey: publicKey.toBase58(),
+            riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+            confidence: 100,
+            portfolioValueSol: amount,
+            signingMode: ooda.signingMode,
+          }),
+        });
+        const data = await res.json();
+        const r = data.results?.[0];
+        if (r?.success) {
+          addActivity({ action: `Stake ${amount} ${token}${r.simulated ? ' (simulated)' : ''}`, status: 'success' });
+        } else {
+          addActivity({ action: `Stake failed: ${r?.error || data.error || 'unknown'}`, status: 'warning' });
+          throw new Error(r?.error || data.error || 'Stake failed');
+        }
+      },
+      onUnstake: async (amount: number, token: string) => {
+        if (!publicKey) throw new Error('Connect wallet first');
+        const res = await fetch('/api/agent/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allocation: [{
+              protocol: 'Marinade',
+              symbol: token,
+              pct: 100,
+              expectedApy: 0,
+              strategyTag: 'sell',
+              risk: 'Low',
+            }],
+            walletPublicKey: publicKey.toBase58(),
+            riskLimits: { maxPositionSizePct: 100, maxSlippageBps: 100, maxDailyLossPct: 10, minSolReserve: 0.01, maxProtocolExposurePct: 100 },
+            confidence: 100,
+            portfolioValueSol: amount,
+            signingMode: ooda.signingMode,
+          }),
+        });
+        const data = await res.json();
+        const r = data.results?.[0];
+        if (r?.success) {
+          addActivity({ action: `Unstake ${amount} ${token}${r.simulated ? ' (simulated)' : ''}`, status: 'success' });
+        } else {
+          addActivity({ action: `Unstake failed: ${r?.error || data.error || 'unknown'}`, status: 'warning' });
+          throw new Error(r?.error || data.error || 'Unstake failed');
+        }
+      },
       // ── Session callbacks ──────────────────────────────────────────────────
       onStartSession: async (params: SessionParams) => {
         const error = tradingSession.startSession(params);
