@@ -18,8 +18,8 @@
     "ackReactionScope": "group-mentions"
   },
   "commands": {
-    "native": "auto",
-    "nativeSkills": "auto"
+    "native": "none",
+    "nativeSkills": "none"
   },
   "channels": {
     "telegram": {

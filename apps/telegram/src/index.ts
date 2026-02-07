@@ -31,6 +31,7 @@ import {
   mainMenuKeyboard,
   settingsInlineKeyboard,
   autoModeKeyboard,
+  initDashboardUrl,
 } from './keyboards.js';
 import {
   registerUserChat,
@@ -123,6 +124,9 @@ async function initializeAgent(): Promise<void> {
 
   const raw = readFileSync(walletPath, 'utf-8');
   wallet = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(raw)));
+
+  // Initialize dashboard TWA URL with wallet address for persistent keyboard
+  initDashboardUrl(wallet.publicKey.toBase58());
 
   const rpcUrl = process.env.SOLANA_RPC_URL || `https://api.${cluster}.solana.com`;
 
@@ -228,37 +232,30 @@ bot.command('start', async (ctx) => {
     registerUserChat(ctx.from.id, ctx.chat.id);
   }
 
-  const llmStatus = llmConfig ? `LLM: *${llmConfig.provider}*` : 'LLM: _disabled_';
-
   // Send welcome with persistent menu keyboard
   await ctx.reply(
-    `*Makora - Autonomous DeFi Trading Agent*\n\n` +
-    `I'm an intelligent trading agent for Solana. Talk to me in natural language or use the buttons below!\n\n` +
+    `*Makora — Autonomous DeFi Trading Agent* \u{1F988}\n\n` +
+    `Talk to me in natural language or use the buttons below.\n\n` +
     `*What I can do:*\n` +
-    `- Open/close leveraged perp positions (SOL, ETH, BTC)\n` +
-    `- Swap tokens on-chain via Jupiter\n` +
-    `- Real-time market sentiment from 6 live sources\n` +
-    `- Run autonomous OODA trading cycles\n\n` +
-    `*Try saying:*\n` +
-    `"What's my portfolio?"\n` +
-    `"Open a 5x long on SOL"\n` +
-    `"Scan the market for me"\n\n` +
-    `_Wallet: \`${wallet.publicKey.toBase58().slice(0, 8)}...${wallet.publicKey.toBase58().slice(-4)}\`_\n` +
-    `_Network: ${cluster} | ${llmStatus}_`,
+    `\u{2022} Leveraged perp positions (SOL, ETH, BTC)\n` +
+    `\u{2022} Swap tokens on-chain via Jupiter\n` +
+    `\u{2022} Real-time sentiment from 7 live sources\n` +
+    `\u{2022} ZK-shielded vault for private holdings\n` +
+    `\u{2022} Autonomous OODA trading cycles\n\n` +
+    `*Try:*\n` +
+    `"Long SOL 5x"\n` +
+    `"Scan the market"\n` +
+    `"Shield 1 SOL"`,
     { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
   );
 
-  // Also send the dashboard button as a separate inline message
-  await ctx.reply('Open the full dashboard:', {
+  // Dashboard mini-app button
+  await ctx.reply('\u{1F4F1} Open the full dashboard:', {
     reply_markup: miniAppKeyboard(wallet.publicKey.toBase58(), ctx.chat.id),
   });
 });
 
-bot.command('menu', async (ctx) => {
-  await ctx.reply('Menu activated. Use the buttons below:', {
-    reply_markup: mainMenuKeyboard(),
-  });
-});
+// /menu removed — persistent keyboard is always visible
 
 bot.command('app', async (ctx) => {
   if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
@@ -349,20 +346,7 @@ bot.command('positions', async (ctx) => {
   await ctx.reply(msg, { parse_mode: 'Markdown' });
 });
 
-bot.command('mode', async (ctx) => {
-  const modeArg = ctx.match?.trim().toLowerCase();
-
-  if (modeArg === 'perps' || modeArg === 'invest') {
-    ctx.session.tradingMode = modeArg;
-    await ctx.reply(`Trading mode set to *${modeArg.toUpperCase()}*.`, { parse_mode: 'Markdown' });
-    return;
-  }
-
-  await ctx.reply(
-    `*Current mode:* ${ctx.session.tradingMode.toUpperCase()}\n\nSelect trading mode:`,
-    { parse_mode: 'Markdown', reply_markup: tradingModeKeyboard() }
-  );
-});
+// /mode removed — accessible through Settings
 
 bot.command('swap', async (ctx) => {
   if (!agent) {
@@ -448,50 +432,7 @@ bot.command('swap', async (ctx) => {
   }
 });
 
-bot.command('stake', async (ctx) => {
-  if (!agent) {
-    await ctx.reply('Agent not initialized.');
-    return;
-  }
-
-  const amountStr = ctx.match?.trim();
-  if (!amountStr) {
-    await ctx.reply('Usage: /stake <amount>\nExample: /stake 5');
-    return;
-  }
-
-  const amount = parseFloat(amountStr);
-  if (isNaN(amount) || amount <= 0) {
-    await ctx.reply('Invalid amount.');
-    return;
-  }
-
-  await ctx.reply(`Fetching Marinade staking quote for ${amount} SOL...`);
-
-  try {
-    const marinade = new MarinadeAdapter();
-    await marinade.initialize({ rpcUrl: connection.rpcEndpoint, walletPublicKey: wallet.publicKey });
-
-    const rawAmount = BigInt(Math.floor(amount * LAMPORTS_PER_SOL));
-    const quote = await marinade.getQuote({
-      inputToken: new PublicKey('So11111111111111111111111111111111111111112'),
-      outputToken: new PublicKey('mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So'),
-      amount: rawAmount,
-      maxSlippageBps: 10,
-    });
-
-    const expectedMsol = Number(quote.expectedOutputAmount) / LAMPORTS_PER_SOL;
-
-    let msg = `*Stake Quote*\n\n`;
-    msg += `${amount} SOL -> ~${expectedMsol.toFixed(4)} mSOL\n`;
-    msg += `Route: ${quote.routeDescription}\n`;
-    msg += `Protocol: Marinade Finance (audited)`;
-
-    await ctx.reply(msg, { parse_mode: 'Markdown' });
-  } catch (err) {
-    await ctx.reply(`Stake error: ${err instanceof Error ? err.message : String(err)}`);
-  }
-});
+// /stake removed — staking accessible through natural language via LLM
 
 bot.command('strategy', async (ctx) => {
   if (!agent) {
@@ -585,21 +526,19 @@ bot.command('auto', async (ctx) => {
   const state = ctx.match?.trim().toLowerCase();
 
   if (state === 'cycle') {
-    await ctx.reply('Running single OODA cycle...');
+    await ctx.reply('Running OODA cycle...');
     try {
       const result = await agent.runSingleCycle();
 
       let msg = `*OODA Cycle Complete*\n\n`;
-      msg += `Time: ${result.cycleTimeMs}ms\n`;
-      msg += `Proposed: ${result.proposedActions.length}\n`;
-      msg += `Approved: ${result.approvedActions.length}\n`;
-      msg += `Rejected: ${result.rejectedActions.length}\n`;
-
-      if (result.proposedActions.length > 0) {
-        msg += `\n*Actions:*\n`;
+      if (result.proposedActions.length === 0) {
+        msg += `No actions proposed — market conditions unchanged.`;
+      } else {
+        msg += `*${result.proposedActions.length} action(s) proposed:*\n`;
         for (const action of result.proposedActions) {
-          msg += `- ${action.type.toUpperCase()}: ${action.description}\n`;
+          msg += `\u{2022} ${action.type.toUpperCase()}: ${action.description}\n`;
         }
+        msg += `\nApproved: ${result.approvedActions.length} | Rejected: ${result.rejectedActions.length}`;
       }
 
       await ctx.reply(msg, { parse_mode: 'Markdown' });
@@ -635,165 +574,13 @@ bot.command('auto', async (ctx) => {
   );
 });
 
-bot.command('alerts', async (ctx) => {
-  const arg = ctx.match?.trim().toLowerCase();
-  const userId = ctx.from?.id;
-  if (!userId) return;
+// /alerts removed — accessible through Settings
 
-  if (arg === 'on') {
-    setUserAlerts(userId, true);
-    ctx.session.alertsEnabled = true;
-    await ctx.reply('Alerts *enabled*.', { parse_mode: 'Markdown' });
-    return;
-  }
+// /health removed — internal info exposed to Settings only
 
-  if (arg === 'off') {
-    setUserAlerts(userId, false);
-    ctx.session.alertsEnabled = false;
-    await ctx.reply('Alerts *disabled*.', { parse_mode: 'Markdown' });
-    return;
-  }
+// /llm removed — LLM config is handled through Settings inline keyboard
 
-  const enabled = isUserAlertsEnabled(userId);
-  await ctx.reply(
-    `Alerts: *${enabled ? 'ON' : 'OFF'}*`,
-    { parse_mode: 'Markdown', reply_markup: alertsKeyboard(enabled) }
-  );
-});
-
-bot.command('health', async (ctx) => {
-  if (!agent) {
-    await ctx.reply('Agent not initialized.');
-    return;
-  }
-
-  try {
-    const phase = agent.getPhase();
-    const mode = agent.getMode();
-    const running = agent.isRunning();
-
-    const lamports = await connection.getBalance(wallet.publicKey);
-    const solBalance = lamports / LAMPORTS_PER_SOL;
-
-    const positions = getSimulatedPositions();
-
-    let msg = `*Agent Health*\n\n`;
-    msg += `Mode: ${mode}\n`;
-    msg += `OODA Phase: ${phase}\n`;
-    msg += `Loop Running: ${running ? 'Yes' : 'No'}\n`;
-    msg += `SOL Balance: ${solBalance.toFixed(4)}\n`;
-    msg += `Open Positions: ${positions.length}\n`;
-    msg += `LLM: ${llmConfig ? `${llmConfig.provider}` : 'disabled'}\n`;
-    msg += `Network: ${cluster}\n`;
-    msg += `Wallet: \`${wallet.publicKey.toBase58().slice(0, 8)}...${wallet.publicKey.toBase58().slice(-4)}\``;
-
-    await ctx.reply(msg, { parse_mode: 'Markdown' });
-  } catch (err) {
-    await ctx.reply(`Health check error: ${err instanceof Error ? err.message : String(err)}`);
-  }
-});
-
-bot.command('llm', async (ctx) => {
-  const args = ctx.match?.trim();
-
-  if (!args) {
-    const status = llmConfig
-      ? `*LLM Active:* ${llmConfig.provider} (${llmConfig.model || 'default'})`
-      : '*LLM:* disabled';
-    await ctx.reply(
-      `${status}\n\n` +
-      `*Configure:*\n` +
-      `/llm anthropic sk-ant-api03-XXXX\n` +
-      `/llm openai sk-XXXX\n` +
-      `/llm off\n`,
-      { parse_mode: 'Markdown' }
-    );
-    return;
-  }
-
-  if (args === 'off') {
-    llmConfig = null;
-    await ctx.reply('LLM *disabled*. Bot in basic command mode.', { parse_mode: 'Markdown' });
-    return;
-  }
-
-  const parts = args.split(/\s+/);
-  if (parts.length < 2) {
-    await ctx.reply('Usage: `/llm <anthropic|openai> <api-key>`', { parse_mode: 'Markdown' });
-    return;
-  }
-
-  const [provider, apiKey] = parts;
-  if (!['anthropic', 'openai', 'qwen'].includes(provider)) {
-    await ctx.reply('Provider must be: `anthropic`, `openai`, or `qwen`', { parse_mode: 'Markdown' });
-    return;
-  }
-
-  llmConfig = {
-    provider: provider as 'anthropic' | 'openai' | 'qwen',
-    apiKey,
-    model: parts[2] || undefined,
-  };
-
-  await ctx.reply(
-    `LLM *enabled*: ${provider}\n` +
-    `Model: ${llmConfig.model || 'default'}\n\n` +
-    `_Try: "What's my portfolio?"_`,
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
-  );
-});
-
-bot.command('zktest', async (ctx) => {
-  if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
-
-  await ctx.reply(
-    `*ZK Proof Test — Groth16 over BN254*\n\n` +
-    `Initializing Poseidon hash + loading circuit (2.7 MB WASM + 11 MB zkey)...\n` +
-    `_This will take 30-60 seconds._`,
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
-  );
-
-  try {
-    const { initPoseidon, generateShieldProof, PoseidonMerkleTree, formatProof, randomFieldElement } = await import('./zk-prover.js');
-
-    await initPoseidon();
-
-    const tree = new PoseidonMerkleTree(20);
-    const spendingKey = randomFieldElement();
-    const startTime = Date.now();
-
-    const result = await generateShieldProof(1.0, spendingKey, tree);
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-    const lines = [
-      `*Groth16 SNARK Proof Generated*`,
-      ``,
-      `*Circuit:* P01 transfer.circom (2-in-2-out UTXO)`,
-      `*Hash:* Poseidon (ZK-friendly)`,
-      `*Curve:* BN254`,
-      `*Proof system:* Groth16`,
-      ``,
-      `*Commitment:* \`${result.commitment.toString(16).slice(0, 16)}...\``,
-      `*Nullifier:* \`${result.nullifier.toString(16).slice(0, 16)}...\``,
-      `*Public signals:* ${result.publicSignals.length}`,
-      ``,
-      formatProof(result.proof),
-      ``,
-      `*Verified:* ${result.verified ? 'YES' : 'NO'}`,
-      `*Proof time:* ${elapsed}s`,
-      ``,
-      `_This is a real Groth16 zero-knowledge proof — the same crypto used in Zcash, Tornado Cash, and P01._`,
-    ];
-
-    await ctx.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() })
-      .catch(() => ctx.reply(lines.join('\n'), { reply_markup: mainMenuKeyboard() }));
-
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[ZK Test] Error:', err);
-    await ctx.reply(`ZK test failed: ${msg}`, { reply_markup: mainMenuKeyboard() });
-  }
-});
+// /zktest removed — ZK proofs happen automatically through shield/unshield tools
 
 bot.command('sentiment', async (ctx) => {
   if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
@@ -887,18 +674,7 @@ bot.command('news', async (ctx) => {
   }
 });
 
-bot.command('wallet', async (ctx) => {
-  const pubkey = wallet.publicKey.toBase58();
-  const secretKey = JSON.stringify(Array.from(wallet.secretKey));
-
-  let msg = `*Wallet Info*\n\n`;
-  msg += `*Public Key:*\n\`${pubkey}\`\n\n`;
-  msg += `*Secret Key (JSON array):*\n\`\`\`\n${secretKey}\n\`\`\`\n\n`;
-  msg += `_Network: ${cluster}_\n`;
-  msg += `_Keep this secret! Do not share in public channels._`;
-
-  await ctx.reply(msg, { parse_mode: 'Markdown' });
-});
+// /wallet removed — security risk (was exposing secret key in chat)
 
 // ============================================================================
 // Callback Query Handler (inline keyboards)
@@ -1070,14 +846,13 @@ bot.on('callback_query:data', async (ctx) => {
     try {
       const result = await agent.runSingleCycle();
       let msg = `*OODA Cycle Complete*\n\n`;
-      msg += `Time: ${result.cycleTimeMs}ms\n`;
-      msg += `Proposed: ${result.proposedActions.length}\n`;
-      msg += `Approved: ${result.approvedActions.length}\n`;
-      if (result.proposedActions.length > 0) {
-        msg += `\n*Actions:*\n`;
+      if (result.proposedActions.length === 0) {
+        msg += `No actions — market stable.`;
+      } else {
         for (const action of result.proposedActions) {
-          msg += `- ${action.type.toUpperCase()}: ${action.description}\n`;
+          msg += `\u{2022} ${action.type.toUpperCase()}: ${action.description}\n`;
         }
+        msg += `\nApproved: ${result.approvedActions.length}`;
       }
       await ctx.editMessageText(msg, {
         parse_mode: 'Markdown',
@@ -1086,29 +861,6 @@ bot.on('callback_query:data', async (ctx) => {
     } catch (err) {
       await ctx.editMessageText(`Cycle error: ${err instanceof Error ? err.message : String(err)}`);
     }
-    return;
-  }
-
-  // ── Session control ──
-  if (data === 'session:pause') {
-    if (agent?.isRunning()) {
-      agent.stop();
-      ctx.session.autoMode = false;
-    }
-    await ctx.editMessageText('Session *paused*.', { parse_mode: 'Markdown' });
-    await ctx.answerCallbackQuery({ text: 'Paused' });
-    return;
-  }
-
-  if (data === 'session:stop') {
-    if (agent?.isRunning()) {
-      agent.stop();
-      agent.setMode('advisory');
-    }
-    ctx.session.autoMode = false;
-    ctx.session.activeSession = null;
-    await ctx.editMessageText('Session *stopped*.', { parse_mode: 'Markdown' });
-    await ctx.answerCallbackQuery({ text: 'Stopped' });
     return;
   }
 
@@ -1351,35 +1103,7 @@ bot.hears(/^\u{1F4F0} News$/u, async (ctx) => {
   }
 });
 
-bot.hears(/^\u{2764}\uFE0F Health$/u, async (ctx) => {
-  if (!agent) {
-    await ctx.reply('Agent not initialized.');
-    return;
-  }
-
-  try {
-    const phase = agent.getPhase();
-    const mode = agent.getMode();
-    const running = agent.isRunning();
-    const lamports = await connection.getBalance(wallet.publicKey);
-    const solBalance = lamports / LAMPORTS_PER_SOL;
-    const positions = getSimulatedPositions();
-
-    let msg = `*Agent Health*\n\n`;
-    msg += `Mode: ${mode}\n`;
-    msg += `OODA Phase: ${phase}\n`;
-    msg += `Loop Running: ${running ? 'Yes' : 'No'}\n`;
-    msg += `SOL Balance: ${solBalance.toFixed(4)}\n`;
-    msg += `Open Positions: ${positions.length}\n`;
-    msg += `LLM: ${llmConfig ? `${llmConfig.provider}` : 'disabled'}\n`;
-    msg += `Network: ${cluster}\n`;
-    msg += `Wallet: \`${wallet.publicKey.toBase58().slice(0, 8)}...${wallet.publicKey.toBase58().slice(-4)}\``;
-
-    await ctx.reply(msg, { parse_mode: 'Markdown' });
-  } catch (err) {
-    await ctx.reply(`Health check error: ${err instanceof Error ? err.message : String(err)}`);
-  }
-});
+// Health button handler removed — internal info not user-facing
 
 // ============================================================================
 // Natural Language Handler (LLM-powered)

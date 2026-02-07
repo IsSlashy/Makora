@@ -56,12 +56,6 @@ node $HOME/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs <command> [a
 | `close-position SOL-PERP` | Close an open position | User says "close SOL", "close my position" |
 | `positions` | List all open positions with P&L | User asks "my positions", "what's open" |
 
-### System
-
-| Command | Description |
-|---------|-------------|
-| `health` | Agent status, network, prices |
-
 ## Market Intelligence
 
 Makora analyzes **7 signals** to produce a composite score from -100 (extreme bearish) to +100 (extreme bullish):
