@@ -1,7 +1,16 @@
 FROM node:24-slim
 
+# Install system dependencies needed by openclaw native modules
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    python3 \
+    make \
+    g++ \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install OpenClaw globally
-RUN npm install -g openclaw@latest
+RUN npm install -g openclaw@2026.2.3-1 --unsafe-perm
 
 # Create workspace
 RUN mkdir -p /root/.openclaw/workspace/skills/makora/scripts \
@@ -11,9 +20,6 @@ RUN mkdir -p /root/.openclaw/workspace/skills/makora/scripts \
 # Copy config and skill files
 COPY openclaw.json /root/.openclaw/openclaw.json
 COPY workspace/ /root/.openclaw/workspace/
-
-# Env vars will be set via Railway dashboard
-# OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, SOLANA_RPC_URL, etc.
 
 # Write .env from Railway env vars at runtime
 COPY entrypoint.sh /entrypoint.sh
