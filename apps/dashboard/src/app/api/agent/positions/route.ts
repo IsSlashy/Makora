@@ -54,6 +54,7 @@ export interface PositionSnapshot {
 export async function GET(req: NextRequest) {
   try {
     const wallet = req.nextUrl.searchParams.get('wallet');
+    const userId = req.nextUrl.searchParams.get('userId') || undefined;
     if (!wallet) {
       return NextResponse.json({ error: 'Missing wallet parameter' }, { status: 400 });
     }
@@ -133,12 +134,12 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.pct - a.pct);
 
-    // Get simulated perp positions from server memory
-    const perpPositions = getSimulatedPositions();
+    // Get simulated perp positions from server memory (per-user if userId provided)
+    const perpPositions = getSimulatedPositions(userId);
     const perpSummary = {
       count: perpPositions.length,
-      totalCollateral: getTotalCollateralUsd(),
-      totalExposure: getTotalExposureUsd(),
+      totalCollateral: getTotalCollateralUsd(userId),
+      totalExposure: getTotalExposureUsd(userId),
       totalUnrealizedPnl: perpPositions.reduce((sum, p) => sum + (p.unrealizedPnl ?? 0), 0),
     };
 

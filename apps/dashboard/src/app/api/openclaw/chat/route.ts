@@ -13,6 +13,8 @@ import {
   setRealPrices,
 } from '@/lib/simulated-perps';
 import { fetchTokenPrices } from '@/lib/price-feed';
+import { getProviderEndpoint, trackUsage } from '@/lib/ai-gateway';
+import { hasCredits, deductCredits, estimateCost } from '@/lib/credits';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,10 +113,11 @@ PROFIT-TAKING:
 
 // ─── Cloud LLM API URLs ──────────────────────────────────────────────────────
 
+// Cloud endpoints — OpenAI routes through AI Gateway when configured
 const CLOUD_ENDPOINTS: Record<string, string> = {
-  anthropic: 'https://api.anthropic.com/v1/messages',
-  openai: 'https://api.openai.com/v1/chat/completions',
-  qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  anthropic: getProviderEndpoint('anthropic'),
+  openai: getProviderEndpoint('openai'),
+  qwen: getProviderEndpoint('qwen'),
 };
 
 const CLOUD_MODELS: Record<string, string> = {
@@ -841,10 +844,19 @@ export async function POST(req: NextRequest) {
       llmKeys,
       walletPublicKey,
       vaultBalance,
+      userId,
     } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
+    }
+
+    // Credit check — if userId provided, verify sufficient credits
+    if (userId && !hasCredits(userId, estimateCost())) {
+      return NextResponse.json(
+        { error: 'Insufficient credits. Deposit SOL to continue using Makora.' },
+        { status: 402 },
+      );
     }
 
     // Ensure Makora system prompt is always first
@@ -932,6 +944,10 @@ export async function POST(req: NextRequest) {
             vaultBalance,
           );
           if (result) {
+            if (userId) {
+              trackUsage(userId, 0, 0);
+              deductCredits(userId, 500, 300, 'Chat (Anthropic)');
+            }
             return NextResponse.json(result);
           }
           continue;
@@ -947,6 +963,10 @@ export async function POST(req: NextRequest) {
             vaultBalance,
           );
           if (result) {
+            if (userId) {
+              trackUsage(userId, 0, 0);
+              deductCredits(userId, 500, 300, 'Chat (OpenAI)');
+            }
             return NextResponse.json(result);
           }
           continue;
@@ -955,6 +975,10 @@ export async function POST(req: NextRequest) {
         // Qwen: no tool support, use simple call
         const result = await callCloudLLMSimple(provider, key, finalMessages);
         if (result) {
+          if (userId) {
+            trackUsage(userId, 0, 0);
+            deductCredits(userId, 500, 200, 'Chat (Qwen)');
+          }
           return NextResponse.json({
             content: result.content,
             model: result.model,

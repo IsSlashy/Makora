@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getProviderEndpoint, trackUsage } from '@/lib/ai-gateway';
 
 const PROVIDER_ENDPOINTS: Record<string, { url: string; authHeader: string }> = {
   anthropic: {
-    url: 'https://api.anthropic.com/v1/messages',
+    url: getProviderEndpoint('anthropic'),
     authHeader: 'x-api-key',
   },
   openai: {
-    url: 'https://api.openai.com/v1/chat/completions',
+    url: getProviderEndpoint('openai'),
     authHeader: 'Authorization',
   },
   qwen: {
-    url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    url: getProviderEndpoint('qwen'),
     authHeader: 'Authorization',
   },
 };
@@ -145,7 +146,7 @@ EXAMPLE BEARISH OUTPUT WITH LEVERAGE:
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { provider, apiKey, model, temperature = 0.3, context, tradingMode } = body;
+    const { provider, apiKey, model, temperature = 0.3, context, tradingMode, userId } = body;
 
     if (!provider || !model || !context) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -247,6 +248,11 @@ export async function POST(req: NextRequest) {
         riskAssessment: { overallRisk: 70, warnings: ['Response parse failed'] },
         explanation: content.slice(0, 200),
       };
+    }
+
+    // Track usage per user if userId provided
+    if (userId) {
+      trackUsage(userId, inputTokens, outputTokens);
     }
 
     return NextResponse.json({

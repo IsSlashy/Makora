@@ -1,12 +1,12 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { TWAProviders, useTWAWallet } from './providers';
 import { TheWheelTWA } from './components/TheWheelTWA';
 import { SentimentPanelTWA } from './components/SentimentPanelTWA';
 import { PortfolioCardTWA } from './components/PortfolioCardTWA';
 import { PositionsPanelTWA } from './components/PositionsPanelTWA';
+import { CreditsPanelTWA } from './components/CreditsPanelTWA';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,37 +84,88 @@ interface PolymarketData {
 
 // ─── Tab definitions ────────────────────────────────────────────────────────
 
-type TabId = 'home' | 'sentiment' | 'portfolio' | 'markets';
+type TabId = 'home' | 'sentiment' | 'portfolio' | 'markets' | 'credits';
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'home', label: 'Home', icon: '◎' },
   { id: 'sentiment', label: 'Signals', icon: '◈' },
   { id: 'portfolio', label: 'Portfolio', icon: '◆' },
-  { id: 'markets', label: 'Markets', icon: '◇' },
+  { id: 'credits', label: 'Credits', icon: '◉' },
 ];
+
+// ─── Login Screen ────────────────────────────────────────────────────────────
+
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="twa-app flex flex-col items-center justify-center h-screen gap-6 px-6">
+      {/* Logo */}
+      <div className="flex flex-col items-center gap-2">
+        <span
+          className="font-display text-3xl tracking-[0.3em]"
+          style={{
+            background: 'linear-gradient(135deg, #a68520, #d4a829, #e8c44a)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          MAKORA
+        </span>
+        <span className="text-[10px] font-mono tracking-[0.2em] text-text-muted uppercase">
+          Autonomous DeFi Agent
+        </span>
+      </div>
+
+      {/* Description */}
+      <div className="text-center max-w-xs">
+        <p className="text-[11px] font-mono text-text-muted leading-relaxed">
+          Leveraged perps, real-time sentiment, autonomous OODA trading cycles — all from Telegram.
+        </p>
+      </div>
+
+      {/* Login button */}
+      <button
+        onClick={onLogin}
+        className="px-8 py-3 rounded-sm font-mono text-sm font-bold tracking-wider uppercase transition-all"
+        style={{
+          background: 'linear-gradient(135deg, #a68520, #d4a829)',
+          color: '#050508',
+        }}
+      >
+        Connect Wallet
+      </button>
+
+      <span className="text-[9px] font-mono text-text-muted">
+        Powered by Privy — email, phone, or Telegram login
+      </span>
+    </div>
+  );
+}
 
 // ─── Main Dashboard Content ─────────────────────────────────────────────────
 
 function TWADashboard() {
-  const { walletAddress } = useTWAWallet();
+  const { walletAddress, userId, authenticated, loading, login, logout, displayName } = useTWAWallet();
   const [activeTab, setActiveTab] = useState<TabId>('home');
 
   // Data state
   const [positionData, setPositionData] = useState<PositionSnapshot | null>(null);
   const [sentiment, setSentiment] = useState<SentimentReport | null>(null);
   const [polymarket, setPolymarket] = useState<PolymarketData | null>(null);
-  const [loading, setLoading] = useState({ positions: true, sentiment: true, polymarket: true });
+  const [loadingState, setLoadingState] = useState({ positions: true, sentiment: true, polymarket: true });
 
   // Decision tick: incremented whenever positions or sentiment change
   const [decisionTick, setDecisionTick] = useState(0);
   const prevPerpCountRef = useRef(0);
   const prevScoreRef = useRef<number | null>(null);
 
-  // Fetch positions
+  // Fetch positions — use userId for per-user isolation when available
   const fetchPositions = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      const res = await fetch(`/api/agent/positions?wallet=${walletAddress}`);
+      const params = new URLSearchParams({ wallet: walletAddress });
+      if (userId) params.set('userId', userId);
+      const res = await fetch(`/api/agent/positions?${params}`);
       if (res.ok) {
         const data: PositionSnapshot = await res.json();
         setPositionData(data);
@@ -127,8 +178,8 @@ function TWADashboard() {
         prevPerpCountRef.current = perpCount;
       }
     } catch { /* silent */ }
-    setLoading(prev => ({ ...prev, positions: false }));
-  }, [walletAddress]);
+    setLoadingState(prev => ({ ...prev, positions: false }));
+  }, [walletAddress, userId]);
 
   // Fetch sentiment
   const fetchSentiment = useCallback(async () => {
@@ -148,7 +199,7 @@ function TWADashboard() {
         prevScoreRef.current = data.overallScore;
       }
     } catch { /* silent */ }
-    setLoading(prev => ({ ...prev, sentiment: false }));
+    setLoadingState(prev => ({ ...prev, sentiment: false }));
   }, []);
 
   // Fetch polymarket
@@ -160,18 +211,20 @@ function TWADashboard() {
         setPolymarket(data);
       }
     } catch { /* silent */ }
-    setLoading(prev => ({ ...prev, polymarket: false }));
+    setLoadingState(prev => ({ ...prev, polymarket: false }));
   }, []);
 
   // Initial fetch — tick once when first data loads
   useEffect(() => {
+    if (!authenticated) return;
     Promise.all([fetchPositions(), fetchSentiment(), fetchPolymarket()]).then(() => {
       setDecisionTick(1); // Initial load = first tick
     });
-  }, [fetchPositions, fetchSentiment, fetchPolymarket]);
+  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket]);
 
   // Polling
   useEffect(() => {
+    if (!authenticated) return;
     const posInterval = setInterval(fetchPositions, 5000);
     const sentInterval = setInterval(fetchSentiment, 60000);
     const polyInterval = setInterval(fetchPolymarket, 60000);
@@ -180,7 +233,21 @@ function TWADashboard() {
       clearInterval(sentInterval);
       clearInterval(polyInterval);
     };
-  }, [fetchPositions, fetchSentiment, fetchPolymarket]);
+  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket]);
+
+  // ─── Loading state ─────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="twa-app flex items-center justify-center h-screen">
+        <div className="text-cursed font-mono text-sm animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  // ─── Login gate ────────────────────────────────────────────────────────
+  if (!authenticated) {
+    return <LoginScreen onLogin={login} />;
+  }
 
   const positionCount = positionData?.perpPositions?.length ?? 0;
 
@@ -285,7 +352,7 @@ function TWADashboard() {
       case 'sentiment':
         return (
           <div className="px-3 pt-3 pb-4">
-            <SentimentPanelTWA report={sentiment} loading={loading.sentiment} />
+            <SentimentPanelTWA report={sentiment} loading={loadingState.sentiment} />
           </div>
         );
 
@@ -297,12 +364,19 @@ function TWADashboard() {
               positions={positionData?.positions ?? []}
               allocation={positionData?.allocation ?? []}
               totalValueSol={positionData?.totalValueSol ?? 0}
-              loading={loading.positions}
+              loading={loadingState.positions}
             />
             <PositionsPanelTWA
               positions={positionData?.perpPositions ?? []}
-              loading={loading.positions}
+              loading={loadingState.positions}
             />
+          </div>
+        );
+
+      case 'credits':
+        return (
+          <div className="px-3 pt-3 pb-4">
+            <CreditsPanelTWA userId={userId} />
           </div>
         );
 
@@ -311,7 +385,7 @@ function TWADashboard() {
           <div className="px-3 pt-3 pb-4">
             <div className="cursed-card p-4">
               <div className="section-title mb-3">PREDICTION MARKETS</div>
-              {loading.polymarket ? (
+              {loadingState.polymarket ? (
                 <div className="text-text-muted text-xs font-mono animate-pulse">Loading markets...</div>
               ) : polymarket && polymarket.cryptoMarkets.length > 0 ? (
                 <div className="space-y-2">
@@ -390,9 +464,19 @@ function TWADashboard() {
             </span>
           )}
         </div>
-        <span className="text-[8px] font-mono text-text-muted">
-          {walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : ''}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[8px] font-mono text-text-muted">
+            {displayName || (walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : '')}
+          </span>
+          {authenticated && (
+            <button
+              onClick={() => logout()}
+              className="text-[7px] font-mono text-text-muted/50 hover:text-cursed uppercase tracking-wider"
+            >
+              logout
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Scrollable content area */}
@@ -426,17 +510,6 @@ function TWADashboard() {
 
 // ─── Page wrapper ───────────────────────────────────────────────────────────
 
-function TWAPageInner() {
-  const searchParams = useSearchParams();
-  const walletAddress = searchParams.get('wallet') || '';
-
-  return (
-    <TWAProviders walletAddress={walletAddress}>
-      <TWADashboard />
-    </TWAProviders>
-  );
-}
-
 export default function TWAPage() {
   return (
     <Suspense fallback={
@@ -444,7 +517,9 @@ export default function TWAPage() {
         <div className="text-cursed font-mono text-sm animate-pulse">Loading Makora...</div>
       </div>
     }>
-      <TWAPageInner />
+      <TWAProviders>
+        <TWADashboard />
+      </TWAProviders>
     </Suspense>
   );
 }

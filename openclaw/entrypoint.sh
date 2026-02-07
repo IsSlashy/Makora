@@ -2,8 +2,10 @@
 set -e
 
 # Write OpenClaw .env from Railway env vars
+# If AI Gateway is configured, route OpenAI calls through it
 cat > /root/.openclaw/.env <<EOF
-OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENAI_API_KEY=${AI_GATEWAY_API_KEY:-${OPENAI_API_KEY}}
+OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
 EOF
 
 # Inject Telegram bot token directly into config JSON

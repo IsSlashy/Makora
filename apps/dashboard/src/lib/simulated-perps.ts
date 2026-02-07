@@ -27,19 +27,25 @@ export interface SimulatedPerpPosition {
 // Uses globalThis to survive hot reloads in development
 const GLOBAL_KEY = '__MAKORA_SIMULATED_POSITIONS__';
 
-function getPositions(): SimulatedPerpPosition[] {
+function storageKey(userId?: string): string {
+  if (userId) return `${GLOBAL_KEY}_${userId}`;
+  return GLOBAL_KEY;
+}
+
+function getPositions(userId?: string): SimulatedPerpPosition[] {
   if (typeof globalThis !== 'undefined') {
-    if (!(globalThis as any)[GLOBAL_KEY]) {
-      (globalThis as any)[GLOBAL_KEY] = [];
+    const key = storageKey(userId);
+    if (!(globalThis as any)[key]) {
+      (globalThis as any)[key] = [];
     }
-    return (globalThis as any)[GLOBAL_KEY];
+    return (globalThis as any)[key];
   }
   return [];
 }
 
-function setPositions(positions: SimulatedPerpPosition[]): void {
+function setPositions(positions: SimulatedPerpPosition[], userId?: string): void {
   if (typeof globalThis !== 'undefined') {
-    (globalThis as any)[GLOBAL_KEY] = positions;
+    (globalThis as any)[storageKey(userId)] = positions;
   }
 }
 
@@ -87,6 +93,7 @@ export function openSimulatedPosition(params: {
   collateralUsd: number;
   leverage: number;
   entryPrice: number;
+  userId?: string;
 }): SimulatedPerpPosition {
   const position: SimulatedPerpPosition = {
     id: `sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -98,39 +105,37 @@ export function openSimulatedPosition(params: {
     openedAt: Date.now(),
   };
 
-  const positions = getPositions();
+  const positions = getPositions(params.userId);
   positions.push(position);
-  setPositions(positions);
-  console.log(`[SIM] Opened ${position.side} ${position.market} position: $${position.collateralUsd.toFixed(2)} @ ${position.leverage}x`);
+  setPositions(positions, params.userId);
+  console.log(`[SIM] Opened ${position.side} ${position.market} position: $${position.collateralUsd.toFixed(2)} @ ${position.leverage}x${params.userId ? ` (user: ${params.userId.slice(0, 12)})` : ''}`);
 
   return position;
 }
 
-export function closeSimulatedPosition(market: string, percentToClose: number = 100): SimulatedPerpPosition | null {
-  const positions = getPositions();
+export function closeSimulatedPosition(market: string, percentToClose: number = 100, userId?: string): SimulatedPerpPosition | null {
+  const positions = getPositions(userId);
   const idx = positions.findIndex(p => p.market === market);
   if (idx === -1) return null;
 
   const position = positions[idx];
 
   if (percentToClose >= 100) {
-    // Full close
     positions.splice(idx, 1);
     console.log(`[SIM] Closed ${position.side} ${position.market} position fully`);
   } else {
-    // Partial close
     const closeAmount = position.collateralUsd * (percentToClose / 100);
     position.collateralUsd -= closeAmount;
     console.log(`[SIM] Partially closed ${percentToClose}% of ${position.market} position`);
   }
 
-  setPositions(positions);
+  setPositions(positions, userId);
   return position;
 }
 
-export function getSimulatedPositions(): SimulatedPerpPosition[] {
+export function getSimulatedPositions(userId?: string): SimulatedPerpPosition[] {
   // Update P&L for each position using real market prices
-  const positions = getPositions();
+  const positions = getPositions(userId);
 
   return positions.map(p => {
     const currentPrice = getCurrentPrice(p.market, p.entryPrice);
@@ -149,22 +154,22 @@ export function getSimulatedPositions(): SimulatedPerpPosition[] {
   });
 }
 
-export function hasOpenPosition(market: string): boolean {
-  return getPositions().some(p => p.market === market);
+export function hasOpenPosition(market: string, userId?: string): boolean {
+  return getPositions(userId).some(p => p.market === market);
 }
 
-export function getPositionForMarket(market: string): SimulatedPerpPosition | undefined {
-  const positions = getSimulatedPositions();
+export function getPositionForMarket(market: string, userId?: string): SimulatedPerpPosition | undefined {
+  const positions = getSimulatedPositions(userId);
   return positions.find(p => p.market === market);
 }
 
-export function clearAllSimulatedPositions(): void {
-  setPositions([]);
+export function clearAllSimulatedPositions(userId?: string): void {
+  setPositions([], userId);
   console.log('[SIM] Cleared all simulated positions');
 }
 
-export function formatSimulatedPositionsForLLM(): string {
-  const positions = getSimulatedPositions();
+export function formatSimulatedPositionsForLLM(userId?: string): string {
+  const positions = getSimulatedPositions(userId);
 
   if (positions.length === 0) {
     return 'No open perp positions.';
@@ -182,10 +187,10 @@ export function formatSimulatedPositionsForLLM(): string {
   return lines.join('\n');
 }
 
-export function getTotalExposureUsd(): number {
-  return getPositions().reduce((sum, p) => sum + p.collateralUsd * p.leverage, 0);
+export function getTotalExposureUsd(userId?: string): number {
+  return getPositions(userId).reduce((sum, p) => sum + p.collateralUsd * p.leverage, 0);
 }
 
-export function getTotalCollateralUsd(): number {
-  return getPositions().reduce((sum, p) => sum + p.collateralUsd, 0);
+export function getTotalCollateralUsd(userId?: string): number {
+  return getPositions(userId).reduce((sum, p) => sum + p.collateralUsd, 0);
 }

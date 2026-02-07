@@ -6,15 +6,16 @@ import { InlineKeyboard, Keyboard } from 'grammy';
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://dashboard-lake-xi-65.vercel.app';
 
-// Module-level TWA URL — set once after wallet is loaded
+// Module-level TWA URL — set once after initialization
 let _twaUrl = '';
 
 /**
- * Call once after wallet initialization to enable the Dashboard button
- * in the persistent keyboard.
+ * Call once after initialization to enable the Dashboard button
+ * in the persistent keyboard. With Privy auth, wallet is no longer
+ * needed in the URL — Privy handles wallet creation on login.
  */
-export function initDashboardUrl(walletPubkey: string): void {
-  _twaUrl = `${DASHBOARD_URL}/twa?wallet=${walletPubkey}`;
+export function initDashboardUrl(walletPubkey?: string): void {
+  _twaUrl = `${DASHBOARD_URL}/twa`;
 }
 
 /**
@@ -67,8 +68,8 @@ export function alertsKeyboard(currentlyEnabled: boolean): InlineKeyboard {
 /**
  * Mini App (TWA) keyboard — opens dashboard inside Telegram (inline version)
  */
-export function miniAppKeyboard(walletPubkey: string, chatId: number): InlineKeyboard {
-  const url = `${DASHBOARD_URL}/twa?wallet=${walletPubkey}&chatId=${chatId}`;
+export function miniAppKeyboard(walletPubkey?: string, chatId?: number): InlineKeyboard {
+  const url = `${DASHBOARD_URL}/twa`;
   return new InlineKeyboard().webApp('\u{1F4F1} Open Dashboard', url);
 }
 
