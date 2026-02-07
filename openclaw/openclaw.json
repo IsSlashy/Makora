@@ -17,10 +17,7 @@
   "messages": {
     "ackReactionScope": "group-mentions"
   },
-  "commands": {
-    "native": "none",
-    "nativeSkills": "none"
-  },
+  "commands": {},
   "channels": {
     "telegram": {
       "enabled": true,
