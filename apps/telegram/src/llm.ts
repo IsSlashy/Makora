@@ -6,8 +6,9 @@
 import { Connection, LAMPORTS_PER_SOL, type Keypair } from '@solana/web3.js';
 import { fetchTokenPrices, getMarketConditions } from './price-feed.js';
 import { analyzeSentiment } from './sentiment.js';
+import { fetchCryptoNews, formatNewsForLLMContext } from './social-feed.js';
 import { formatSimulatedPositionsForLLM, setRealPrices } from './simulated-perps.js';
-import { formatVaultForLLM, getVaultBalance } from './shielded-vault.js';
+import { formatVaultForLLM, getVaultOnChainBalance } from './shielded-vault.js';
 import { ANTHROPIC_TOOLS, OPENAI_TOOLS, executeTool, type ToolResult, type ToolExecutionContext } from './tools.js';
 import type { SessionData } from './session.js';
 
@@ -118,13 +119,13 @@ async function buildContext(
 ): Promise<string> {
   const parts: string[] = [];
 
-  // Wallet balance (available = on-chain minus vault)
+  // Wallet + vault balances (real on-chain)
   try {
     const lamports = await connection.getBalance(wallet.publicKey);
-    const solBalance = lamports / LAMPORTS_PER_SOL;
-    const vaultBal = getVaultBalance();
-    const available = Math.max(0, solBalance - vaultBal);
-    parts.push(`WALLET (available): ${available.toFixed(4)} SOL | ZK Vault: ${vaultBal.toFixed(4)} SOL | Total on-chain: ${solBalance.toFixed(4)} SOL (${wallet.publicKey.toBase58().slice(0, 8)}...)`);
+    const walletBal = lamports / LAMPORTS_PER_SOL;
+    const vaultBal = await getVaultOnChainBalance(connection, wallet);
+    const total = walletBal + vaultBal;
+    parts.push(`WALLET: ${walletBal.toFixed(4)} SOL | ZK Vault: ${vaultBal.toFixed(4)} SOL | Total: ${total.toFixed(4)} SOL (${wallet.publicKey.toBase58().slice(0, 8)}...)`);
   } catch {
     parts.push('WALLET: Unable to fetch balance');
   }
@@ -157,6 +158,16 @@ async function buildContext(
     for (const rec of report.recommendations) {
       parts.push(`  ${rec.token}: ${rec.action} (${rec.confidence}%) — ${rec.reasons[0] ?? ''}`);
     }
+  }
+
+  // News sentiment
+  try {
+    const newsFeed = await fetchCryptoNews();
+    if (newsFeed.articles.length > 0) {
+      parts.push(formatNewsForLLMContext(newsFeed));
+    }
+  } catch {
+    // Skip news if unavailable
   }
 
   // ZK Vault status

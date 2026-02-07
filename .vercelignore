@@ -1,0 +1,12 @@
+node_modules
+.git
+.turbo
+target
+programs
+apps/telegram
+apps/dashboard/.next
+packages/*/node_modules
+packages/*/dist
+*.tsbuildinfo
+.claude
+.planning

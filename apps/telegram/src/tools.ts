@@ -26,6 +26,10 @@ import {
   getVaultState,
   formatVaultForLLM,
   runCryptoSelfTest,
+  transferToVault,
+  transferFromVault,
+  deriveVaultKeypair,
+  getVaultOnChainBalance,
 } from './shielded-vault.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -263,7 +267,9 @@ export async function executeTool(
         }
 
         // Check vault balance first — trading uses vault, not wallet
-        const vaultBal = getVaultBalance();
+        // Use on-chain balance as source of truth (survives bot restarts)
+        const vaultOnChainBal = await getVaultOnChainBalance(ctx.connection, ctx.wallet);
+        const vaultBal = Math.max(vaultOnChainBal, getVaultBalance());
         if (vaultBal <= 0) {
           return `Error: ZK vault is empty. Shield SOL first using shield_sol before trading. Wallet balance: ${ctx.walletSolBalance.toFixed(4)} SOL.`;
         }
@@ -367,10 +373,10 @@ export async function executeTool(
         const prices = await fetchTokenPrices(['SOL']);
         const solPrice = prices.SOL || 77;
 
-        const vaultBalance = getVaultBalance();
-        const vaultUsd = vaultBalance * solPrice;
-        // Available wallet = on-chain balance minus what's locked in vault
-        const availableWallet = Math.max(0, ctx.walletSolBalance - vaultBalance);
+        // Real on-chain balances (wallet already reduced after shield transfers)
+        const walletBalance = ctx.walletSolBalance;
+        const vaultOnChain = await getVaultOnChainBalance(ctx.connection, ctx.wallet);
+        const totalOnChain = walletBalance + vaultOnChain;
 
         const positions = getSimulatedPositions();
         const totalCollateral = positions.reduce(
@@ -382,11 +388,13 @@ export async function executeTool(
           0,
         );
 
+        const vaultKp = deriveVaultKeypair(ctx.wallet);
         const lines = [
           `Portfolio Summary:`,
-          `- Main Wallet (available): ${availableWallet.toFixed(4)} SOL ($${(availableWallet * solPrice).toFixed(2)})`,
-          `- ZK Vault: ${vaultBalance.toFixed(4)} SOL ($${vaultUsd.toFixed(2)})`,
-          `- Total: ${ctx.walletSolBalance.toFixed(4)} SOL ($${(ctx.walletSolBalance * solPrice).toFixed(2)})`,
+          `- Main Wallet: ${walletBalance.toFixed(4)} SOL ($${(walletBalance * solPrice).toFixed(2)})`,
+          `- ZK Vault: ${vaultOnChain.toFixed(4)} SOL ($${(vaultOnChain * solPrice).toFixed(2)})`,
+          `  Vault address: ${vaultKp.publicKey.toBase58().slice(0, 8)}...${vaultKp.publicKey.toBase58().slice(-6)}`,
+          `- Total: ${totalOnChain.toFixed(4)} SOL ($${(totalOnChain * solPrice).toFixed(2)})`,
           `- SOL Price: $${solPrice.toFixed(2)}`,
           `- Open Perp Positions: ${positions.length}`,
         ];
@@ -399,7 +407,7 @@ export async function executeTool(
             `- Unrealized P&L: ${pnlSign}$${totalPnl.toFixed(2)}`,
           );
         }
-        if (vaultBalance === 0) {
+        if (vaultOnChain === 0) {
           lines.push(`\nTip: Shield SOL into your vault to start trading.`);
         }
         return lines.join('\n');
@@ -486,9 +494,9 @@ export async function executeTool(
         const prices = await fetchTokenPrices(['SOL']);
         const solPrice = prices.SOL || 77;
 
-        // Available = on-chain balance minus what's already in vault
-        const currentVault = getVaultBalance();
-        const availableToShield = Math.max(0, ctx.walletSolBalance - currentVault);
+        // Keep 0.01 SOL reserve for fees
+        const reserve = 0.01;
+        const availableToShield = Math.max(0, ctx.walletSolBalance - reserve);
 
         let amountSol: number;
         if (toolInput.percent_of_wallet) {
@@ -497,25 +505,49 @@ export async function executeTool(
         } else if (toolInput.amount_sol) {
           amountSol = Number(toolInput.amount_sol);
         } else {
-          // Default: shield all available
           amountSol = availableToShield;
         }
 
         if (amountSol > availableToShield) {
-          return `Error: Cannot shield ${amountSol.toFixed(4)} SOL — only ${availableToShield.toFixed(4)} SOL available (wallet: ${ctx.walletSolBalance.toFixed(4)}, already in vault: ${currentVault.toFixed(4)}).`;
+          return `Error: Cannot shield ${amountSol.toFixed(4)} SOL — only ${availableToShield.toFixed(4)} SOL available (keeping ${reserve} SOL for tx fees).`;
         }
 
         if (amountSol <= 0) {
           return `Error: Nothing to shield. Wallet balance: ${ctx.walletSolBalance.toFixed(4)} SOL.`;
         }
 
+        // 1. Real on-chain transfer: wallet → vault address
+        let txSignature: string;
+        let vaultAddress: string;
+        try {
+          const txResult = await transferToVault(ctx.connection, ctx.wallet, amountSol);
+          txSignature = txResult.signature;
+          vaultAddress = txResult.vaultAddress;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return `Error: On-chain shield transfer failed: ${msg}`;
+        }
+
+        // 2. Record ZK commitment in local state
         const result = shieldSol(amountSol);
         if (!result.success) {
-          return `Error: ${result.error}`;
+          return `Error: ZK commitment failed after on-chain transfer: ${result.error}`;
         }
 
         const usdValue = amountSol * solPrice;
-        return `ZK Shield complete:\n- Shielded: ${amountSol.toFixed(4)} SOL ($${usdValue.toFixed(2)})\n- Commitment: ${result.commitment.slice(0, 16)}...${result.commitment.slice(-8)}\n- Nullifier: ${result.nullifier.slice(0, 16)}...\n- Merkle leaf: #${result.leafIndex}\n- Merkle root: ${result.merkleRoot.slice(0, 16)}...\n- Vault balance: ${result.newBalanceSol.toFixed(4)} SOL ($${(result.newBalanceSol * solPrice).toFixed(2)})\n\nCrypto: SHA-256 commitment + Merkle tree (depth 16). Ready to trade.`;
+        return [
+          `ZK Shield complete:`,
+          `- Shielded: ${amountSol.toFixed(4)} SOL ($${usdValue.toFixed(2)})`,
+          `- Vault address: ${vaultAddress.slice(0, 8)}...${vaultAddress.slice(-6)}`,
+          `- TX: ${txSignature.slice(0, 12)}...`,
+          `- Commitment: ${result.commitment.slice(0, 16)}...`,
+          `- Nullifier: ${result.nullifier.slice(0, 16)}...`,
+          `- Merkle leaf: #${result.leafIndex}`,
+          `- Merkle root: ${result.merkleRoot.slice(0, 16)}...`,
+          `- Vault balance: ${result.newBalanceSol.toFixed(4)} SOL ($${(result.newBalanceSol * solPrice).toFixed(2)})`,
+          ``,
+          `On-chain transfer confirmed. Crypto: SHA-256 + Merkle tree.`,
+        ].join('\n');
       }
 
       case 'unshield_sol': {
@@ -530,17 +562,39 @@ export async function executeTool(
         } else if (toolInput.amount_sol) {
           amountSol = Number(toolInput.amount_sol);
         } else {
-          // Default: unshield 100%
           amountSol = vaultBal;
         }
 
+        // 1. Verify ZK state (nullifiers, Merkle proofs)
         const result = unshieldSol(amountSol);
         if (!result.success) {
           return `Error: ${result.error}`;
         }
 
+        // 2. Real on-chain transfer: vault address → wallet
+        let txSignature: string;
+        let vaultAddress: string;
+        try {
+          const txResult = await transferFromVault(ctx.connection, ctx.wallet, amountSol);
+          txSignature = txResult.signature;
+          vaultAddress = txResult.vaultAddress;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return `Error: ZK proofs verified but on-chain transfer failed: ${msg}`;
+        }
+
         const usdValue = amountSol * solPrice;
-        return `ZK Unshield complete:\n- Unshielded: ${amountSol.toFixed(4)} SOL ($${usdValue.toFixed(2)})\n- Nullifier revealed: ${result.nullifier.slice(0, 16)}...\n- Merkle proof: ${result.proofValid ? 'VALID' : 'INVALID'}\n- Merkle root: ${result.merkleRoot.slice(0, 16)}...\n- Remaining vault: ${result.newBalanceSol.toFixed(4)} SOL\n\nDouble-spend check: passed. Nullifier added to spent set.`;
+        return [
+          `ZK Unshield complete:`,
+          `- Unshielded: ${amountSol.toFixed(4)} SOL ($${usdValue.toFixed(2)})`,
+          `- TX: ${txSignature.slice(0, 12)}...`,
+          `- Nullifier revealed: ${result.nullifier.slice(0, 16)}...`,
+          `- Merkle proof: ${result.proofValid ? 'VALID' : 'INVALID'}`,
+          `- Merkle root: ${result.merkleRoot.slice(0, 16)}...`,
+          `- Remaining vault: ${result.newBalanceSol.toFixed(4)} SOL`,
+          ``,
+          `On-chain transfer confirmed. Double-spend check: passed.`,
+        ].join('\n');
       }
 
       case 'get_vault': {
@@ -548,14 +602,18 @@ export async function executeTool(
         const solPrice = prices.SOL || 77;
         const vault = getVaultState();
         const usdValue = vault.balanceSol * solPrice;
+        const vaultKp = deriveVaultKeypair(ctx.wallet);
+        const onChainBal = await getVaultOnChainBalance(ctx.connection, ctx.wallet);
 
         if (vault.balanceSol === 0 && vault.totalShieldedSol === 0) {
-          return `ZK Vault: Empty\n\nShield SOL first to start trading. Your main wallet has ${ctx.walletSolBalance.toFixed(4)} SOL.`;
+          return `ZK Vault: Empty\nVault address: ${vaultKp.publicKey.toBase58()}\nOn-chain balance: ${onChainBal.toFixed(4)} SOL\n\nShield SOL first to start trading. Your main wallet has ${ctx.walletSolBalance.toFixed(4)} SOL.`;
         }
 
         const lines = [
           `ZK Shielded Vault:`,
+          `- Vault address: ${vaultKp.publicKey.toBase58()}`,
           `- Balance: ${vault.balanceSol.toFixed(4)} SOL ($${usdValue.toFixed(2)})`,
+          `- On-chain vault balance: ${onChainBal.toFixed(4)} SOL`,
           `- Total shielded: ${vault.totalShieldedSol.toFixed(4)} SOL`,
           `- Total unshielded: ${vault.totalUnshieldedSol.toFixed(4)} SOL`,
           ``,

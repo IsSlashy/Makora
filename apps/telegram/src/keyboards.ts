@@ -79,7 +79,7 @@ export function mainMenuKeyboard(): Keyboard {
   return new Keyboard()
     .text('\u{1F4CA} Status').text('\u{1F4C8} Scan').text('\u{1F9E0} Sentiment').row()
     .text('\u{1F4BC} Positions').text('\u{1F916} Auto').text('\u{2699}\uFE0F Settings').row()
-    .text('\u{1F3AF} Strategy').text('\u{1F4F1} Dashboard').text('\u{2764}\uFE0F Health')
+    .text('\u{1F3AF} Strategy').text('\u{1F4F0} News').text('\u{2764}\uFE0F Health')
     .resized()
     .persistent();
 }

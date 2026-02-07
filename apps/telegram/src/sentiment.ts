@@ -7,6 +7,7 @@
 import { PolymarketFeed, type MarketIntelligence } from '@makora/data-feed';
 import { getPriceHistory, getMarketConditions, fetchTokenPrices, type MarketConditions } from './price-feed.js';
 import { computeRSI, computeMomentum, rsiSignal } from './indicators.js';
+import { fetchCryptoNews, type NewsFeedResult } from './social-feed.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ export interface SentimentReport {
     polymarket: { bias: string; conviction: number };
     tvl: { value: number; change24hPct: number };
     dexVolume: { value: number; change24hPct: number };
+    news: { score: number; articleCount: number; bias: string };
   };
   recommendations: TokenRecommendation[];
 }
@@ -143,17 +145,18 @@ interface AllSignals {
   polymarket: { bias: string; conviction: number };
   tvl: { value: number; change24hPct: number };
   dexVolume: { value: number; change24hPct: number };
+  news: { score: number; articleCount: number; bias: string };
 }
 
 function computeOverallScore(signals: AllSignals): number {
   let score = 0;
 
-  // 1. Fear & Greed (25% weight) — contrarian
+  // 1. Fear & Greed (20% weight) — contrarian
   const fg = signals.fearGreed.value;
-  if (fg < 25) score += 30;
-  else if (fg < 45) score += 15;
-  else if (fg > 75) score -= 30;
-  else if (fg > 55) score -= 15;
+  if (fg < 25) score += 25;
+  else if (fg < 45) score += 12;
+  else if (fg > 75) score -= 25;
+  else if (fg > 55) score -= 12;
 
   // 2. RSI (20% weight) — mean reversion
   const solRsi = signals.rsi['SOL'];
@@ -170,9 +173,9 @@ function computeOverallScore(signals: AllSignals): number {
   if (signals.momentum.changePct > 3) score += 10;
   else if (signals.momentum.changePct < -3) score -= 10;
 
-  // 4. Polymarket (15% weight)
-  if (signals.polymarket.bias === 'bullish') score += 15;
-  else if (signals.polymarket.bias === 'bearish') score -= 15;
+  // 4. Polymarket (10% weight)
+  if (signals.polymarket.bias === 'bullish') score += 10;
+  else if (signals.polymarket.bias === 'bearish') score -= 10;
 
   // 5. TVL (10% weight)
   if (signals.tvl.change24hPct > 5) score += 10;
@@ -185,6 +188,14 @@ function computeOverallScore(signals: AllSignals): number {
   else if (signals.dexVolume.change24hPct > 5) score += 5;
   else if (signals.dexVolume.change24hPct < -10) score -= 10;
   else if (signals.dexVolume.change24hPct < -5) score -= 5;
+
+  // 7. News sentiment (10% weight) — only if enough articles
+  if (signals.news.articleCount >= 3) {
+    if (signals.news.score > 40) score += 10;
+    else if (signals.news.score > 15) score += 5;
+    else if (signals.news.score < -40) score -= 10;
+    else if (signals.news.score < -15) score -= 5;
+  }
 
   // Clamp to [-100, +100]
   return Math.max(-100, Math.min(100, score));
@@ -265,6 +276,14 @@ function generateRecommendations(
       reasons.push(`Polymarket: ${signals.polymarket.bias}`);
     }
 
+    // News sentiment context
+    if (signals.news.articleCount >= 3 && signals.news.bias !== 'neutral') {
+      const newsLabel = signals.news.score > 0 ? 'positive' : 'negative';
+      reasons.push(`News: ${newsLabel} (${signals.news.articleCount} articles)`);
+      if (signals.news.score > 30) tokenScore += 8;
+      else if (signals.news.score < -30) tokenScore -= 8;
+    }
+
     const clampedScore = Math.max(-100, Math.min(100, tokenScore));
     let action: TokenRecommendation['action'];
     if (clampedScore >= 40) action = 'strong_buy';
@@ -298,13 +317,20 @@ export async function analyzeSentiment(): Promise<SentimentReport> {
   await fetchTokenPrices().catch(() => null);
 
   // Fetch all sources in parallel
-  const [fearGreed, tvl, dexVolume, polyIntel] = await Promise.all([
+  const [fearGreed, tvl, dexVolume, polyIntel, newsFeed] = await Promise.all([
     fetchFearGreedIndex(),
     fetchSolanaTVL(),
     fetchDEXVolume(),
     polyFeed.getMarketIntelligence().catch((): MarketIntelligence => ({
       cryptoMarkets: [],
       sentimentSummary: { overallBias: 'neutral', highConvictionCount: 0, averageProbability: 0.5 },
+      fetchedAt: Date.now(),
+    })),
+    fetchCryptoNews().catch((): NewsFeedResult => ({
+      articles: [],
+      aggregateSentiment: 0,
+      counts: { positive: 0, negative: 0, neutral: 0 },
+      topHeadlines: [],
       fetchedAt: Date.now(),
     })),
   ]);
@@ -324,6 +350,10 @@ export async function analyzeSentiment(): Promise<SentimentReport> {
     conviction: Math.round(polyIntel.sentimentSummary.averageProbability * 100),
   };
 
+  const newsBias = newsFeed.aggregateSentiment > 20 ? 'bullish'
+    : newsFeed.aggregateSentiment < -20 ? 'bearish'
+    : 'neutral';
+
   const signals: AllSignals = {
     fearGreed,
     rsi,
@@ -331,6 +361,11 @@ export async function analyzeSentiment(): Promise<SentimentReport> {
     polymarket,
     tvl,
     dexVolume,
+    news: {
+      score: newsFeed.aggregateSentiment,
+      articleCount: newsFeed.articles.length,
+      bias: newsBias,
+    },
   };
 
   const overallScore = computeOverallScore(signals);

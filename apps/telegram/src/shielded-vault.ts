@@ -22,6 +22,15 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { randomBytes } from 'node:crypto';
+import {
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from '@solana/web3.js';
 
 // ─── Cryptographic Primitives ────────────────────────────────────────────────
 
@@ -653,4 +662,117 @@ export function formatVaultForLLM(solPrice: number): string {
   }
 
   return lines.join('\n');
+}
+
+// ─── On-Chain Vault Transfers ────────────────────────────────────────────────
+
+const VAULT_KEYPAIR_KEY = '__MAKORA_VAULT_KEYPAIR__';
+
+/**
+ * Derive a deterministic vault keypair from the main wallet.
+ * vault_seed = SHA256("makora-zk-vault" ‖ wallet_secret_key[0..32])
+ * This ensures the vault address is always the same for a given wallet.
+ */
+export function deriveVaultKeypair(wallet: Keypair): Keypair {
+  if (typeof globalThis !== 'undefined' && (globalThis as any)[VAULT_KEYPAIR_KEY]) {
+    return (globalThis as any)[VAULT_KEYPAIR_KEY];
+  }
+
+  const seed = sha256(
+    concat(
+      new TextEncoder().encode('makora-zk-vault'),
+      wallet.secretKey.slice(0, 32),
+    )
+  );
+
+  const vaultKeypair = Keypair.fromSeed(seed);
+
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any)[VAULT_KEYPAIR_KEY] = vaultKeypair;
+  }
+
+  console.log(`[ZK Vault] Vault address: ${vaultKeypair.publicKey.toBase58()}`);
+  return vaultKeypair;
+}
+
+/**
+ * Get vault on-chain SOL balance.
+ */
+export async function getVaultOnChainBalance(connection: Connection, wallet: Keypair): Promise<number> {
+  const vaultKeypair = deriveVaultKeypair(wallet);
+  try {
+    const lamports = await connection.getBalance(vaultKeypair.publicKey);
+    return lamports / LAMPORTS_PER_SOL;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Transfer SOL from main wallet to vault (on-chain shield).
+ */
+export async function transferToVault(
+  connection: Connection,
+  wallet: Keypair,
+  amountSol: number,
+): Promise<{ signature: string; vaultAddress: string }> {
+  const vaultKeypair = deriveVaultKeypair(wallet);
+  const lamports = Math.round(amountSol * LAMPORTS_PER_SOL);
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: vaultKeypair.publicKey,
+      lamports,
+    })
+  );
+
+  const signature = await sendAndConfirmTransaction(connection, tx, [wallet], {
+    commitment: 'confirmed',
+  });
+
+  console.log(`[ZK Vault] On-chain shield: ${amountSol} SOL → ${vaultKeypair.publicKey.toBase58()}`);
+  console.log(`  tx: ${signature}`);
+
+  return { signature, vaultAddress: vaultKeypair.publicKey.toBase58() };
+}
+
+/**
+ * Transfer SOL from vault back to main wallet (on-chain unshield).
+ */
+export async function transferFromVault(
+  connection: Connection,
+  wallet: Keypair,
+  amountSol: number,
+): Promise<{ signature: string; vaultAddress: string }> {
+  const vaultKeypair = deriveVaultKeypair(wallet);
+  const lamports = Math.round(amountSol * LAMPORTS_PER_SOL);
+
+  const vaultBalance = await connection.getBalance(vaultKeypair.publicKey);
+  const rentExempt = 890880;
+  const available = vaultBalance - rentExempt;
+
+  if (lamports > available) {
+    throw new Error(
+      `Vault on-chain balance too low. Available: ${(available / LAMPORTS_PER_SOL).toFixed(4)} SOL, ` +
+      `requested: ${amountSol.toFixed(4)} SOL`
+    );
+  }
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: vaultKeypair.publicKey,
+      toPubkey: wallet.publicKey,
+      lamports,
+    })
+  );
+
+  const signature = await sendAndConfirmTransaction(connection, tx, [vaultKeypair], {
+    commitment: 'confirmed',
+  });
+
+  console.log(`[ZK Vault] On-chain unshield: ${amountSol} SOL → ${wallet.publicKey.toBase58()}`);
+  console.log(`  tx: ${signature}`);
+
+  return { signature, vaultAddress: vaultKeypair.publicKey.toBase58() };
 }

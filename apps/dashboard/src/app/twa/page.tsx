@@ -1,0 +1,450 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { TWAProviders, useTWAWallet } from './providers';
+import { TheWheelTWA } from './components/TheWheelTWA';
+import { SentimentPanelTWA } from './components/SentimentPanelTWA';
+import { PortfolioCardTWA } from './components/PortfolioCardTWA';
+import { PositionsPanelTWA } from './components/PositionsPanelTWA';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface PositionEntry {
+  symbol: string;
+  mint: string;
+  balance: number;
+  uiAmount: number;
+  decimals: number;
+}
+
+interface PerpPosition {
+  id: string;
+  market: string;
+  side: 'long' | 'short';
+  leverage: number;
+  collateralUsd: number;
+  entryPrice: number;
+  currentPrice?: number;
+  unrealizedPnl?: number;
+  unrealizedPnlPct?: number;
+  openedAt: number;
+}
+
+interface PositionSnapshot {
+  positions: PositionEntry[];
+  allocation: Array<{ symbol: string; pct: number }>;
+  totalValueSol: number;
+  timestamp: number;
+  perpPositions: PerpPosition[];
+  perpSummary: {
+    count: number;
+    totalCollateral: number;
+    totalExposure: number;
+    totalUnrealizedPnl: number;
+  };
+}
+
+interface SentimentReport {
+  timestamp: number;
+  overallScore: number;
+  direction: string;
+  confidence: number;
+  signals: {
+    fearGreed: { value: number; classification: string };
+    rsi: Record<string, { value: number; signal: string }>;
+    momentum: { trend: string; volatility: string; changePct: number };
+    polymarket: { bias: string; conviction: number };
+    tvl: { tvl: number; change24hPct: number };
+    dexVolume: { volume24h: number; change24hPct: number };
+  };
+  recommendations: Array<{
+    token: string;
+    action: 'strong_buy' | 'buy' | 'hold' | 'sell' | 'strong_sell';
+    confidence: number;
+    reasons: string[];
+  }>;
+}
+
+interface PolymarketData {
+  cryptoMarkets: Array<{
+    question: string;
+    probability: number;
+    volume24h: number;
+    priceChange24h: number;
+    relevance: string;
+  }>;
+  sentimentSummary: {
+    overallBias: string;
+    highConvictionCount: number;
+    averageProbability: number;
+  };
+  fetchedAt: number;
+}
+
+// ─── Tab definitions ────────────────────────────────────────────────────────
+
+type TabId = 'home' | 'sentiment' | 'portfolio' | 'markets';
+
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: 'home', label: 'Home', icon: '◎' },
+  { id: 'sentiment', label: 'Signals', icon: '◈' },
+  { id: 'portfolio', label: 'Portfolio', icon: '◆' },
+  { id: 'markets', label: 'Markets', icon: '◇' },
+];
+
+// ─── Main Dashboard Content ─────────────────────────────────────────────────
+
+function TWADashboard() {
+  const { walletAddress } = useTWAWallet();
+  const [activeTab, setActiveTab] = useState<TabId>('home');
+
+  // Data state
+  const [positionData, setPositionData] = useState<PositionSnapshot | null>(null);
+  const [sentiment, setSentiment] = useState<SentimentReport | null>(null);
+  const [polymarket, setPolymarket] = useState<PolymarketData | null>(null);
+  const [loading, setLoading] = useState({ positions: true, sentiment: true, polymarket: true });
+
+  // Decision tick: incremented whenever positions or sentiment change
+  const [decisionTick, setDecisionTick] = useState(0);
+  const prevPerpCountRef = useRef(0);
+  const prevScoreRef = useRef<number | null>(null);
+
+  // Fetch positions
+  const fetchPositions = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      const res = await fetch(`/api/agent/positions?wallet=${walletAddress}`);
+      if (res.ok) {
+        const data: PositionSnapshot = await res.json();
+        setPositionData(data);
+
+        // Tick on position count change (new position opened/closed = decision)
+        const perpCount = data.perpPositions?.length ?? 0;
+        if (perpCount !== prevPerpCountRef.current && prevPerpCountRef.current !== 0) {
+          setDecisionTick(t => t + 1);
+        }
+        prevPerpCountRef.current = perpCount;
+      }
+    } catch { /* silent */ }
+    setLoading(prev => ({ ...prev, positions: false }));
+  }, [walletAddress]);
+
+  // Fetch sentiment
+  const fetchSentiment = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sentiment');
+      if (res.ok) {
+        const data: SentimentReport = await res.json();
+        setSentiment(data);
+
+        // Tick on sentiment direction change (market shift = decision)
+        if (prevScoreRef.current !== null && data.overallScore !== prevScoreRef.current) {
+          const scoreDelta = Math.abs(data.overallScore - prevScoreRef.current);
+          if (scoreDelta >= 5) {
+            setDecisionTick(t => t + 1);
+          }
+        }
+        prevScoreRef.current = data.overallScore;
+      }
+    } catch { /* silent */ }
+    setLoading(prev => ({ ...prev, sentiment: false }));
+  }, []);
+
+  // Fetch polymarket
+  const fetchPolymarket = useCallback(async () => {
+    try {
+      const res = await fetch('/api/polymarket');
+      if (res.ok) {
+        const data: PolymarketData = await res.json();
+        setPolymarket(data);
+      }
+    } catch { /* silent */ }
+    setLoading(prev => ({ ...prev, polymarket: false }));
+  }, []);
+
+  // Initial fetch — tick once when first data loads
+  useEffect(() => {
+    Promise.all([fetchPositions(), fetchSentiment(), fetchPolymarket()]).then(() => {
+      setDecisionTick(1); // Initial load = first tick
+    });
+  }, [fetchPositions, fetchSentiment, fetchPolymarket]);
+
+  // Polling
+  useEffect(() => {
+    const posInterval = setInterval(fetchPositions, 5000);
+    const sentInterval = setInterval(fetchSentiment, 60000);
+    const polyInterval = setInterval(fetchPolymarket, 60000);
+    return () => {
+      clearInterval(posInterval);
+      clearInterval(sentInterval);
+      clearInterval(polyInterval);
+    };
+  }, [fetchPositions, fetchSentiment, fetchPolymarket]);
+
+  const positionCount = positionData?.perpPositions?.length ?? 0;
+
+  // ─── Tab Content ──────────────────────────────────────────────────────────
+
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <>
+            {/* Wheel */}
+            <TheWheelTWA
+              walletAddress={walletAddress}
+              positionCount={positionCount}
+              sentimentDirection={sentiment?.direction}
+              sentimentScore={sentiment?.overallScore}
+              decisionTick={decisionTick}
+              totalValueSol={positionData?.totalValueSol ?? 0}
+            />
+
+            {/* Quick position summary */}
+            {positionCount > 0 && (
+              <div className="px-3 pb-3">
+                <div className="cursed-card p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-mono tracking-wider uppercase text-text-muted">Open Positions</span>
+                    <span className="text-[9px] font-mono text-cursed">{positionCount}</span>
+                  </div>
+                  {positionData?.perpPositions.slice(0, 3).map(pos => {
+                    const pnl = pos.unrealizedPnlPct ?? 0;
+                    const isProfit = pnl >= 0;
+                    return (
+                      <div key={pos.id} className="flex items-center justify-between py-1 border-t border-cursed/5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded-sm"
+                            style={{
+                              color: pos.side === 'long' ? '#22c55e' : '#ef4444',
+                              background: pos.side === 'long' ? '#22c55e12' : '#ef444412',
+                            }}
+                          >
+                            {pos.side}
+                          </span>
+                          <span className="text-[11px] font-mono font-bold">{pos.market}</span>
+                          <span className="text-[9px] font-mono text-text-muted">{pos.leverage}x</span>
+                        </div>
+                        <span className="text-[11px] font-mono font-bold" style={{ color: isProfit ? '#22c55e' : '#ef4444' }}>
+                          {isProfit ? '+' : ''}{pnl.toFixed(2)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Sentiment mini */}
+            {sentiment && (
+              <div className="px-3 pb-3">
+                <div className="cursed-card p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono tracking-wider uppercase text-text-muted">Market Sentiment</span>
+                    <span
+                      className="text-[9px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
+                      style={{
+                        color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#d4a829',
+                        background: sentiment.direction.includes('buy') ? '#22c55e12' : sentiment.direction.includes('sell') ? '#ef444412' : '#d4a82912',
+                      }}
+                    >
+                      {sentiment.direction.replace('_', ' ')}
+                    </span>
+                  </div>
+                  {sentiment.recommendations.length > 0 && (
+                    <div className="mt-2 flex items-center gap-3">
+                      {sentiment.recommendations.map(r => (
+                        <div key={r.token} className="flex items-center gap-1">
+                          <span className="text-[10px] font-mono font-bold">{r.token}</span>
+                          <span
+                            className="text-[8px] font-mono uppercase"
+                            style={{ color: r.action.includes('buy') ? '#22c55e' : r.action.includes('sell') ? '#ef4444' : '#d4a829' }}
+                          >
+                            {r.action.replace('_', ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Live indicator */}
+            <div className="px-3 pb-4">
+              <div className="flex items-center justify-center gap-2 py-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#22c55e' }} />
+                <span className="text-[9px] font-mono text-text-muted">Live — refreshing every 5s</span>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'sentiment':
+        return (
+          <div className="px-3 pt-3 pb-4">
+            <SentimentPanelTWA report={sentiment} loading={loading.sentiment} />
+          </div>
+        );
+
+      case 'portfolio':
+        return (
+          <div className="px-3 pt-3 pb-4 space-y-3">
+            <PortfolioCardTWA
+              solBalance={positionData?.positions.find(p => p.symbol === 'SOL')?.uiAmount ?? null}
+              positions={positionData?.positions ?? []}
+              allocation={positionData?.allocation ?? []}
+              totalValueSol={positionData?.totalValueSol ?? 0}
+              loading={loading.positions}
+            />
+            <PositionsPanelTWA
+              positions={positionData?.perpPositions ?? []}
+              loading={loading.positions}
+            />
+          </div>
+        );
+
+      case 'markets':
+        return (
+          <div className="px-3 pt-3 pb-4">
+            <div className="cursed-card p-4">
+              <div className="section-title mb-3">PREDICTION MARKETS</div>
+              {loading.polymarket ? (
+                <div className="text-text-muted text-xs font-mono animate-pulse">Loading markets...</div>
+              ) : polymarket && polymarket.cryptoMarkets.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono mb-3">
+                    <span className="text-text-muted">Overall Bias</span>
+                    <span style={{
+                      color: polymarket.sentimentSummary.overallBias === 'bullish' ? '#22c55e' :
+                             polymarket.sentimentSummary.overallBias === 'bearish' ? '#ef4444' : '#d4a829'
+                    }}>
+                      {polymarket.sentimentSummary.overallBias.toUpperCase()}
+                    </span>
+                  </div>
+                  {polymarket.cryptoMarkets.slice(0, 8).map((market, i) => (
+                    <div key={i} className="bg-bg-inner p-2.5 rounded-sm border border-cursed/10">
+                      <div className="text-[10px] font-mono text-text-primary mb-1.5 leading-tight">
+                        {market.question.length > 70 ? market.question.slice(0, 67) + '...' : market.question}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold" style={{
+                            color: market.probability > 0.6 ? '#22c55e' : market.probability < 0.4 ? '#ef4444' : '#d4a829'
+                          }}>
+                            {(market.probability * 100).toFixed(0)}% YES
+                          </span>
+                          <span className="text-[9px] font-mono text-text-muted">
+                            Vol: ${(market.volume24h / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+                        <span
+                          className="text-[8px] font-mono tracking-wider uppercase px-1 py-0.5 rounded-sm"
+                          style={{
+                            color: market.relevance === 'high' ? '#d4a829' : '#5a5548',
+                            background: market.relevance === 'high' ? '#d4a82912' : 'transparent',
+                          }}
+                        >
+                          {market.relevance}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-text-muted text-xs font-mono">No market data available</div>
+              )}
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="twa-app">
+      {/* Status bar */}
+      <div className="twa-statusbar">
+        <div className="flex items-center gap-2">
+          <span
+            className="font-display text-base tracking-[0.2em]"
+            style={{
+              background: 'linear-gradient(135deg, #a68520, #d4a829, #e8c44a)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            MAKORA
+          </span>
+          {sentiment && (
+            <span
+              className="text-[8px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
+              style={{
+                color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#d4a829',
+                background: sentiment.direction.includes('buy') ? '#22c55e10' : sentiment.direction.includes('sell') ? '#ef444410' : '#d4a82910',
+              }}
+            >
+              {sentiment.direction.replace('_', ' ')}
+            </span>
+          )}
+        </div>
+        <span className="text-[8px] font-mono text-text-muted">
+          {walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : ''}
+        </span>
+      </div>
+
+      {/* Scrollable content area */}
+      <div className="twa-content">
+        {renderTab()}
+      </div>
+
+      {/* Bottom tab bar */}
+      <div className="twa-tabbar">
+        {TABS.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="twa-tab"
+              style={{
+                color: isActive ? '#d4a829' : '#5a5548',
+              }}
+            >
+              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="text-[8px] font-mono tracking-wider uppercase">{tab.label}</span>
+              {isActive && <div className="twa-tab-indicator" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page wrapper ───────────────────────────────────────────────────────────
+
+function TWAPageInner() {
+  const searchParams = useSearchParams();
+  const walletAddress = searchParams.get('wallet') || '';
+
+  return (
+    <TWAProviders walletAddress={walletAddress}>
+      <TWADashboard />
+    </TWAProviders>
+  );
+}
+
+export default function TWAPage() {
+  return (
+    <Suspense fallback={
+      <div className="twa-page flex items-center justify-center h-screen">
+        <div className="text-cursed font-mono text-sm animate-pulse">Loading Makora...</div>
+      </div>
+    }>
+      <TWAPageInner />
+    </Suspense>
+  );
+}

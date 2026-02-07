@@ -42,7 +42,8 @@ import {
 import { getSimulatedPositions, formatSimulatedPositionsForLLM } from './simulated-perps.js';
 import { executeTool, type ToolExecutionContext } from './tools.js';
 import { analyzeSentiment } from './sentiment.js';
-import { startAutonomousScan, stopAutonomousScan, runSingleScan } from './autonomous.js';
+import { startAutonomousScan, stopAutonomousScan, startNewsMonitor, stopNewsMonitor, runSingleScan } from './autonomous.js';
+import { fetchCryptoNews, formatNewsForDisplay } from './social-feed.js';
 
 // Load env
 loadDotenv();
@@ -56,6 +57,33 @@ let connection: Connection;
 let wallet: Keypair;
 let cluster: SolanaCluster;
 let llmConfig: LLMConfig | null = null;
+
+// ============================================================================
+// Safe Markdown Reply (fallback to plain text on parse error)
+// ============================================================================
+
+function escapeMarkdown(text: string): string {
+  // Strip markdown entities that Telegram can't parse rather than escaping
+  return text.replace(/[*_`\[]/g, '');
+}
+
+async function safeReply(
+  ctx: MakoraContext,
+  text: string,
+  opts?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await ctx.reply(text, { parse_mode: 'Markdown', ...opts } as any);
+  } catch {
+    // Markdown parse failed — retry as plain text
+    try {
+      await ctx.reply(escapeMarkdown(text), opts as any);
+    } catch {
+      // Last resort
+      await ctx.reply(text.slice(0, 4000)).catch(() => {});
+    }
+  }
+}
 
 // ============================================================================
 // Initialize
@@ -145,6 +173,26 @@ if (!token) {
 }
 
 const bot = new Bot<MakoraContext>(token);
+
+// Intercept Markdown parse failures and retry without parse_mode
+bot.api.config.use(async (prev, method, payload, signal) => {
+  const result = await prev(method, payload, signal);
+  if (
+    !result.ok &&
+    result.error_code === 400 &&
+    typeof result.description === 'string' &&
+    result.description.includes("can't parse entities")
+  ) {
+    // Strip parse_mode and retry as plain text
+    const cleaned = { ...payload } as Record<string, unknown>;
+    delete cleaned.parse_mode;
+    if (typeof cleaned.text === 'string') {
+      cleaned.text = cleaned.text.replace(/[*_`\[]/g, '');
+    }
+    return prev(method, cleaned as any, signal);
+  }
+  return result;
+});
 
 bot.use(session({
   initial: initialSession,
@@ -777,6 +825,10 @@ bot.command('sentiment', async (ctx) => {
       msg += `  DEX Volume: ${volSign}${report.signals.dexVolume.change24hPct.toFixed(1)}% (24h)\n`;
     }
 
+    if (report.signals.news.articleCount > 0) {
+      msg += `  News: ${report.signals.news.bias} (${report.signals.news.score > 0 ? '+' : ''}${report.signals.news.score}, ${report.signals.news.articleCount} articles)\n`;
+    }
+
     msg += `\n_Updated: ${new Date().toLocaleTimeString()}_`;
     await ctx.reply(msg, { parse_mode: 'Markdown' });
   } catch (err) {
@@ -808,6 +860,30 @@ bot.command('scan', async (ctx) => {
     }
   } catch (err) {
     await ctx.reply(`Scan error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+});
+
+bot.command('news', async (ctx) => {
+  if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
+
+  try {
+    const feed = await fetchCryptoNews();
+    if (feed.articles.length === 0) {
+      await ctx.reply('No crypto news available right now. Try again later.');
+      return;
+    }
+
+    const msg = formatNewsForDisplay(feed);
+    if (msg.length <= 4000) {
+      await ctx.reply(msg, { parse_mode: 'Markdown' }).catch(() => ctx.reply(msg));
+    } else {
+      const chunks = splitMessage(msg, 4000);
+      for (const chunk of chunks) {
+        await ctx.reply(chunk, { parse_mode: 'Markdown' }).catch(() => ctx.reply(chunk));
+      }
+    }
+  } catch (err) {
+    await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
   }
 });
 
@@ -1164,6 +1240,10 @@ bot.hears(/^\u{1F9E0} Sentiment$/u, async (ctx) => {
       msg += `  DEX Volume: ${volSign}${report.signals.dexVolume.change24hPct.toFixed(1)}% (24h)\n`;
     }
 
+    if (report.signals.news.articleCount > 0) {
+      msg += `  News: ${report.signals.news.bias} (${report.signals.news.score > 0 ? '+' : ''}${report.signals.news.score}, ${report.signals.news.articleCount} articles)\n`;
+    }
+
     msg += `\n_Updated: ${new Date().toLocaleTimeString()}_`;
     await ctx.reply(msg, { parse_mode: 'Markdown' });
   } catch (err) {
@@ -1247,10 +1327,28 @@ bot.hears(/^\u{1F3AF} Strategy$/u, async (ctx) => {
   await ctx.reply('Select strategy:', { reply_markup: strategySelectKeyboard() });
 });
 
-bot.hears(/^\u{1F4F1} Dashboard$/u, async (ctx) => {
-  await ctx.reply('Open the Makora dashboard:', {
-    reply_markup: miniAppKeyboard(wallet.publicKey.toBase58(), ctx.chat.id),
-  });
+bot.hears(/^\u{1F4F0} News$/u, async (ctx) => {
+  if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
+
+  try {
+    const feed = await fetchCryptoNews();
+    if (feed.articles.length === 0) {
+      await ctx.reply('No crypto news available right now. Try again later.');
+      return;
+    }
+
+    const msg = formatNewsForDisplay(feed);
+    if (msg.length <= 4000) {
+      await ctx.reply(msg, { parse_mode: 'Markdown' }).catch(() => ctx.reply(msg));
+    } else {
+      const chunks = splitMessage(msg, 4000);
+      for (const chunk of chunks) {
+        await ctx.reply(chunk, { parse_mode: 'Markdown' }).catch(() => ctx.reply(chunk));
+      }
+    }
+  } catch (err) {
+    await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
+  }
 });
 
 bot.hears(/^\u{2764}\uFE0F Health$/u, async (ctx) => {
@@ -1377,6 +1475,100 @@ bot.on('message:text', async (ctx) => {
     }
   }
 
+  // ── Direct command parsing (works without LLM) ──
+  const lower = text.toLowerCase().trim();
+  const toolCtx = await getToolCtx();
+
+  // Shield: "shield 1 sol", "shield 50%", "shield all"
+  const shieldMatch = lower.match(/^shield\s+(?:(\d+(?:\.\d+)?)\s*(?:sol)?|(\d+)%|all)$/);
+  if (shieldMatch) {
+    const input: Record<string, unknown> = {};
+    if (shieldMatch[1]) input.amount_sol = parseFloat(shieldMatch[1]);
+    else if (shieldMatch[2]) input.percent_of_wallet = parseInt(shieldMatch[2]);
+    // else: no args = shield all (default behavior)
+    const result = await executeTool('shield_sol', input, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Unshield: "unshield 1 sol", "unshield 50%", "unshield all"
+  const unshieldMatch = lower.match(/^unshield\s+(?:(\d+(?:\.\d+)?)\s*(?:sol)?|(\d+)%|all)$/);
+  if (unshieldMatch) {
+    const input: Record<string, unknown> = {};
+    if (unshieldMatch[1]) input.amount_sol = parseFloat(unshieldMatch[1]);
+    else if (unshieldMatch[2]) input.percent_of_vault = parseInt(unshieldMatch[2]);
+    const result = await executeTool('unshield_sol', input, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // News: "news", "headlines", "latest news"
+  if (/^(?:latest\s+)?(?:news|headlines)$/i.test(lower)) {
+    try {
+      const feed = await fetchCryptoNews();
+      if (feed.articles.length === 0) {
+        await ctx.reply('No crypto news available right now.');
+        return;
+      }
+      const msg = formatNewsForDisplay(feed);
+      await safeReply(ctx, msg, { reply_markup: mainMenuKeyboard() });
+    } catch (err) {
+      await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return;
+  }
+
+  // Vault: "vault", "my vault"
+  if (/^(?:my\s+)?vault$/i.test(lower)) {
+    const result = await executeTool('get_vault', {}, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Portfolio: "portfolio", "my portfolio", "balance"
+  if (/^(?:my\s+)?(?:portfolio|balance|wallet)$/i.test(lower)) {
+    const result = await executeTool('get_portfolio', {}, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Positions: "positions", "my positions"
+  if (/^(?:my\s+)?positions?$/i.test(lower)) {
+    const result = await executeTool('get_positions', {}, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Open position: "long sol 5x", "short btc 10x", "open long sol"
+  const posMatch = lower.match(/^(?:open\s+)?(long|short)\s+(sol|eth|btc)(?:\s+(\d+)x)?(?:\s+(\d+)%)?$/);
+  if (posMatch) {
+    const side = posMatch[1];
+    const asset = posMatch[2].toUpperCase();
+    const leverage = posMatch[3] ? parseInt(posMatch[3]) : 5;
+    const pct = posMatch[4] ? parseInt(posMatch[4]) : 25;
+    const result = await executeTool('open_position', {
+      market: `${asset}-PERP`,
+      side,
+      leverage,
+      percent_of_vault: pct,
+    }, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Close position: "close sol", "close btc"
+  const closeMatch = lower.match(/^close\s+(sol|eth|btc|all)$/);
+  if (closeMatch) {
+    if (closeMatch[1] === 'all') {
+      const result = await executeTool('close_all_positions', {}, toolCtx);
+      await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    } else {
+      const result = await executeTool('close_position', { market: `${closeMatch[1].toUpperCase()}-PERP` }, toolCtx);
+      await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    }
+    return;
+  }
+
   // Fallback: basic agent command parsing
   try {
     const intent = agent.parseCommand(text);
@@ -1385,17 +1577,18 @@ bot.on('message:text', async (ctx) => {
       await ctx.reply(
         `I didn't understand that.\n\n` +
         `Try:\n` +
-        `- "swap 10 SOL to USDC"\n` +
-        `- "check my portfolio"\n` +
-        `- "open long SOL 5x"\n\n` +
-        `${llmConfig ? '' : '_Tip: Set LLM\\_API\\_KEY for intelligent conversations._'}`,
-        { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+        `- "shield 1 sol" / "unshield 0.5 sol"\n` +
+        `- "vault" / "portfolio" / "positions"\n` +
+        `- "long sol 5x" / "short btc 10x"\n` +
+        `- "close sol" / "close all"\n\n` +
+        `${llmConfig ? '' : 'Tip: Set LLM API key in Settings for intelligent conversations.'}`,
+        { reply_markup: mainMenuKeyboard() }
       );
       return;
     }
 
     const response = await agent.executeCommand(text);
-    await ctx.reply(`*Agent:* ${response}`, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    await ctx.reply(`Agent: ${response}`, { reply_markup: mainMenuKeyboard() });
   } catch (err) {
     await ctx.reply(`Error: ${err instanceof Error ? err.message : String(err)}`, { reply_markup: mainMenuKeyboard() });
   }
@@ -1418,16 +1611,16 @@ async function main() {
     }
 
     // Start autonomous sentiment scan (every 4 hours)
-    startAutonomousScan({
-      bot,
-      connection,
-      wallet,
-      llmConfig,
-    });
+    const scanConfig = { bot, connection, wallet, llmConfig };
+    startAutonomousScan(scanConfig);
+
+    // Start continuous news monitor (every 15 minutes)
+    startNewsMonitor(scanConfig);
 
     // Graceful shutdown
     const shutdown = () => {
       console.log('[Makora Telegram] Shutting down...');
+      stopNewsMonitor();
       stopAutonomousScan();
       bot.stop();
     };
@@ -1441,6 +1634,7 @@ async function main() {
         console.log(`[Makora Telegram] Network: ${cluster}`);
         console.log(`[Makora Telegram] LLM: ${llmConfig ? `${llmConfig.provider}` : 'disabled'}`);
         console.log(`[Makora Telegram] Autonomous scan: enabled (4h interval)`);
+        console.log(`[Makora Telegram] News monitor: enabled (15min interval)`);
       },
     });
   } catch (err) {
