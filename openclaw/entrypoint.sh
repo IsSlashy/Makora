@@ -30,6 +30,19 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
         {"command": "app", "description": "Open the full dashboard"}
       ]
     }' > /dev/null 2>&1 && echo "[Makora] Bot commands registered" || echo "[Makora] Warning: could not set bot commands"
+
+  # Set the Menu Button to open TWA Dashboard directly
+  DASHBOARD_URL="${DASHBOARD_URL:-https://dashboard-lake-xi-65.vercel.app}"
+  echo "[Makora] Setting menu button → ${DASHBOARD_URL}/twa"
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setChatMenuButton" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"menu_button\": {
+        \"type\": \"web_app\",
+        \"text\": \"Dashboard\",
+        \"web_app\": {\"url\": \"${DASHBOARD_URL}/twa\"}
+      }
+    }" > /dev/null 2>&1 && echo "[Makora] Menu button set" || echo "[Makora] Warning: could not set menu button"
 fi
 
 # Inject gateway auth token if provided
