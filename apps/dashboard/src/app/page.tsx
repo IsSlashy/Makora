@@ -1,26 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { TheWheel } from '@/components/TheWheel';
 import { PortfolioCard } from '@/components/PortfolioCard';
-import { TradeGuardPanel } from '@/components/TradeGuardPanel';
+import { MarketTickerBar } from '@/components/MarketTickerBar';
 import { ActivityFeed } from '@/components/ActivityFeed';
-import { RiskControls } from '@/components/RiskControls';
-import { LLMReasoningPanel } from '@/components/LLMReasoningPanel';
-import { PolymarketPanel } from '@/components/PolymarketPanel';
-import { ExecutionPanel } from '@/components/ExecutionPanel';
-import { SelfEvaluationPanel } from '@/components/SelfEvaluationPanel';
 import { PositionsPanel } from '@/components/PositionsPanel';
 import { PerformanceHistoryPanel } from '@/components/PerformanceHistoryPanel';
+import { SentimentPanel } from '@/components/SentimentPanel';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useOODALoop } from '@/hooks/useOODALoop';
-import type { PastDecision } from '@/hooks/useSelfEvaluation';
 import { useYieldData } from '@/hooks/useYieldData';
 import { usePolymarket } from '@/hooks/usePolymarket';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useTradeGuard } from '@/hooks/useTradeGuard';
-import { useTradingSession, type SessionParams } from '@/hooks/useTradingSession';
+import { useTradingSession } from '@/hooks/useTradingSession';
 import { useVault } from '@/hooks/useVault';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -101,8 +96,6 @@ export default function Home() {
     });
   }, [ooda.startLoop, ooda.stopLoop, ooda.setAutoMode, ooda.setSessionParams, ooda.lastObservation, vault.vaultBalance, generateReport, tradingSession.setCallbacks]);
 
-  const [activeTab, setActiveTab] = useState<'details' | 'intelligence' | 'execution' | 'risk'>('details');
-
   // Force re-render every second for countdown timer
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -170,31 +163,6 @@ export default function Home() {
     }
   }, [tradingSession.session.status, tradingSession.session.report, addActivity]);
 
-  // ── Tab definitions ────────────────────────────────────────────────────────
-
-  const tabs = [
-    { id: 'details' as const, kanji: '制', label: 'DETAILS' },
-    { id: 'intelligence' as const, kanji: '知', label: 'INTELLIGENCE' },
-    { id: 'execution' as const, kanji: '執', label: 'EXECUTION' },
-    { id: 'risk' as const, kanji: '防', label: 'RISK' },
-  ];
-
-  // ── Derive past decisions for Self-Evaluation from execution results ──────
-
-  const selfEvalDecisions = useMemo<PastDecision[]>(() => {
-    return ooda.executionResults
-      .filter(r => !r.simulated)
-      .map(r => ({
-        timestamp: Date.now(),
-        action: `${r.action} via ${r.protocol}`,
-        reasoning: r.riskAssessment?.summary || 'No reasoning available',
-        outcome: (r.success ? 'profit' : 'loss') as 'profit' | 'loss' | 'neutral',
-        pnlPercent: r.success ? (r.riskAssessment?.riskScore ?? 0) * 0.1 : -(r.riskAssessment?.riskScore ?? 0) * 0.1,
-      }));
-  }, [ooda.executionResults]);
-
-  const selfEvalLLMConfig = null;
-
   return (
     <div className="h-screen bg-bg-void flex flex-col overflow-hidden">
       <Header
@@ -206,8 +174,11 @@ export default function Home() {
       <main className="flex-1 min-h-0 overflow-auto">
         <div className="max-w-[1600px] 2xl:max-w-[2200px] mx-auto px-4 py-3 space-y-3">
 
-          {/* Top row: Wheel + Portfolio + Positions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {/* Ticker Bar */}
+          <MarketTickerBar />
+
+          {/* Top row: Status + Portfolio + Positions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3" style={{ minHeight: '200px' }}>
             <div className="min-h-0">
               <TheWheel
                 oodaState={ooda}
@@ -226,105 +197,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Tab bar */}
-          <nav className="flex items-center gap-4 border-t border-cursed/10 pt-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`text-[9px] font-mono tracking-[0.15em] uppercase transition-colors py-1 border-b-2 ${
-                  activeTab === tab.id
-                    ? 'text-cursed border-cursed'
-                    : 'text-text-muted hover:text-text-secondary border-transparent'
-                }`}
-              >
-                {tab.kanji} {tab.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Tab content — always visible */}
-          <div>
-            {/* DETAILS */}
-            {activeTab === 'details' && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                  <div className="min-h-0">
-                    <LLMReasoningPanel llmOrient={ooda.llmOrient} phase={ooda.phase} />
-                  </div>
-                  <div className="min-h-0">
-                    <ActivityFeed />
-                  </div>
-                  <ErrorBoundary>
-                    <div className="min-h-0">
-                      <PerformanceHistoryPanel />
-                    </div>
-                  </ErrorBoundary>
-                </div>
+          {/* Bottom row: Sentiment + Activity + Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3" style={{ minHeight: '280px' }}>
+            <ErrorBoundary>
+              <div className="min-h-0">
+                <SentimentPanel
+                  intelligence={intelligence}
+                  loading={polyLoading}
+                  error={polyError}
+                />
               </div>
-            )}
-
-            {/* INTELLIGENCE */}
-            {activeTab === 'intelligence' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <div className="min-h-0">
-                  <PolymarketPanel
-                    intelligence={intelligence}
-                    loading={polyLoading}
-                    error={polyError}
-                  />
-                </div>
-                <ErrorBoundary>
-                  <div className="min-h-0">
-                    <SelfEvaluationPanel
-                      decisions={selfEvalDecisions}
-                      llmConfig={selfEvalLLMConfig}
-                    />
-                  </div>
-                </ErrorBoundary>
-                <div className="min-h-0">
-                  <ActivityFeed />
-                </div>
+            </ErrorBoundary>
+            <div className="min-h-0">
+              <ActivityFeed />
+            </div>
+            <ErrorBoundary>
+              <div className="min-h-0">
+                <PerformanceHistoryPanel />
               </div>
-            )}
-
-            {/* EXECUTION */}
-            {activeTab === 'execution' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="min-h-0">
-                  <ExecutionPanel
-                    executionResults={ooda.executionResults}
-                    positionSnapshot={ooda.positionSnapshot}
-                    isAutoMode={ooda.isAutoMode}
-                    confidence={ooda.confidence}
-                    tradeGuard={tradeGuard}
-                  />
-                </div>
-                <div className="min-h-0">
-                  <ActivityFeed />
-                </div>
-              </div>
-            )}
-
-            {/* RISK */}
-            {activeTab === 'risk' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="min-h-0">
-                  <RiskControls
-                    isAgentAutoMode={ooda.isAutoMode}
-                    onSetAutoMode={ooda.setAutoMode}
-                    signingMode={ooda.signingMode}
-                    onSetSigningMode={ooda.setSigningMode}
-                    agentRiskParams={ooda.agentRiskParams}
-                    walletBalance={ooda.lastObservation?.walletBalance}
-                    vaultBalance={ooda.lastObservation?.vaultBalance}
-                  />
-                </div>
-                <div className="min-h-0">
-                  <TradeGuardPanel state={tradeGuard.state} config={tradeGuard.config} />
-                </div>
-              </div>
-            )}
+            </ErrorBoundary>
           </div>
 
         </div>
