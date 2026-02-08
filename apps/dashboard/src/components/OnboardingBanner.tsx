@@ -37,8 +37,8 @@ export const OnboardingBanner = ({ walletConnected, llmConfigured, onDismiss }: 
         mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
       style={{
-        background: 'linear-gradient(90deg, rgba(212,168,41,0.08) 0%, rgba(18,18,26,0.95) 100%)',
-        borderColor: 'rgba(212,168,41,0.25)',
+        background: 'linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(18,18,26,0.95) 100%)',
+        borderColor: 'rgba(139,92,246,0.25)',
       }}
     >
       {/* Left icon */}

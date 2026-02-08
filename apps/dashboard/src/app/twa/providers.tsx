@@ -159,7 +159,7 @@ export const TWAProviders: FC<TWAProvidersProps> = ({ children }) => {
           accentColor: '#8b5cf6',
           logo: undefined,
         },
-        loginMethods: ['email', 'sms', 'telegram'],
+        loginMethods: ['email', 'sms', 'telegram', 'wallet'],
         embeddedWallets: {
           solana: {
             createOnLogin: 'all-users',

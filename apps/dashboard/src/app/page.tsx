@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from '@/components/Header';
-import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { TheWheel } from '@/components/TheWheel';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { TradeGuardPanel } from '@/components/TradeGuardPanel';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { RiskControls } from '@/components/RiskControls';
-import { SettingsPanel } from '@/components/SettingsPanel';
 import { LLMReasoningPanel } from '@/components/LLMReasoningPanel';
 import { PolymarketPanel } from '@/components/PolymarketPanel';
 import { ExecutionPanel } from '@/components/ExecutionPanel';
@@ -19,7 +17,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useOODALoop } from '@/hooks/useOODALoop';
 import type { PastDecision } from '@/hooks/useSelfEvaluation';
 import { useYieldData } from '@/hooks/useYieldData';
-import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { usePolymarket } from '@/hooks/usePolymarket';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useTradeGuard } from '@/hooks/useTradeGuard';
@@ -82,44 +79,13 @@ export default function Home() {
   const tradingSession = useTradingSession();
   const { addActivity } = useActivityFeed();
   const { opportunities } = useYieldData();
-  const { config, isConfigured } = useLLMConfig();
   const { intelligence, loading: polyLoading, error: polyError } = usePolymarket();
 
-  // ── Session report generation via LLM ────────────────────────────────────
+  // ── Session report generation (agent handles this via Telegram) ──────────
 
-  const generateReport = useCallback(async (data: {
-    params: SessionParams;
-    pnlSol: number;
-    pnlPct: number;
-    tradesExecuted: number;
-    cyclesCompleted: number;
-    durationMs: number;
-    reason: string;
-  }): Promise<string> => {
-    const localEndpoint = config?.localEndpoint || '';
-    if (!localEndpoint && !config?.llmKeys) {
-      return '';
-    }
-    try {
-      const res = await fetch('/api/openclaw/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: 'You are Makora, the trading agent. Generate a concise session report in markdown. Include: performance summary, what worked, what didn\'t, risk events if any, and a recommendation for the next session. Be direct and data-driven.' },
-            { role: 'user', content: `Generate a session report:\n- Strategy: ${data.params.strategy}\n- Budget: ${data.params.walletPct}% of portfolio\n- Duration: ${Math.round(data.durationMs / 60000)} minutes\n- Reason ended: ${data.reason}\n- P&L: ${data.pnlSol >= 0 ? '+' : ''}${data.pnlSol.toFixed(4)} SOL (${data.pnlPct >= 0 ? '+' : ''}${data.pnlPct.toFixed(2)}%)\n- OODA cycles: ${data.cyclesCompleted}\n- Trades executed: ${data.tradesExecuted}${data.params.focusTokens?.length ? `\n- Focus tokens: ${data.params.focusTokens.join(', ')}` : ''}` },
-          ],
-          gatewayUrl: localEndpoint || 'http://localhost:1234',
-          sessionId: 'makora-report',
-        }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        return result.content || '';
-      }
-    } catch { /* fall through */ }
+  const generateReport = useCallback(async (): Promise<string> => {
     return '';
-  }, [config?.localEndpoint, config?.llmKeys]);
+  }, []);
 
   // ── Wire trading session callbacks ─────────────────────────────────────────
 
@@ -135,13 +101,7 @@ export default function Home() {
     });
   }, [ooda.startLoop, ooda.stopLoop, ooda.setAutoMode, ooda.setSessionParams, ooda.lastObservation, vault.vaultBalance, generateReport, tradingSession.setCallbacks]);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'intelligence' | 'execution' | 'risk'>('details');
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  const handleSettingsClose = useCallback(() => {
-    setSettingsOpen(false);
-  }, []);
 
   // Force re-render every second for countdown timer
   const [, setTick] = useState(0);
@@ -172,31 +132,13 @@ export default function Home() {
     });
   }, [ooda.setTradeGuard, tradeGuard]);
 
-  // ── Feed LLM config to OODA loop ──────────────────────────────────────────
-
-  useEffect(() => {
-    if (config && (config.localEndpoint || Object.values(config.llmKeys).some(k => k && k.length > 0))) {
-      ooda.setGateway({
-        endpoint: config.localEndpoint,
-        llmKeys: config.llmKeys,
-      });
-    } else {
-      ooda.setGateway(null);
-    }
-    if (config?.signingMode) {
-      ooda.setSigningMode(config.signingMode);
-    }
-  }, [config, ooda.setGateway, ooda.setSigningMode]);
-
   // ── Feed Polymarket data to OODA loop ──────────────────────────────────────
 
   useEffect(() => {
-    if (config?.enablePolymarket !== false && intelligence) {
+    if (intelligence) {
       ooda.setPolymarketData(intelligence);
-    } else {
-      ooda.setPolymarketData(null);
     }
-  }, [intelligence, config?.enablePolymarket, ooda.setPolymarketData]);
+  }, [intelligence, ooda.setPolymarketData]);
 
   const sentimentBias = intelligence?.sentimentSummary?.overallBias as 'bullish' | 'neutral' | 'bearish' | undefined;
 
@@ -251,23 +193,11 @@ export default function Home() {
       }));
   }, [ooda.executionResults]);
 
-  const selfEvalLLMConfig = useMemo(() => {
-    if (!config?.llmKeys) return null;
-    const entries = Object.entries(config.llmKeys);
-    const active = entries.find(([, v]) => v && v.length > 0);
-    if (!active) return null;
-    return {
-      provider: active[0],
-      apiKey: active[1] as string,
-      model: active[0] === 'anthropic' ? 'claude-sonnet-4-20250514' : active[0] === 'openai' ? 'gpt-4o' : 'qwen-max',
-    };
-  }, [config?.llmKeys]);
+  const selfEvalLLMConfig = null;
 
   return (
     <div className="h-screen bg-bg-void flex flex-col overflow-hidden">
       <Header
-        onSettingsOpen={() => setSettingsOpen(true)}
-        llmModel={isConfigured ? 'AI Active' : undefined}
         sentimentBias={sentimentBias}
         tradingMode={ooda.tradingMode}
         onTradingModeChange={ooda.setTradingMode}
@@ -275,17 +205,6 @@ export default function Home() {
 
       <main className="flex-1 min-h-0 overflow-auto">
         <div className="max-w-[1600px] 2xl:max-w-[2200px] mx-auto px-4 py-3 space-y-3">
-
-          {/* Onboarding banner */}
-          {!bannerDismissed && (
-            <ErrorBoundary fallback={null}>
-              <OnboardingBanner
-                walletConnected={!!publicKey}
-                llmConfigured={isConfigured}
-                onDismiss={() => setBannerDismissed(true)}
-              />
-            </ErrorBoundary>
-          )}
 
           {/* Top row: Wheel + Portfolio + Positions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -410,9 +329,6 @@ export default function Home() {
 
         </div>
       </main>
-
-      {/* Settings drawer */}
-      <SettingsPanel open={settingsOpen} onClose={handleSettingsClose} />
     </div>
   );
 }

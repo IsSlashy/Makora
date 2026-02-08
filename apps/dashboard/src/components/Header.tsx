@@ -6,8 +6,6 @@ import { TradingModeBadge } from './TradingModeSelector';
 import type { TradingMode } from '@/hooks/useOODALoop';
 
 interface HeaderProps {
-  onSettingsOpen?: () => void;
-  llmModel?: string;
   sentimentBias?: 'bullish' | 'neutral' | 'bearish';
   tradingMode?: TradingMode;
   onTradingModeChange?: (mode: TradingMode) => void;
@@ -19,7 +17,7 @@ const BIAS_DOT: Record<string, string> = {
   bearish: 'bg-negative',
 };
 
-export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, onTradingModeChange }: HeaderProps) => {
+export const Header = ({ sentimentBias, tradingMode, onTradingModeChange }: HeaderProps) => {
   const { publicKey, connected } = useWallet();
 
   // Toggle between trading modes
@@ -58,16 +56,6 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, o
               </span>
             </div>
 
-            {/* LLM provider badge */}
-            {llmModel && (
-              <div className="hidden md:flex items-center gap-2 px-2 py-1 border border-shadow-purple/30 bg-shadow-purple/5">
-                <div className="w-1.5 h-1.5 bg-shadow-purple animate-pulse" />
-                <span className="text-[9px] font-mono tracking-wider text-shadow-purple uppercase">
-                  {llmModel}
-                </span>
-              </div>
-            )}
-
             {/* Polymarket sentiment dot */}
             {sentimentBias && (
               <div className="hidden md:flex items-center gap-1.5">
@@ -100,18 +88,6 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, o
                 Twitter
               </a>
             </div>
-
-            {/* Settings gear */}
-            <button
-              onClick={onSettingsOpen}
-              className="p-2 text-text-muted hover:text-cursed transition-colors"
-              title="Agent Settings"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
 
             <WalletButton />
           </div>
