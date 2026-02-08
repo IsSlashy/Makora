@@ -81,11 +81,15 @@ export const Header = ({ sentimentBias, tradingMode, onTradingModeChange }: Head
 
             {/* External links */}
             <div className="hidden md:flex items-center gap-3">
-              <a href="https://github.com/IsSlashy/Makora" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
+              <a href="https://www.anonme.sh" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
+                anonme.sh
+              </a>
+              <a href="https://github.com/anonmesh" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
                 GitHub
               </a>
-              <a href="https://x.com/Not_Mikuu" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider uppercase">
-                Twitter
+              <a href="https://x.com/anon0mesh" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-text-muted hover:text-cursed transition-colors tracking-wider">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                @anon0mesh
               </a>
             </div>
 
