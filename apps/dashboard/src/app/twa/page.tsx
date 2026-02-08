@@ -148,6 +148,7 @@ function TWADashboard() {
   const { walletAddress, userId, authenticated, loading, login, logout, displayName } = useTWAWallet();
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showWelcome, setShowWelcome] = useState(false);
+  const [copied, setCopied] = useState(false);
   const prevAuthRef = useRef(false);
 
   // Show welcome banner on first login during this session
@@ -155,10 +156,21 @@ function TWADashboard() {
     if (authenticated && !prevAuthRef.current) {
       setShowWelcome(true);
       const timer = setTimeout(() => setShowWelcome(false), 8000);
+
+      // Notify Telegram bot about wallet connection (fire-and-forget)
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id && walletAddress) {
+        fetch('/api/twa/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramUserId: tgUser.id, walletAddress }),
+        }).catch(() => { /* silent */ });
+      }
+
       return () => clearTimeout(timer);
     }
     prevAuthRef.current = authenticated;
-  }, [authenticated]);
+  }, [authenticated, walletAddress]);
 
   // Data state
   const [positionData, setPositionData] = useState<PositionSnapshot | null>(null);
@@ -504,9 +516,23 @@ function TWADashboard() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[8px] font-mono text-text-muted">
-            {displayName || (walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : '')}
-          </span>
+          {walletAddress && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(walletAddress).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }).catch(() => { /* fallback: no clipboard API in some WebViews */ });
+              }}
+              className="text-[8px] font-mono text-text-muted active:text-cursed transition-colors"
+              title="Tap to copy full address"
+            >
+              {copied ? 'Copied!' : (displayName || `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`)}
+            </button>
+          )}
+          {!walletAddress && displayName && (
+            <span className="text-[8px] font-mono text-text-muted">{displayName}</span>
+          )}
           {authenticated && (
             <button
               onClick={() => logout()}

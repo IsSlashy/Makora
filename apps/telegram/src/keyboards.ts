@@ -4,7 +4,7 @@
 
 import { InlineKeyboard, Keyboard } from 'grammy';
 
-const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://dashboard-lake-xi-65.vercel.app';
+const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://solana-agent-hackathon-seven.vercel.app';
 
 // Module-level TWA URL — set once after initialization
 let _twaUrl = '';
