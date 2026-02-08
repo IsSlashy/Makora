@@ -157,14 +157,22 @@ function TWADashboard() {
       setShowWelcome(true);
       const timer = setTimeout(() => setShowWelcome(false), 8000);
 
-      // Notify Telegram bot about wallet connection (fire-and-forget)
-      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgUser?.id && walletAddress) {
-        fetch('/api/twa/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telegramUserId: tgUser.id, walletAddress }),
-        }).catch(() => { /* silent */ });
+      // Notify Telegram bot about wallet connection
+      if (walletAddress) {
+        const tgWebApp = (window as any).Telegram?.WebApp;
+        const tgUser = tgWebApp?.initDataUnsafe?.user;
+        const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id;
+        console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, webApp: !!tgWebApp, walletAddress: walletAddress.slice(0, 8) });
+        if (chatId) {
+          fetch('/api/twa/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegramUserId: chatId, walletAddress }),
+          })
+            .then(r => r.json())
+            .then(d => console.log('[TWA] notify result:', d))
+            .catch(e => console.error('[TWA] notify error:', e));
+        }
       }
 
       return () => clearTimeout(timer);
