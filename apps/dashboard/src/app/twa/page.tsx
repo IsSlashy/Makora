@@ -150,34 +150,40 @@ function TWADashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [copied, setCopied] = useState(false);
   const prevAuthRef = useRef(false);
+  const notifiedRef = useRef(false);
 
   // Show welcome banner on first login during this session
   useEffect(() => {
     if (authenticated && !prevAuthRef.current) {
       setShowWelcome(true);
       const timer = setTimeout(() => setShowWelcome(false), 8000);
-
-      // Notify Telegram bot about wallet connection
-      if (walletAddress) {
-        const tgWebApp = (window as any).Telegram?.WebApp;
-        const tgUser = tgWebApp?.initDataUnsafe?.user;
-        const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id;
-        console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, webApp: !!tgWebApp, walletAddress: walletAddress.slice(0, 8) });
-        if (chatId) {
-          fetch('/api/twa/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegramUserId: chatId, walletAddress }),
-          })
-            .then(r => r.json())
-            .then(d => console.log('[TWA] notify result:', d))
-            .catch(e => console.error('[TWA] notify error:', e));
-        }
-      }
-
       return () => clearTimeout(timer);
     }
     prevAuthRef.current = authenticated;
+  }, [authenticated]);
+
+  // Notify Telegram bot when wallet becomes available (separate from welcome banner)
+  useEffect(() => {
+    if (!authenticated || !walletAddress || notifiedRef.current) return;
+    notifiedRef.current = true;
+
+    const tgWebApp = (window as any).Telegram?.WebApp;
+    const tgUser = tgWebApp?.initDataUnsafe?.user;
+    const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id;
+    console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, webApp: !!tgWebApp, wallet: walletAddress.slice(0, 8) });
+
+    if (chatId) {
+      fetch('/api/twa/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramUserId: chatId, walletAddress }),
+      })
+        .then(r => r.json())
+        .then(d => console.log('[TWA] notify result:', d))
+        .catch(e => console.error('[TWA] notify error:', e));
+    } else {
+      console.warn('[TWA] No Telegram chatId found — not opened from Telegram?');
+    }
   }, [authenticated, walletAddress]);
 
   // Data state
