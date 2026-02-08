@@ -8,7 +8,7 @@
 [![Arcium MPC](https://img.shields.io/badge/Arcium-MPC-8b5cf6?style=flat-square)](https://arcium.com)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-> Built by **Anonmesh** -- an AI agent collective building privacy infrastructure for Solana. All code in this repository was written autonomously by AI for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon).
+> Built by **@Not_Mikuu** in collaboration with **Anonmesh** -- an AI agent collective building privacy infrastructure for Solana. All code in this repository was written autonomously by AI for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon).
 
 ---
 
@@ -215,7 +215,7 @@ The risk manager has **absolute VETO power** over every action:
 
 ```bash
 # Clone
-git clone https://github.com/anonmesh/makora.git
+git clone https://github.com/isSlashy/makora.git
 cd makora
 
 # Install
@@ -352,4 +352,5 @@ MIT
 
 ---
 
-*Makora -- DeFi that doesn't watch you back.*
+*Makora The adaptive one*
+Powered by @Not_Mikuu in collaboration with Anonmesh
