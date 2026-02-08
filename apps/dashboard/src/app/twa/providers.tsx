@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, ReactNode, createContext, useContext, useEffect, useMemo } from 'react';
+import { FC, ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ConnectionProvider } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
@@ -47,6 +47,14 @@ export function useTWAWallet() {
 
 const PrivyWalletBridge: FC<{ children: ReactNode }> = ({ children }) => {
   const user = useUser();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // If Privy doesn't become ready within 8s, stop showing Loading
+  useEffect(() => {
+    if (!user.loading) return;
+    const timer = setTimeout(() => setTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [user.loading]);
 
   const walletCtx = useMemo<TWAWalletContextType>(() => {
     let publicKey: PublicKey | null = null;
@@ -60,11 +68,11 @@ const PrivyWalletBridge: FC<{ children: ReactNode }> = ({ children }) => {
       userId: user.userId,
       displayName: user.displayName,
       authenticated: user.authenticated,
-      loading: user.loading,
+      loading: timedOut ? false : user.loading,
       login: user.login,
       logout: user.logout,
     };
-  }, [user]);
+  }, [user, timedOut]);
 
   return (
     <TWAWalletContext.Provider value={walletCtx}>
@@ -117,13 +125,26 @@ export const TWAProviders: FC<TWAProvidersProps> = ({ children }) => {
   }), []);
 
   // If Privy is not configured, fall back to non-Privy mode
+  // Set loading: false so the dashboard doesn't get stuck on "Loading..." forever
   if (!PRIVY_APP_ID) {
     return (
       <ConnectionProvider endpoint={endpoint} config={connectionConfig}>
         <TelegramInit>
-          <ActivityProvider>
-            {children}
-          </ActivityProvider>
+          <TWAWalletContext.Provider value={{
+            publicKey: null,
+            connected: false,
+            walletAddress: '',
+            userId: null,
+            displayName: '',
+            authenticated: false,
+            loading: false,
+            login: () => {},
+            logout: async () => {},
+          }}>
+            <ActivityProvider>
+              {children}
+            </ActivityProvider>
+          </TWAWalletContext.Provider>
         </TelegramInit>
       </ConnectionProvider>
     );
