@@ -31,6 +31,7 @@ import {
   deriveVaultKeypair,
   getVaultOnChainBalance,
 } from './shielded-vault.js';
+import { submitConfidentialSwap, isArciumAvailable } from './arcium-client.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,29 @@ export const ANTHROPIC_TOOLS: AnthropicTool[] = [
       type: 'object' as const,
       properties: {},
       required: [] as string[],
+    },
+  },
+  {
+    name: 'swap_private',
+    description:
+      'Execute a CONFIDENTIAL token swap using Arcium encrypted compute. The trade intent is hidden from validators and MEV bots using Multi-Party Computation. Falls back to standard Jupiter swap if Arcium is unavailable. Use when user says "privately", "confidential", "hidden", "stealth swap", or "MEV-protected".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        from_token: {
+          type: 'string' as const,
+          description: 'Token symbol to sell (e.g., SOL, USDC).',
+        },
+        to_token: {
+          type: 'string' as const,
+          description: 'Token symbol to buy (e.g., BONK, SOL).',
+        },
+        amount: {
+          type: 'number' as const,
+          description: 'Amount to swap in from_token denomination.',
+        },
+      },
+      required: ['from_token', 'to_token', 'amount'],
     },
   },
 ];
@@ -632,6 +656,95 @@ export async function executeTool(
         }
 
         return lines.join('\n');
+      }
+
+      case 'swap_private': {
+        const fromSymbol = (toolInput.from_token as string || '').toUpperCase();
+        const toSymbol = (toolInput.to_token as string || '').toUpperCase();
+        const amount = Number(toolInput.amount);
+
+        if (!amount || amount <= 0) {
+          return 'Error: Invalid swap amount.';
+        }
+
+        const inputMint = MINT_MAP[fromSymbol];
+        const outputMint = MINT_MAP[toSymbol];
+
+        if (!inputMint) return `Error: Unknown token "${fromSymbol}". Supported: ${Object.keys(MINT_MAP).join(', ')}`;
+        if (!outputMint) return `Error: Unknown token "${toSymbol}". Supported: ${Object.keys(MINT_MAP).join(', ')}`;
+
+        // 1. Try Arcium confidential path
+        const arciumResult = await submitConfidentialSwap(fromSymbol, toSymbol, amount, ctx);
+
+        if (arciumResult) {
+          return [
+            `Confidential swap via Arcium MPC:`,
+            `- Swapped: ${amount} ${fromSymbol} -> ${arciumResult.outputAmount} ${toSymbol}`,
+            `- Encrypted order ID: ${arciumResult.computationId.slice(0, 12)}...`,
+            `- Route: ${arciumResult.route}`,
+            `- Signature: ${arciumResult.signature}`,
+            ``,
+            `Trade intent was hidden from validators and MEV bots via Multi-Party Computation.`,
+          ].join('\n');
+        }
+
+        // 2. Fallback to Jupiter (same logic as swap_tokens)
+        const decimals = TOKEN_DECIMALS[fromSymbol] ?? 9;
+        const rawAmount = Math.floor(amount * 10 ** decimals);
+
+        const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`;
+        const quoteRes = await fetch(quoteUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!quoteRes.ok) {
+          const errText = await quoteRes.text().catch(() => '');
+          return `Error: Jupiter quote failed (${quoteRes.status}): ${errText.slice(0, 100)}`;
+        }
+        const quoteData = await quoteRes.json();
+
+        const outDecimals = TOKEN_DECIMALS[toSymbol] ?? 9;
+        const expectedOutput = Number(quoteData.outAmount) / 10 ** outDecimals;
+
+        const swapRes = await fetch('https://api.jup.ag/swap/v1/swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quoteResponse: quoteData,
+            userPublicKey: ctx.wallet.publicKey.toBase58(),
+            dynamicComputeUnitLimit: true,
+            prioritizationFeeLamports: 'auto',
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+
+        if (!swapRes.ok) {
+          const errText = await swapRes.text().catch(() => '');
+          return `Error: Jupiter swap API failed (${swapRes.status}): ${errText.slice(0, 100)}`;
+        }
+
+        const swapData = await swapRes.json();
+        const swapTxBase64 = swapData.swapTransaction;
+
+        if (!swapTxBase64) {
+          return 'Error: No swap transaction returned from Jupiter.';
+        }
+
+        const txBuffer = Buffer.from(swapTxBase64, 'base64');
+        const transaction = VersionedTransaction.deserialize(txBuffer);
+        transaction.sign([ctx.wallet]);
+
+        const rawTx = transaction.serialize();
+        const sig = await ctx.connection.sendRawTransaction(rawTx, {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+
+        const latestBlock = await ctx.connection.getLatestBlockhash();
+        await ctx.connection.confirmTransaction({
+          signature: sig,
+          blockhash: latestBlock.blockhash,
+          lastValidBlockHeight: latestBlock.lastValidBlockHeight,
+        });
+
+        return `Swap executed: ${amount} ${fromSymbol} -> ~${expectedOutput.toFixed(6)} ${toSymbol}\n(Note: Arcium unavailable — executed via Jupiter standard route)\nSignature: ${sig}`;
       }
 
       default:

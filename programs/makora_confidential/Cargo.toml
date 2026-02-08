@@ -1,0 +1,21 @@
+[package]
+name = "makora_confidential"
+version = "0.1.0"
+description = "Makora Confidential Swaps - Arcium MPC encrypted token swaps"
+edition = "2021"
+rust-version = "1.75"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "makora_confidential"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }

@@ -25,6 +25,8 @@
     "@makora/risk-manager": "workspace:*",
     "@makora/strategy-engine": "workspace:*",
     "@makora/types": "workspace:*",
+    "@arcium-hq/client": "^0.8.0",
+    "@noble/curves": "^1.8.0",
     "@solana/web3.js": "^1.98.4",
     "circomlibjs": "^0.1.7",
     "dotenv": "^16.4.0",

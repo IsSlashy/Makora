@@ -194,11 +194,19 @@ export function AgentPanelTWA() {
                   <div className="text-[10px] font-mono text-text-primary truncate">
                     {action.description}
                   </div>
-                  {action.tool && (
-                    <span className="text-[8px] font-mono text-text-muted">
-                      tool: {action.tool}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {action.tool && (
+                      <span className="text-[8px] font-mono text-text-muted">
+                        tool: {action.tool}
+                      </span>
+                    )}
+                    {action.tool === 'swap_private' && (
+                      <span className="text-[7px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
+                        style={{ color: '#a855f7', background: '#a855f712', border: '1px solid #a855f730' }}>
+                        CONFIDENTIAL
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="text-[8px] font-mono text-text-muted shrink-0">
                   {timeAgo(action.timestamp)}
