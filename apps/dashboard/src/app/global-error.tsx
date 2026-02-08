@@ -9,7 +9,7 @@ export default function GlobalError({
 }) {
   return (
     <html>
-      <body style={{ background: '#050508', color: '#f0ede5', fontFamily: 'monospace', padding: '2rem' }}>
+      <body style={{ background: '#050508', color: '#f0edf5', fontFamily: 'monospace', padding: '2rem' }}>
         <h2>Something went wrong</h2>
         <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', marginTop: '1rem' }}>
           {error.message}
@@ -19,7 +19,7 @@ export default function GlobalError({
         </pre>
         <button
           onClick={() => reset()}
-          style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#d4a829', color: '#050508', border: 'none', cursor: 'pointer' }}
+          style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#8b5cf6', color: '#050508', border: 'none', cursor: 'pointer' }}
         >
           Try again
         </button>

@@ -88,7 +88,7 @@ function CumulativePnLChart({ trades }: { trades: TradeEntry[] }) {
         y1={zeroY}
         x2={width - padding.right}
         y2={zeroY}
-        stroke="rgba(212, 168, 41, 0.15)"
+        stroke="rgba(139, 92, 246, 0.15)"
         strokeWidth="0.5"
         strokeDasharray="4 2"
       />

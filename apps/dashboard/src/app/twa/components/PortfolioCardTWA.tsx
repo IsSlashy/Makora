@@ -39,7 +39,7 @@ export const PortfolioCardTWA = ({
       {/* Total value */}
       <div className="flex items-baseline gap-2 mb-4">
         <span className="text-2xl font-bold font-mono text-cursed-gradient" style={{
-          background: 'linear-gradient(135deg, #a68520 0%, #d4a829 40%, #e8c44a 60%, #d4a829 100%)',
+          background: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 40%, #a78bfa 60%, #8b5cf6 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -58,7 +58,7 @@ export const PortfolioCardTWA = ({
           return (
             <div key={pos.mint} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold" style={{ color: '#f0ede5' }}>{pos.symbol}</span>
+                <span className="text-xs font-mono font-bold" style={{ color: '#f0edf5' }}>{pos.symbol}</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs font-mono text-text-muted">
@@ -71,7 +71,7 @@ export const PortfolioCardTWA = ({
                         className="h-full rounded-sm"
                         style={{
                           width: `${Math.min(100, pct)}%`,
-                          background: '#d4a829',
+                          background: '#8b5cf6',
                         }}
                       />
                     </div>

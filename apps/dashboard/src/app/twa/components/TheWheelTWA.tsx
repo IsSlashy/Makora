@@ -59,11 +59,11 @@ export const TheWheelTWA = ({
       <h2
         className="font-display text-3xl tracking-[0.3em] leading-none mb-1"
         style={{
-          background: 'linear-gradient(135deg, #a68520 0%, #d4a829 35%, #e8c44a 50%, #d4a829 65%, #a68520 100%)',
+          background: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 35%, #a78bfa 50%, #8b5cf6 65%, #6d28d9 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
-          filter: 'drop-shadow(0 0 20px rgba(212, 168, 41, 0.4))',
+          filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
         }}
       >
         MAKORA
@@ -71,7 +71,7 @@ export const TheWheelTWA = ({
       <div
         className="text-[9px] tracking-[0.5em] uppercase mb-4"
         style={{
-          background: 'linear-gradient(90deg, #4a4740, #d4a829 40%, #e8c44a 50%, #d4a829 60%, #4a4740)',
+          background: 'linear-gradient(90deg, #4a4750, #8b5cf6 40%, #a78bfa 50%, #8b5cf6 60%, #4a4750)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -86,7 +86,7 @@ export const TheWheelTWA = ({
         <div
           className="absolute inset-[-20px] rounded-full"
           style={{
-            background: `radial-gradient(circle, rgba(212, 168, 41, ${stepping ? 0.25 : isActive ? 0.1 : 0.03}) 0%, transparent 70%)`,
+            background: `radial-gradient(circle, rgba(139, 92, 246, ${stepping ? 0.25 : isActive ? 0.1 : 0.03}) 0%, transparent 70%)`,
             transition: 'background 0.5s',
           }}
         />
@@ -104,7 +104,7 @@ export const TheWheelTWA = ({
             alt="Wheel"
             className="w-full h-full object-contain"
             style={{
-              filter: 'invert(1) sepia(1) saturate(2) hue-rotate(10deg) brightness(0.9)',
+              filter: 'invert(1) sepia(1) saturate(3) hue-rotate(230deg) brightness(0.85)',
               opacity: isActive && decisionTick > 0 ? 1 : 0.25,
               transition: 'opacity 0.5s',
             }}
@@ -128,13 +128,13 @@ export const TheWheelTWA = ({
               <div className={`flex flex-col items-center gap-0.5 transition-all duration-500 ${isPhaseActive ? 'scale-110' : 'scale-90 opacity-25'}`}>
                 <span
                   className="text-lg font-bold select-none"
-                  style={{ color: isPhaseActive ? '#d4a829' : '#3a3730', textShadow: isPhaseActive ? '0 0 20px rgba(212, 168, 41, 0.6)' : 'none' }}
+                  style={{ color: isPhaseActive ? '#8b5cf6' : '#3a3540', textShadow: isPhaseActive ? '0 0 20px rgba(139, 92, 246, 0.6)' : 'none' }}
                 >
                   {phase.kanji}
                 </span>
                 <span
                   className="text-[8px] font-mono tracking-[0.15em] uppercase"
-                  style={{ color: isPhaseActive ? '#d4a829' : '#3a3730' }}
+                  style={{ color: isPhaseActive ? '#8b5cf6' : '#3a3540' }}
                 >
                   {phase.name}
                 </span>

@@ -219,12 +219,12 @@ export const PortfolioCard = () => {
                     ? 'linear-gradient(90deg, #6d28d9, #8b5cf6)'
                     : token.symbol === 'SESSION'
                       ? 'linear-gradient(90deg, #059669, #34d399)'
-                      : 'linear-gradient(90deg, #a68520, #d4a829)',
+                      : 'linear-gradient(90deg, #6d28d9, #8b5cf6)',
                   boxShadow: token.symbol === 'VAULT'
                     ? '0 0 8px rgba(109, 40, 217, 0.4)'
                     : token.symbol === 'SESSION'
                       ? '0 0 8px rgba(5, 150, 105, 0.4)'
-                      : '0 0 8px rgba(212, 168, 41, 0.3)',
+                      : '0 0 8px rgba(139, 92, 246, 0.3)',
                 }}
               />
             </div>

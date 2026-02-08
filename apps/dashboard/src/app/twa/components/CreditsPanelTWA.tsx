@@ -127,7 +127,7 @@ export function CreditsPanelTWA({ userId }: CreditsPanelTWAProps) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-[9px] font-mono text-text-muted uppercase tracking-wider">Balance</div>
-          <div className="text-2xl font-mono font-bold" style={{ color: '#d4a829' }}>
+          <div className="text-2xl font-mono font-bold" style={{ color: '#8b5cf6' }}>
             {(data?.balance ?? 0).toFixed(1)}
           </div>
           <div className="text-[9px] font-mono text-text-muted">credits</div>
@@ -155,9 +155,9 @@ export function CreditsPanelTWA({ userId }: CreditsPanelTWAProps) {
                 onClick={() => setDepositAmount(amt)}
                 className="flex-1 text-[10px] font-mono py-1.5 rounded-sm border transition-colors"
                 style={{
-                  borderColor: depositAmount === amt ? '#d4a829' : '#1a1a1f',
-                  color: depositAmount === amt ? '#d4a829' : '#5a5548',
-                  background: depositAmount === amt ? '#d4a82910' : 'transparent',
+                  borderColor: depositAmount === amt ? '#8b5cf6' : '#1a1a1f',
+                  color: depositAmount === amt ? '#8b5cf6' : '#504a60',
+                  background: depositAmount === amt ? '#8b5cf610' : 'transparent',
                 }}
               >
                 {amt} SOL
@@ -169,7 +169,7 @@ export function CreditsPanelTWA({ userId }: CreditsPanelTWAProps) {
             disabled={depositing}
             className="px-3 py-1.5 rounded-sm font-mono text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
             style={{
-              background: 'linear-gradient(135deg, #a68520, #d4a829)',
+              background: 'linear-gradient(135deg, #6d28d9, #8b5cf6)',
               color: '#050508',
             }}
           >
@@ -191,8 +191,8 @@ export function CreditsPanelTWA({ userId }: CreditsPanelTWAProps) {
                   <span
                     className="text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded-sm"
                     style={{
-                      color: tx.type === 'deposit' ? '#22c55e' : tx.type === 'bonus' ? '#d4a829' : '#ef4444',
-                      background: tx.type === 'deposit' ? '#22c55e12' : tx.type === 'bonus' ? '#d4a82912' : '#ef444412',
+                      color: tx.type === 'deposit' ? '#22c55e' : tx.type === 'bonus' ? '#8b5cf6' : '#ef4444',
+                      background: tx.type === 'deposit' ? '#22c55e12' : tx.type === 'bonus' ? '#8b5cf612' : '#ef444412',
                     }}
                   >
                     {tx.type}
