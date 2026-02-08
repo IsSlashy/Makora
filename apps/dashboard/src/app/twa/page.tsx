@@ -6,7 +6,7 @@ import { TheWheelTWA } from './components/TheWheelTWA';
 import { SentimentPanelTWA } from './components/SentimentPanelTWA';
 import { PortfolioCardTWA } from './components/PortfolioCardTWA';
 import { PositionsPanelTWA } from './components/PositionsPanelTWA';
-import { CreditsPanelTWA } from './components/CreditsPanelTWA';
+import { AgentPanelTWA } from './components/AgentPanelTWA';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,13 +84,13 @@ interface PolymarketData {
 
 // ─── Tab definitions ────────────────────────────────────────────────────────
 
-type TabId = 'home' | 'sentiment' | 'portfolio' | 'markets' | 'credits';
+type TabId = 'home' | 'sentiment' | 'portfolio' | 'markets' | 'agent';
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'home', label: 'Home', icon: '◎' },
   { id: 'sentiment', label: 'Signals', icon: '◈' },
   { id: 'portfolio', label: 'Portfolio', icon: '◆' },
-  { id: 'credits', label: 'Credits', icon: '◉' },
+  { id: 'agent', label: 'Agent', icon: '◉' },
 ];
 
 // ─── Login Screen ────────────────────────────────────────────────────────────
@@ -412,10 +412,10 @@ function TWADashboard() {
           </div>
         );
 
-      case 'credits':
+      case 'agent':
         return (
           <div className="px-3 pt-3 pb-4">
-            <CreditsPanelTWA userId={userId} />
+            <AgentPanelTWA />
           </div>
         );
 
