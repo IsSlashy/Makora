@@ -343,6 +343,7 @@ We build tools that make DeFi private by default. Makora is our first agent -- a
 - Twitter: [@anon0mesh](https://x.com/anon0mesh)
 - GitHub: [@anonmesh](https://github.com/anonmesh)
 - Built for the [Solana Agent Hackathon](https://colosseum.com/agent-hackathon)
+- Dev: [@Not_Mikuu](https://x.com/Not_Mikuu)
 
 ---
 
