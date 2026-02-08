@@ -169,8 +169,10 @@ function TWADashboard() {
 
     const tgWebApp = (window as any).Telegram?.WebApp;
     const tgUser = tgWebApp?.initDataUnsafe?.user;
-    const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id;
-    console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, webApp: !!tgWebApp, wallet: walletAddress.slice(0, 8) });
+    // Try Telegram WebApp context first, then URL param as fallback
+    const urlChatId = new URLSearchParams(window.location.search).get('chatId');
+    const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id || (urlChatId ? Number(urlChatId) : null);
+    console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, urlChatId, webApp: !!tgWebApp, wallet: walletAddress.slice(0, 8) });
 
     if (chatId) {
       fetch('/api/twa/notify', {

@@ -18,6 +18,11 @@ export function initDashboardUrl(walletPubkey?: string): void {
   _twaUrl = `${DASHBOARD_URL}/twa`;
 }
 
+/** Update the persistent keyboard TWA URL with a specific chatId */
+export function setTwaChatId(chatId: number): void {
+  _twaUrl = `${DASHBOARD_URL}/twa?chatId=${chatId}`;
+}
+
 /**
  * Trade confirmation keyboard: Confirm / Cancel
  */
@@ -69,7 +74,7 @@ export function alertsKeyboard(currentlyEnabled: boolean): InlineKeyboard {
  * Mini App (TWA) keyboard — opens dashboard inside Telegram (inline version)
  */
 export function miniAppKeyboard(walletPubkey?: string, chatId?: number): InlineKeyboard {
-  const url = `${DASHBOARD_URL}/twa`;
+  const url = chatId ? `${DASHBOARD_URL}/twa?chatId=${chatId}` : `${DASHBOARD_URL}/twa`;
   return new InlineKeyboard().webApp('\u{1F4F1} Open Dashboard', url);
 }
 

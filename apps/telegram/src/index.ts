@@ -32,6 +32,7 @@ import {
   settingsInlineKeyboard,
   autoModeKeyboard,
   initDashboardUrl,
+  setTwaChatId,
 } from './keyboards.js';
 import {
   registerUserChat,
@@ -235,9 +236,10 @@ async function getToolCtx(): Promise<ToolExecutionContext> {
 // ============================================================================
 
 bot.command('start', async (ctx) => {
-  // Register user for alerts
+  // Register user for alerts + set chatId for TWA notifications
   if (ctx.from) {
     registerUserChat(ctx.from.id, ctx.chat.id);
+    setTwaChatId(ctx.chat.id);
   }
 
   // Send welcome with persistent menu keyboard
@@ -1164,9 +1166,10 @@ bot.on('message:text', async (ctx) => {
     return;
   }
 
-  // Register user for alerts
+  // Register user for alerts + set chatId for TWA notifications
   if (ctx.from) {
     registerUserChat(ctx.from.id, ctx.chat.id);
+    setTwaChatId(ctx.chat.id);
   }
 
   // ── Direct action parsing (tool executes FIRST, then LLM formats response) ──
