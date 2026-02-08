@@ -1169,45 +1169,7 @@ bot.on('message:text', async (ctx) => {
     registerUserChat(ctx.from.id, ctx.chat.id);
   }
 
-  // If LLM is configured, use intelligent mode
-  if (llmConfig) {
-    try {
-      const result = await callLLMWithTools(
-        llmConfig,
-        text,
-        ctx.session,
-        connection,
-        wallet,
-      );
-
-      if (result) {
-        pushChatHistory(ctx.session, 'user', text);
-        pushChatHistory(ctx.session, 'assistant', result.content);
-
-        // Send response (split if too long for Telegram's 4096 char limit)
-        const content = result.content;
-        const kb = mainMenuKeyboard();
-        if (content.length <= 4000) {
-          await ctx.reply(content, { parse_mode: 'Markdown', reply_markup: kb }).catch(() =>
-            ctx.reply(content, { reply_markup: kb })
-          );
-        } else {
-          const chunks = splitMessage(content, 4000);
-          for (const chunk of chunks) {
-            await ctx.reply(chunk, { parse_mode: 'Markdown', reply_markup: kb }).catch(() =>
-              ctx.reply(chunk, { reply_markup: kb })
-            );
-          }
-        }
-        return;
-      }
-    } catch (err) {
-      console.error('[LLM] Error:', err);
-      // Fallback to basic mode
-    }
-  }
-
-  // ── Direct command parsing (works without LLM) ──
+  // ── Direct action parsing (runs FIRST — faster and more reliable than LLM) ──
   const lower = text.toLowerCase().trim();
   const toolCtx = await getToolCtx();
 
@@ -1217,9 +1179,8 @@ bot.on('message:text', async (ctx) => {
     const input: Record<string, unknown> = {};
     if (shieldMatch[1]) input.amount_sol = parseFloat(shieldMatch[1]);
     else if (shieldMatch[2]) input.percent_of_wallet = parseInt(shieldMatch[2]);
-    // else: no args = shield all (default behavior)
     const result = await executeTool('shield_sol', input, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
     return;
   }
 
@@ -1230,7 +1191,69 @@ bot.on('message:text', async (ctx) => {
     if (unshieldMatch[1]) input.amount_sol = parseFloat(unshieldMatch[1]);
     else if (unshieldMatch[2]) input.percent_of_vault = parseInt(unshieldMatch[2]);
     const result = await executeTool('unshield_sol', input, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Swap: "swap 1 sol usdc", "swap 0.5 sol to usdc", "buy 1 sol usdc"
+  const swapMatch = lower.match(/^(?:swap|buy|sell|convert)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+|for\s+|en\s+|->?\s*)?(\w+)$/);
+  if (swapMatch) {
+    const amount = parseFloat(swapMatch[1]);
+    const from = swapMatch[2].toUpperCase();
+    const to = swapMatch[3].toUpperCase();
+    const result = await executeTool('swap_tokens', { from_token: from, to_token: to, amount }, toolCtx);
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Vault: "vault", "my vault"
+  if (/^(?:my\s+)?vault$/i.test(lower)) {
+    const result = await executeTool('get_vault', {}, toolCtx);
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Portfolio: "portfolio", "my portfolio", "balance", "solde"
+  if (/^(?:my\s+)?(?:portfolio|balance|wallet|solde)$/i.test(lower)) {
+    const result = await executeTool('get_portfolio', {}, toolCtx);
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Positions: "positions", "my positions"
+  if (/^(?:my\s+)?positions?$/i.test(lower)) {
+    const result = await executeTool('get_positions', {}, toolCtx);
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Open position: "long sol 5x", "short btc 10x", "open long sol"
+  const posMatch = lower.match(/^(?:open\s+)?(long|short)\s+(sol|eth|btc)(?:\s+(\d+)x)?(?:\s+(\d+)%)?$/);
+  if (posMatch) {
+    const side = posMatch[1];
+    const asset = posMatch[2].toUpperCase();
+    const leverage = posMatch[3] ? parseInt(posMatch[3]) : 5;
+    const pct = posMatch[4] ? parseInt(posMatch[4]) : 25;
+    const result = await executeTool('open_position', {
+      market: `${asset}-PERP`,
+      side,
+      leverage,
+      percent_of_vault: pct,
+    }, toolCtx);
+    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    return;
+  }
+
+  // Close position: "close sol", "close btc", "close all"
+  const closeMatch = lower.match(/^close\s+(sol|eth|btc|all)$/);
+  if (closeMatch) {
+    if (closeMatch[1] === 'all') {
+      const result = await executeTool('close_all_positions', {}, toolCtx);
+      await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    } else {
+      const result = await executeTool('close_position', { market: `${closeMatch[1].toUpperCase()}-PERP` }, toolCtx);
+      await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+    }
     return;
   }
 
@@ -1250,66 +1273,40 @@ bot.on('message:text', async (ctx) => {
     return;
   }
 
-  // Swap: "swap 1 sol usdc", "swap 0.5 sol to usdc", "buy 1 usdc with sol"
-  const swapMatch = lower.match(/^(?:swap|buy|sell|convert)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+|for\s+|en\s+|->?\s*)?(\w+)$/);
-  if (swapMatch) {
-    const amount = parseFloat(swapMatch[1]);
-    const from = swapMatch[2].toUpperCase();
-    const to = swapMatch[3].toUpperCase();
-    const result = await executeTool('swap_tokens', { from_token: from, to_token: to, amount }, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    return;
-  }
+  // ── Natural language → LLM (only for non-action messages) ──
+  if (llmConfig) {
+    try {
+      const result = await callLLMWithTools(
+        llmConfig,
+        text,
+        ctx.session,
+        connection,
+        wallet,
+      );
 
-  // Vault: "vault", "my vault"
-  if (/^(?:my\s+)?vault$/i.test(lower)) {
-    const result = await executeTool('get_vault', {}, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    return;
-  }
+      if (result) {
+        pushChatHistory(ctx.session, 'user', text);
+        pushChatHistory(ctx.session, 'assistant', result.content);
 
-  // Portfolio: "portfolio", "my portfolio", "balance"
-  if (/^(?:my\s+)?(?:portfolio|balance|wallet)$/i.test(lower)) {
-    const result = await executeTool('get_portfolio', {}, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    return;
-  }
-
-  // Positions: "positions", "my positions"
-  if (/^(?:my\s+)?positions?$/i.test(lower)) {
-    const result = await executeTool('get_positions', {}, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    return;
-  }
-
-  // Open position: "long sol 5x", "short btc 10x", "open long sol"
-  const posMatch = lower.match(/^(?:open\s+)?(long|short)\s+(sol|eth|btc)(?:\s+(\d+)x)?(?:\s+(\d+)%)?$/);
-  if (posMatch) {
-    const side = posMatch[1];
-    const asset = posMatch[2].toUpperCase();
-    const leverage = posMatch[3] ? parseInt(posMatch[3]) : 5;
-    const pct = posMatch[4] ? parseInt(posMatch[4]) : 25;
-    const result = await executeTool('open_position', {
-      market: `${asset}-PERP`,
-      side,
-      leverage,
-      percent_of_vault: pct,
-    }, toolCtx);
-    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    return;
-  }
-
-  // Close position: "close sol", "close btc"
-  const closeMatch = lower.match(/^close\s+(sol|eth|btc|all)$/);
-  if (closeMatch) {
-    if (closeMatch[1] === 'all') {
-      const result = await executeTool('close_all_positions', {}, toolCtx);
-      await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
-    } else {
-      const result = await executeTool('close_position', { market: `${closeMatch[1].toUpperCase()}-PERP` }, toolCtx);
-      await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+        const content = result.content;
+        const kb = mainMenuKeyboard();
+        if (content.length <= 4000) {
+          await ctx.reply(content, { parse_mode: 'Markdown', reply_markup: kb }).catch(() =>
+            ctx.reply(content, { reply_markup: kb })
+          );
+        } else {
+          const chunks = splitMessage(content, 4000);
+          for (const chunk of chunks) {
+            await ctx.reply(chunk, { parse_mode: 'Markdown', reply_markup: kb }).catch(() =>
+              ctx.reply(chunk, { reply_markup: kb })
+            );
+          }
+        }
+        return;
+      }
+    } catch (err) {
+      console.error('[LLM] Error:', err);
     }
-    return;
   }
 
   // Fallback: basic agent command parsing
