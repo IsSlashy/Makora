@@ -22,6 +22,11 @@ interface TheWheelProps {
   sessionPnlSol?: number;
   sessionTimeRemaining?: string;
   sessionStrategy?: string;
+  // Agent status from Telegram bot (polled via /api/agent/status)
+  agentPhase?: OODAPhase;
+  agentPhaseDescription?: string;
+  agentCycleCount?: number;
+  agentConfidence?: number;
 }
 
 export const TheWheel = ({
@@ -31,14 +36,27 @@ export const TheWheel = ({
   sessionPnlSol,
   sessionTimeRemaining,
   sessionStrategy,
+  agentPhase = 'IDLE',
+  agentPhaseDescription,
+  agentCycleCount = 0,
+  agentConfidence = 0,
 }: TheWheelProps) => {
   const { publicKey } = useWallet();
 
-  const activePhase = PHASE_INDEX_MAP[ooda.phase] ?? -1;
-  const isAdapting = ooda.phase !== 'IDLE';
+  // Effective phase: prefer agent phase (from bot) over local OODA phase
+  const effectivePhase = agentPhase !== 'IDLE' ? agentPhase : ooda.phase;
+  const activePhase = PHASE_INDEX_MAP[effectivePhase] ?? -1;
+  const isAdapting = effectivePhase !== 'IDLE';
   const blendedApy = ooda.lastDecision?.blendedApy ?? 0;
 
-  // Phase-locked rotation: wheel turns 90deg on each OODA step
+  // Effective stats: merge agent + local
+  const effectiveCycles = agentCycleCount > 0 ? agentCycleCount + ooda.adaptations : ooda.adaptations;
+  const effectiveConfidence = agentConfidence > 0 ? agentConfidence : ooda.confidence;
+  const effectiveDescription = agentPhase !== 'IDLE' && agentPhaseDescription
+    ? agentPhaseDescription
+    : ooda.phaseDescription;
+
+  // Phase-locked rotation: wheel turns 90deg on each phase change
   const rotationRef = useRef(0);
   const prevPhaseRef = useRef<OODAPhase>('IDLE');
   const [rotation, setRotation] = useState(0);
@@ -46,7 +64,7 @@ export const TheWheel = ({
 
   useEffect(() => {
     const prev = prevPhaseRef.current;
-    const curr = ooda.phase;
+    const curr = effectivePhase;
     prevPhaseRef.current = curr;
     if (curr === 'IDLE' || prev === curr) return;
     rotationRef.current += 90;
@@ -54,10 +72,11 @@ export const TheWheel = ({
     setStepping(true);
     const timer = setTimeout(() => setStepping(false), 400);
     return () => clearTimeout(timer);
-  }, [ooda.phase]);
+  }, [effectivePhase]);
 
   const getSubtitle = () => {
     if (!publicKey) return 'Connect Wallet';
+    if (agentPhase !== 'IDLE') return 'Bot Active';
     if (sessionActive) return 'Session Active';
     if (isAdapting) return 'The Adaptive One';
     return 'Awaiting Mandate';
@@ -92,7 +111,7 @@ export const TheWheel = ({
           }}
         >
           {getSubtitle()}
-          {sessionActive && (
+          {(sessionActive || agentPhase !== 'IDLE') && (
             <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#8b5cf6' }} />
           )}
         </div>
@@ -182,18 +201,27 @@ export const TheWheel = ({
         </div>
       </div>
 
+      {/* Phase description */}
+      {effectiveDescription && effectivePhase !== 'IDLE' && (
+        <div className="w-full text-center mb-1">
+          <div className="text-[8px] text-text-muted/70 font-mono tracking-wider truncate px-2">
+            {effectiveDescription}
+          </div>
+        </div>
+      )}
+
       {/* Stats bar */}
-      <div className="w-full mt-2">
+      <div className="w-full mt-auto">
         <div className="ink-divider mb-2" />
         <div className="flex items-center justify-between text-[10px] font-mono">
           <div className="text-center">
             <div className="text-text-muted tracking-wider uppercase mb-0.5" style={{ fontSize: '7px' }}>Cycles</div>
-            <div className="text-cursed font-bold">{ooda.adaptations.toLocaleString()}</div>
+            <div className="text-cursed font-bold">{effectiveCycles.toLocaleString()}</div>
           </div>
           <div className="w-px h-5 bg-cursed/20" />
           <div className="text-center">
             <div className="text-text-muted tracking-wider uppercase mb-0.5" style={{ fontSize: '7px' }}>Conf</div>
-            <div className="text-cursed font-bold">{ooda.confidence > 0 ? `${ooda.confidence}%` : '--'}</div>
+            <div className="text-cursed font-bold">{effectiveConfidence > 0 ? `${effectiveConfidence}%` : '--'}</div>
           </div>
           <div className="w-px h-5 bg-cursed/20" />
           <div className="text-center">
@@ -203,7 +231,7 @@ export const TheWheel = ({
           <div className="w-px h-5 bg-cursed/20" />
           <div className="text-center">
             <div className="text-text-muted tracking-wider uppercase mb-0.5" style={{ fontSize: '7px' }}>Phase</div>
-            <div className="text-cursed font-bold">{ooda.phase}</div>
+            <div className="text-cursed font-bold">{effectivePhase}</div>
           </div>
         </div>
       </div>

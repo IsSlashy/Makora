@@ -12,6 +12,29 @@ import { formatVaultForLLM, getVaultOnChainBalance } from './shielded-vault.js';
 import { ANTHROPIC_TOOLS, OPENAI_TOOLS, executeTool, type ToolResult, type ToolExecutionContext } from './tools.js';
 import type { SessionData } from './session.js';
 
+// ─── Agent Phase Push (Dashboard Bridge) ─────────────────────────────────────
+
+const DASHBOARD_URL = process.env.DASHBOARD_URL || '';
+
+type AgentPhase = 'IDLE' | 'OBSERVE' | 'ORIENT' | 'DECIDE' | 'ACT';
+
+async function pushAgentPhase(
+  phase: AgentPhase,
+  description: string,
+  extra?: { tool?: string; result?: string; confidence?: number; sentiment?: string },
+): Promise<void> {
+  if (!DASHBOARD_URL) return;
+  try {
+    await fetch(`${DASHBOARD_URL}/api/agent/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase, description, ...extra }),
+    });
+  } catch {
+    // Non-critical — dashboard may be unreachable
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AnthropicContentBlock {
@@ -253,12 +276,16 @@ async function callAnthropicWithTools(
       );
 
       if (toolUseBlocks.length > 0) {
+        const toolNames = toolUseBlocks.map((b) => b.name || '').join(', ');
+        await pushAgentPhase('DECIDE', `Decided to use: ${toolNames}`);
+
         const toolResultContents: AnthropicContentBlock[] = [];
 
         for (const toolBlock of toolUseBlocks) {
           const toolName = toolBlock.name || '';
           const toolInput = (toolBlock.input || {}) as Record<string, unknown>;
 
+          await pushAgentPhase('ACT', `Executing ${toolName}`, { tool: toolName });
           const result = await executeTool(toolName, toolInput, toolCtx);
 
           toolResults.push({ tool: toolName, result });
@@ -377,6 +404,9 @@ async function callOpenAIWithTools(
     // Check for tool calls (OpenAI format)
     if (choice.finish_reason === 'tool_calls' && choice.message?.tool_calls) {
       const toolCalls: OpenAIToolCall[] = choice.message.tool_calls;
+      const toolNames = toolCalls.map((tc) => tc.function.name).join(', ');
+      await pushAgentPhase('DECIDE', `Decided to use: ${toolNames}`);
+
       const toolMessages: OpenAIMessage[] = [];
 
       toolMessages.push({
@@ -393,6 +423,7 @@ async function callOpenAIWithTools(
           toolInput = {};
         }
 
+        await pushAgentPhase('ACT', `Executing ${tc.function.name}`, { tool: tc.function.name });
         const result = await executeTool(tc.function.name, toolInput, toolCtx);
 
         toolResults.push({ tool: tc.function.name, result });
@@ -464,41 +495,55 @@ export async function callLLMWithTools(
   connection: Connection,
   wallet: Keypair,
 ): Promise<LLMResponse | null> {
-  // Build dynamic context
-  const context = await buildContext(connection, wallet, session);
-
-  // Get wallet balance for tool execution
-  let walletSolBalance = 0;
   try {
-    const lamports = await connection.getBalance(wallet.publicKey);
-    walletSolBalance = lamports / LAMPORTS_PER_SOL;
-  } catch {
-    // will be 0
+    // OBSERVE: gather market data, balances, positions
+    await pushAgentPhase('OBSERVE', 'Gathering market data & portfolio state');
+    const context = await buildContext(connection, wallet, session);
+
+    // Get wallet balance for tool execution
+    let walletSolBalance = 0;
+    try {
+      const lamports = await connection.getBalance(wallet.publicKey);
+      walletSolBalance = lamports / LAMPORTS_PER_SOL;
+    } catch {
+      // will be 0
+    }
+
+    const toolCtx: ToolExecutionContext = {
+      connection,
+      wallet,
+      walletSolBalance,
+    };
+
+    // Build messages: system + context, chat history, user message
+    const messages: ChatMessage[] = [
+      { role: 'system', content: `${SYSTEM_PROMPT}\n\n--- LIVE CONTEXT ---\n${context}` },
+      ...session.chatHistory.map((h) => ({
+        role: h.role,
+        content: h.content,
+      })),
+      { role: 'user', content: userMessage },
+    ];
+
+    // ORIENT: send to LLM for analysis
+    await pushAgentPhase('ORIENT', `Analyzing with ${config.provider} (${config.model || 'default'})`);
+
+    // Call the appropriate provider
+    let result: LLMResponse | null;
+    if (config.provider === 'anthropic') {
+      result = await callAnthropicWithTools(config, messages, toolCtx);
+    } else {
+      result = await callOpenAIWithTools(config, messages, toolCtx);
+    }
+
+    // IDLE: processing complete
+    await pushAgentPhase('IDLE', 'Processing complete');
+
+    return result;
+  } catch (e) {
+    await pushAgentPhase('IDLE', 'Error during processing');
+    throw e;
   }
-
-  const toolCtx: ToolExecutionContext = {
-    connection,
-    wallet,
-    walletSolBalance,
-  };
-
-  // Build messages: system + context, chat history, user message
-  const messages: ChatMessage[] = [
-    { role: 'system', content: `${SYSTEM_PROMPT}\n\n--- LIVE CONTEXT ---\n${context}` },
-    ...session.chatHistory.map((h) => ({
-      role: h.role,
-      content: h.content,
-    })),
-    { role: 'user', content: userMessage },
-  ];
-
-  // Call the appropriate provider
-  if (config.provider === 'anthropic') {
-    return callAnthropicWithTools(config, messages, toolCtx);
-  }
-
-  // OpenAI and Qwen use the same format
-  return callOpenAIWithTools(config, messages, toolCtx);
 }
 
 export { SYSTEM_PROMPT };

@@ -19,6 +19,7 @@ import { useTradingSession } from '@/hooks/useTradingSession';
 import { useVault } from '@/hooks/useVault';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useAgentStatus } from '@/hooks/useAgentStatus';
 
 // ─── Time formatting helper ──────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ export default function Home() {
   const { connection } = useConnection();
   const ooda = useOODALoop();
   const vault = useVault();
+  const agentStatus = useAgentStatus();
 
   // Cache wallet balance so session start can read it synchronously
   const cachedBalanceRef = useRef(0);
@@ -187,6 +189,10 @@ export default function Home() {
                 sessionPnlSol={tradingSession.session.pnlSol}
                 sessionTimeRemaining={tradingSession.isActive ? formatTimeRemaining(tradingSession.timeRemainingMs) : undefined}
                 sessionStrategy={tradingSession.session.params?.strategy}
+                agentPhase={agentStatus.phase}
+                agentPhaseDescription={agentStatus.phaseDescription}
+                agentCycleCount={agentStatus.cycleCount}
+                agentConfidence={agentStatus.confidence}
               />
             </div>
             <div className="min-h-0">
