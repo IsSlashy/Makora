@@ -94,15 +94,23 @@ function loadLLMConfig(): LLMConfig | null {
   const provider = (process.env.LLM_PROVIDER || '').toLowerCase();
   const apiKey = process.env.LLM_API_KEY || '';
 
-  if (!apiKey || !['anthropic', 'openai', 'qwen'].includes(provider)) {
-    return null;
+  if (apiKey && ['anthropic', 'openai', 'qwen'].includes(provider)) {
+    return {
+      provider: provider as 'anthropic' | 'openai' | 'qwen',
+      apiKey,
+      model: process.env.LLM_MODEL || undefined,
+    };
   }
 
-  return {
-    provider: provider as 'anthropic' | 'openai' | 'qwen',
-    apiKey,
-    model: process.env.LLM_MODEL || undefined,
-  };
+  // Auto-detect from common env vars
+  if (process.env.OPENAI_API_KEY) {
+    return { provider: 'openai', apiKey: process.env.OPENAI_API_KEY, model: process.env.LLM_MODEL || undefined };
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, model: process.env.LLM_MODEL || undefined };
+  }
+
+  return null;
 }
 
 async function initializeAgent(): Promise<void> {
@@ -1239,6 +1247,17 @@ bot.on('message:text', async (ctx) => {
     } catch (err) {
       await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
     }
+    return;
+  }
+
+  // Swap: "swap 1 sol usdc", "swap 0.5 sol to usdc", "buy 1 usdc with sol"
+  const swapMatch = lower.match(/^(?:swap|buy|sell|convert)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+|for\s+|en\s+|->?\s*)?(\w+)$/);
+  if (swapMatch) {
+    const amount = parseFloat(swapMatch[1]);
+    const from = swapMatch[2].toUpperCase();
+    const to = swapMatch[3].toUpperCase();
+    const result = await executeTool('swap_tokens', { from_token: from, to_token: to, amount }, toolCtx);
+    await ctx.reply(result, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
     return;
   }
 

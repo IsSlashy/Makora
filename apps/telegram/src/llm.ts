@@ -92,7 +92,7 @@ const CLOUD_ENDPOINTS: Record<string, string> = {
 
 const DEFAULT_MODELS: Record<string, string> = {
   anthropic: 'claude-sonnet-4-20250514',
-  openai: 'gpt-4o-mini',
+  openai: 'gpt-4o',
   qwen: 'qwen-plus',
 };
 
