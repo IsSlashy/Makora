@@ -1,12 +1,12 @@
 'use client';
 
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import { useMemo } from 'react';
 
 export interface MakoraUser {
   /** Privy user ID (e.g., 'did:privy:...') */
   userId: string | null;
-  /** Display name — email, phone, or wallet abbreviation */
+  /** Display name — abbreviated wallet address */
   displayName: string;
   /** Solana wallet address from Privy embedded wallet */
   walletAddress: string;
@@ -22,23 +22,28 @@ export interface MakoraUser {
 
 /**
  * Combines Privy auth + embedded wallet into a single user context.
- * Works inside PrivyProvider.
+ * Uses user.linkedAccounts to find the Solana embedded wallet
+ * (useWallets() only returns EVM wallets).
  */
 export function useUser(): MakoraUser {
   const { ready, authenticated, user, login, logout } = usePrivy();
-  const { wallets } = useWallets();
 
   return useMemo(() => {
-    // Find the Privy embedded wallet
-    const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy');
-    const walletAddress = embeddedWallet?.address ?? '';
+    // Find the Solana embedded wallet from linkedAccounts
+    // useWallets() only returns EVM wallets — Solana wallets are in linkedAccounts
+    let walletAddress = '';
+    if (user?.linkedAccounts) {
+      const solanaWallet = (user.linkedAccounts as any[]).find(
+        (a) => a.type === 'wallet' && a.chainType === 'solana' && a.walletClientType === 'privy',
+      );
+      if (solanaWallet?.address) {
+        walletAddress = solanaWallet.address;
+      }
+    }
 
+    // Display name: always show wallet address abbreviation (not email)
     let displayName = '';
-    if (user?.email?.address) {
-      displayName = user.email.address;
-    } else if (user?.phone?.number) {
-      displayName = user.phone.number;
-    } else if (walletAddress) {
+    if (walletAddress) {
       displayName = `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`;
     }
 
@@ -51,5 +56,5 @@ export function useUser(): MakoraUser {
       login,
       logout,
     };
-  }, [ready, authenticated, user, wallets, login, logout]);
+  }, [ready, authenticated, user, login, logout]);
 }

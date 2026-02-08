@@ -173,7 +173,10 @@ function TWADashboard() {
 
   // Fetch positions — use userId for per-user isolation when available
   const fetchPositions = useCallback(async () => {
-    if (!walletAddress) return;
+    if (!walletAddress) {
+      setLoadingState(prev => ({ ...prev, positions: false }));
+      return;
+    }
     try {
       const params = new URLSearchParams({ wallet: walletAddress });
       if (userId) params.set('userId', userId);
