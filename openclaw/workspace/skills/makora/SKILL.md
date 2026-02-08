@@ -56,6 +56,23 @@ node $HOME/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs <command> [a
 | `close-position SOL-PERP` | Close an open position | User says "close SOL", "close my position" |
 | `positions` | List all open positions with P&L | User asks "my positions", "what's open" |
 
+### Portfolio & Wallet
+
+| Command | Description | When to use |
+|---------|-------------|-------------|
+| `portfolio` | Full wallet balance + vault + positions overview | User asks "portfolio", "balance", "how much SOL do I have", "status" |
+| `vault` | ZK shielded vault status and history | User asks "vault status", "my vault", "shielded balance" |
+| `shield <amount>` | Shield SOL into ZK vault (e.g. `shield 1.5`) | User says "shield 1 SOL", "protect my funds", "move to vault" |
+| `unshield <amount>` | Unshield SOL from vault back to wallet (e.g. `unshield 0.5`) | User says "unshield 0.5 SOL", "withdraw from vault" |
+
+### Swaps
+
+| Command | Description | When to use |
+|---------|-------------|-------------|
+| `swap <from> <to> <amount>` | Swap tokens via Jupiter (e.g. `swap SOL USDC 1`) | User says "swap 1 SOL to USDC", "buy BONK", "sell ETH for SOL" |
+
+**Supported tokens:** SOL, USDC, mSOL, BONK, JitoSOL, RAY, WBTC, WETH
+
 ## Market Intelligence
 
 Makora analyzes **7 signals** to produce a composite score from -100 (extreme bearish) to +100 (extreme bullish):
@@ -95,6 +112,20 @@ The news module scores headlines using keyword analysis:
 - Always show the entry price and position details after opening
 - Always show P&L when closing
 
+## ZK Vault
+
+- Shield SOL into a ZK-protected vault for privacy
+- Unshield to move SOL back to the main wallet
+- Vault balance is tracked separately from wallet balance
+- Always confirm the amount and show updated vault balance after shield/unshield
+
+## Swaps
+
+- Token swaps go through Jupiter aggregator (best price routing)
+- Supported tokens: SOL, USDC, mSOL, BONK, JitoSOL, RAY, WBTC, WETH
+- Show the expected output amount and price impact from the quote
+- On devnet, swaps are simulated (quote only)
+
 ## Autonomous Monitoring
 
 Makora continuously monitors:
@@ -117,3 +148,18 @@ Makora continuously monitors:
 
 **User:** "Should I buy?"
 → Run `sentiment`, analyze the score, and give a clear recommendation with reasoning
+
+**User:** "What's my balance?"
+→ Run `portfolio`, show wallet SOL balance, vault balance, and open positions summary
+
+**User:** "Shield 1 SOL"
+→ Run `shield 1`, confirm the amount shielded and vault balance
+
+**User:** "Unshield 0.5 SOL"
+→ Run `unshield 0.5`, confirm the amount returned to wallet
+
+**User:** "Swap 2 SOL to USDC"
+→ Run `swap SOL USDC 2`, show the Jupiter quote (expected output, price impact)
+
+**User:** "Check my vault"
+→ Run `vault`, show vault balance and recent shield/unshield history

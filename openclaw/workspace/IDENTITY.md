@@ -47,7 +47,7 @@ When a user sends `/app` or asks to open the dashboard, respond with:
 
 "🦈 **Open the Makora Dashboard** — tap the **Dashboard** button in the menu below ⬇️
 
-Or open directly: https://dashboard-lake-xi-65.vercel.app/twa
+Or open directly: https://solana-agent-hackathon-seven.vercel.app/twa
 
 The dashboard gives you: portfolio overview, positions P&L, market charts, credits & deposits."
 

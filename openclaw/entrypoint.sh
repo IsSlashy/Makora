@@ -32,7 +32,7 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
     }' > /dev/null 2>&1 && echo "[Makora] Bot commands registered" || echo "[Makora] Warning: could not set bot commands"
 
   # Set the Menu Button to open TWA Dashboard directly
-  DASHBOARD_URL="${DASHBOARD_URL:-https://dashboard-lake-xi-65.vercel.app}"
+  DASHBOARD_URL="${DASHBOARD_URL:-https://solana-agent-hackathon-seven.vercel.app}"
   echo "[Makora] Setting menu button → ${DASHBOARD_URL}/twa"
   curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setChatMenuButton" \
     -H "Content-Type: application/json" \
@@ -56,6 +56,8 @@ SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
 SOLANA_NETWORK=${SOLANA_NETWORK:-devnet}
 JUPITER_API_KEY=${JUPITER_API_KEY:-}
 CRYPTOPANIC_API_KEY=${CRYPTOPANIC_API_KEY:-}
+WALLET_PATH=${WALLET_PATH:-~/.config/solana/id.json}
+DASHBOARD_URL=${DASHBOARD_URL:-https://solana-agent-hackathon-seven.vercel.app}
 EOF
 
 echo "[Makora] Starting OpenClaw gateway on port ${PORT:-18789}..."

@@ -181,6 +181,97 @@ function timeSince(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+// ─── Solana helpers (no npm deps — raw JSON-RPC + fetch) ──────────────────
+
+const LAMPORTS_PER_SOL = 1_000_000_000;
+const RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+
+async function rpc(method, params = []) {
+  const res = await fetch(RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
+}
+
+function loadWallet() {
+  const walletPath = process.env.WALLET_PATH || resolve(
+    process.env.HOME || process.env.USERPROFILE || '/root',
+    '.config', 'solana', 'id.json'
+  );
+  try {
+    const raw = readFileSync(walletPath, 'utf-8');
+    const bytes = JSON.parse(raw);
+    // Derive public key from first 32 bytes (ed25519 seed -> pubkey is bytes 32..64)
+    // For a 64-byte keypair, pubkey is the last 32 bytes
+    const pubkeyBytes = new Uint8Array(bytes.slice(32, 64));
+    const pubkey = encodeBase58(pubkeyBytes);
+    return { secretKey: new Uint8Array(bytes), publicKey: pubkey };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Base58 encode (no deps)
+const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function encodeBase58(bytes) {
+  let num = 0n;
+  for (const b of bytes) num = num * 256n + BigInt(b);
+  let str = '';
+  while (num > 0n) { str = BASE58_ALPHABET[Number(num % 58n)] + str; num /= 58n; }
+  for (const b of bytes) { if (b === 0) str = '1' + str; else break; }
+  return str || '1';
+}
+
+async function getBalance(pubkey) {
+  const result = await rpc('getBalance', [pubkey]);
+  return (result?.value || 0) / LAMPORTS_PER_SOL;
+}
+
+// ─── ZK Vault (simulated, persisted in globalThis) ──────────────────────────
+
+if (!globalThis.__makora_vault) {
+  globalThis.__makora_vault = { balanceSol: 0, totalShielded: 0, totalUnshielded: 0, history: [] };
+}
+
+function getVault() { return globalThis.__makora_vault; }
+
+function shieldSol(amount) {
+  const vault = getVault();
+  vault.balanceSol += amount;
+  vault.totalShielded += amount;
+  vault.history.push({ type: 'shield', amount, timestamp: Date.now() });
+  return vault;
+}
+
+function unshieldSol(amount) {
+  const vault = getVault();
+  if (amount > vault.balanceSol) return { error: `Vault has only ${vault.balanceSol.toFixed(4)} SOL` };
+  vault.balanceSol -= amount;
+  vault.totalUnshielded += amount;
+  vault.history.push({ type: 'unshield', amount, timestamp: Date.now() });
+  return vault;
+}
+
+// ─── Token mints for Jupiter ─────────────────────────────────────────────────
+
+const MINT_MAP = {
+  SOL: 'So11111111111111111111111111111111111111112',
+  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  mSOL: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+  BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  JitoSOL: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+  RAY: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
+  WBTC: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+  WETH: '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs',
+};
+
+const TOKEN_DECIMALS = { SOL: 9, USDC: 6, mSOL: 9, JitoSOL: 9, BONK: 5, RAY: 6, WBTC: 8, WETH: 8 };
+
 // ─── Simulated Perps (in-memory) ──────────────────────────────
 
 // Use globalThis to persist across calls if running in same process
@@ -368,10 +459,134 @@ async function main() {
       break;
     }
 
+    case 'portfolio': {
+      const w = loadWallet();
+      if (!w) { console.log(JSON.stringify({ error: 'Wallet not configured. Set WALLET_PATH.' })); break; }
+      const [balance, prices] = await Promise.all([getBalance(w.publicKey), fetchPrices()]);
+      const solPrice = prices.SOL || 0;
+      const vault = getVault();
+      const positions = getPositions();
+      const totalCollateral = positions.reduce((s, p) => s + p.collateralUsd, 0);
+      const totalPnl = positions.reduce((s, p) => s + (p.unrealizedPnl || 0), 0);
+
+      console.log(JSON.stringify({
+        wallet: { address: w.publicKey, balanceSol: balance, balanceUsd: balance * solPrice },
+        vault: { balanceSol: vault.balanceSol, balanceUsd: vault.balanceSol * solPrice },
+        total: { sol: balance + vault.balanceSol, usd: (balance + vault.balanceSol) * solPrice },
+        solPrice,
+        positions: { count: positions.length, totalCollateralUsd: totalCollateral, unrealizedPnlUsd: totalPnl },
+        timestamp: new Date().toISOString(),
+      }));
+      break;
+    }
+
+    case 'vault': {
+      const vault = getVault();
+      const prices = await fetchPrices();
+      const solPrice = prices.SOL || 0;
+      console.log(JSON.stringify({
+        balanceSol: vault.balanceSol,
+        balanceUsd: vault.balanceSol * solPrice,
+        totalShieldedSol: vault.totalShielded,
+        totalUnshieldedSol: vault.totalUnshielded,
+        history: vault.history.slice(-5),
+        timestamp: new Date().toISOString(),
+      }));
+      break;
+    }
+
+    case 'shield': {
+      const amount = parseFloat(args[0]);
+      if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: shield <amount_sol>' })); break; }
+      const w = loadWallet();
+      if (!w) { console.log(JSON.stringify({ error: 'Wallet not configured.' })); break; }
+      const balance = await getBalance(w.publicKey);
+      const reserve = 0.01;
+      if (amount > balance - reserve) {
+        console.log(JSON.stringify({ error: `Insufficient balance. Have ${balance.toFixed(4)} SOL, need ${amount} + ${reserve} reserve.` }));
+        break;
+      }
+      const vault = shieldSol(amount);
+      const prices = await fetchPrices();
+      const solPrice = prices.SOL || 0;
+      console.log(JSON.stringify({
+        success: true,
+        shielded: amount,
+        shieldedUsd: amount * solPrice,
+        vaultBalance: vault.balanceSol,
+        vaultBalanceUsd: vault.balanceSol * solPrice,
+        walletRemaining: balance - amount,
+        timestamp: new Date().toISOString(),
+      }));
+      break;
+    }
+
+    case 'unshield': {
+      const amount = parseFloat(args[0]);
+      if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: unshield <amount_sol>' })); break; }
+      const result = unshieldSol(amount);
+      if (result.error) { console.log(JSON.stringify({ error: result.error })); break; }
+      const prices = await fetchPrices();
+      const solPrice = prices.SOL || 0;
+      console.log(JSON.stringify({
+        success: true,
+        unshielded: amount,
+        unshieldedUsd: amount * solPrice,
+        vaultRemaining: result.balanceSol,
+        vaultRemainingUsd: result.balanceSol * solPrice,
+        timestamp: new Date().toISOString(),
+      }));
+      break;
+    }
+
+    case 'swap': {
+      const fromSymbol = (args[0] || '').toUpperCase();
+      const toSymbol = (args[1] || '').toUpperCase();
+      const amount = parseFloat(args[2]);
+      if (!fromSymbol || !toSymbol || !amount || amount <= 0) {
+        console.log(JSON.stringify({ error: 'Usage: swap <from_token> <to_token> <amount>' }));
+        break;
+      }
+      const inputMint = MINT_MAP[fromSymbol];
+      const outputMint = MINT_MAP[toSymbol];
+      if (!inputMint) { console.log(JSON.stringify({ error: `Unknown token: ${fromSymbol}. Supported: ${Object.keys(MINT_MAP).join(', ')}` })); break; }
+      if (!outputMint) { console.log(JSON.stringify({ error: `Unknown token: ${toSymbol}. Supported: ${Object.keys(MINT_MAP).join(', ')}` })); break; }
+
+      const decimals = TOKEN_DECIMALS[fromSymbol] || 9;
+      const rawAmount = Math.floor(amount * 10 ** decimals);
+
+      // Get Jupiter quote
+      try {
+        const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`;
+        const quoteRes = await fetch(quoteUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!quoteRes.ok) {
+          const err = await quoteRes.text().catch(() => '');
+          console.log(JSON.stringify({ error: `Jupiter quote failed: ${err.slice(0, 100)}` }));
+          break;
+        }
+        const quoteData = await quoteRes.json();
+        const outDecimals = TOKEN_DECIMALS[toSymbol] || 9;
+        const expectedOutput = Number(quoteData.outAmount) / 10 ** outDecimals;
+        const priceImpact = quoteData.priceImpactPct || '0';
+
+        // NOTE: Actual on-chain swap requires wallet signing which needs @solana/web3.js
+        // In OpenClaw container we return the quote — the agent presents it to the user
+        console.log(JSON.stringify({
+          success: true,
+          swap: { from: fromSymbol, to: toSymbol, amountIn: amount, expectedOut: expectedOutput.toFixed(6), priceImpactPct: priceImpact },
+          note: 'Quote from Jupiter. On devnet, swaps are simulated.',
+          timestamp: new Date().toISOString(),
+        }));
+      } catch (e) {
+        console.log(JSON.stringify({ error: `Swap failed: ${e.message}` }));
+      }
+      break;
+    }
+
     default:
       console.log(JSON.stringify({
         error: `Unknown command: ${command}`,
-        available: ['prices', 'sentiment', 'news', 'scan', 'positions', 'open-position', 'close-position', 'health'],
+        available: ['prices', 'sentiment', 'news', 'scan', 'positions', 'open-position', 'close-position', 'portfolio', 'vault', 'shield', 'unshield', 'swap', 'health'],
       }));
   }
 }
