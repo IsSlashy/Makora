@@ -216,15 +216,15 @@ export const PortfolioCard = () => {
                 style={{
                   width: `${token.percentage}%`,
                   background: token.symbol === 'VAULT'
-                    ? 'linear-gradient(90deg, #6d28d9, #8b5cf6)'
+                    ? 'linear-gradient(90deg, #00B4D8, #00E5FF)'
                     : token.symbol === 'SESSION'
                       ? 'linear-gradient(90deg, #059669, #34d399)'
-                      : 'linear-gradient(90deg, #6d28d9, #8b5cf6)',
+                      : 'linear-gradient(90deg, #00B4D8, #00E5FF)',
                   boxShadow: token.symbol === 'VAULT'
-                    ? '0 0 8px rgba(109, 40, 217, 0.4)'
+                    ? '0 0 8px rgba(0, 180, 216, 0.4)'
                     : token.symbol === 'SESSION'
                       ? '0 0 8px rgba(5, 150, 105, 0.4)'
-                      : '0 0 8px rgba(139, 92, 246, 0.3)',
+                      : '0 0 8px rgba(0, 229, 255, 0.3)',
                 }}
               />
             </div>

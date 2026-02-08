@@ -39,7 +39,7 @@ export const PortfolioCardTWA = ({
       {/* Total value */}
       <div className="flex items-baseline gap-2 mb-4">
         <span className="text-2xl font-bold font-mono text-cursed-gradient" style={{
-          background: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 40%, #a78bfa 60%, #8b5cf6 100%)',
+          background: 'linear-gradient(135deg, #00B4D8 0%, #00E5FF 40%, #67EFFF 60%, #00E5FF 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -71,7 +71,7 @@ export const PortfolioCardTWA = ({
                         className="h-full rounded-sm"
                         style={{
                           width: `${Math.min(100, pct)}%`,
-                          background: '#8b5cf6',
+                          background: '#00E5FF',
                         }}
                       />
                     </div>

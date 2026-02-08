@@ -24,9 +24,9 @@ interface AgentStatusData {
 
 const PHASE_COLORS: Record<AgentPhase, string> = {
   IDLE: '#504a60',
-  OBSERVE: '#8b5cf6',
-  ORIENT: '#a78bfa',
-  DECIDE: '#6d28d9',
+  OBSERVE: '#00E5FF',
+  ORIENT: '#67EFFF',
+  DECIDE: '#00B4D8',
   ACT: '#22c55e',
 };
 

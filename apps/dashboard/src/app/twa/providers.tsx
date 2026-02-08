@@ -156,7 +156,7 @@ export const TWAProviders: FC<TWAProvidersProps> = ({ children }) => {
       config={{
         appearance: {
           theme: 'dark',
-          accentColor: '#8b5cf6',
+          accentColor: '#00E5FF',
           logo: undefined,
         },
         loginMethods: ['email', 'sms', 'telegram', 'wallet'],

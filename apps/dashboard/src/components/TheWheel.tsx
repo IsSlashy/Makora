@@ -92,11 +92,11 @@ export const TheWheel = ({
         <h2
           className="font-display text-xl tracking-[0.3em] leading-none"
           style={{
-            background: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 35%, #a78bfa 50%, #8b5cf6 65%, #6d28d9 100%)',
+            background: 'linear-gradient(135deg, #00B4D8 0%, #00E5FF 35%, #67EFFF 50%, #00E5FF 65%, #00B4D8 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            filter: 'drop-shadow(0 0 12px rgba(139, 92, 246, 0.3))',
+            filter: 'drop-shadow(0 0 12px rgba(0, 229, 255, 0.3))',
           }}
         >
           MAKORA
@@ -104,7 +104,7 @@ export const TheWheel = ({
         <div
           className="text-[9px] tracking-[0.3em] uppercase mt-0.5 flex items-center justify-center gap-1.5"
           style={{
-            background: 'linear-gradient(90deg, #4a4750, #8b5cf6 40%, #a78bfa 50%, #8b5cf6 60%, #4a4750)',
+            background: 'linear-gradient(90deg, #4a4750, #00E5FF 40%, #67EFFF 50%, #00E5FF 60%, #4a4750)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -112,7 +112,7 @@ export const TheWheel = ({
         >
           {getSubtitle()}
           {(sessionActive || agentPhase !== 'IDLE') && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#8b5cf6' }} />
+            <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#00E5FF' }} />
           )}
         </div>
       </div>
@@ -124,7 +124,7 @@ export const TheWheel = ({
           <div
             className="absolute inset-[-8px] rounded-full transition-all duration-700"
             style={{
-              background: `radial-gradient(circle, rgba(139, 92, 246, ${isAdapting || sessionActive ? 0.15 : 0.05}) 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(0, 229, 255, ${isAdapting || sessionActive ? 0.15 : 0.05}) 0%, transparent 70%)`,
             }}
           />
 
@@ -144,7 +144,7 @@ export const TheWheel = ({
               alt="Wheel of Adaptation"
               className="w-full h-full object-contain"
               style={{
-                filter: 'invert(1) sepia(1) saturate(3) hue-rotate(230deg) brightness(0.85)',
+                filter: 'invert(1) sepia(1) saturate(3) hue-rotate(160deg) brightness(0.85)',
                 opacity: !publicKey ? 0.2 : (isAdapting || sessionActive) ? 1 : 0.6,
                 transition: 'opacity 0.5s',
               }}
@@ -175,15 +175,15 @@ export const TheWheel = ({
                   <span
                     className="text-base font-bold select-none"
                     style={{
-                      color: isActive ? '#8b5cf6' : '#4a4750',
-                      textShadow: isActive ? '0 0 12px rgba(139, 92, 246, 0.6)' : 'none',
+                      color: isActive ? '#00E5FF' : '#4a4750',
+                      textShadow: isActive ? '0 0 12px rgba(0, 229, 255, 0.6)' : 'none',
                     }}
                   >
                     {phase.kanji}
                   </span>
                   <span
                     className="text-[7px] font-mono tracking-[0.1em] uppercase"
-                    style={{ color: isActive ? '#8b5cf6' : '#4a4750' }}
+                    style={{ color: isActive ? '#00E5FF' : '#4a4750' }}
                   >
                     {phase.name}
                   </span>

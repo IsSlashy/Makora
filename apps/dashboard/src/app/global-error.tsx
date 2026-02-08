@@ -19,7 +19,7 @@ export default function GlobalError({
         </pre>
         <button
           onClick={() => reset()}
-          style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#8b5cf6', color: '#050508', border: 'none', cursor: 'pointer' }}
+          style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#00E5FF', color: '#050508', border: 'none', cursor: 'pointer' }}
         >
           Try again
         </button>

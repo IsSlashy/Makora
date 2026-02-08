@@ -31,7 +31,7 @@ interface SentimentPanelTWAProps {
 const DIRECTION_COLORS: Record<string, string> = {
   strong_buy: '#22c55e',
   buy: '#4ade80',
-  neutral: '#8b5cf6',
+  neutral: '#00E5FF',
   sell: '#f97316',
   strong_sell: '#ef4444',
 };
@@ -39,7 +39,7 @@ const DIRECTION_COLORS: Record<string, string> = {
 const ACTION_COLORS: Record<string, string> = {
   strong_buy: '#22c55e',
   buy: '#4ade80',
-  hold: '#8b5cf6',
+  hold: '#00E5FF',
   sell: '#f97316',
   strong_sell: '#ef4444',
 };
@@ -63,7 +63,7 @@ export const SentimentPanelTWA = ({ report, loading }: SentimentPanelTWAProps) =
     );
   }
 
-  const dirColor = DIRECTION_COLORS[report.direction] || '#8b5cf6';
+  const dirColor = DIRECTION_COLORS[report.direction] || '#00E5FF';
   const scoreSign = report.overallScore >= 0 ? '+' : '';
 
   return (
@@ -101,7 +101,7 @@ export const SentimentPanelTWA = ({ report, loading }: SentimentPanelTWAProps) =
       <div className="space-y-2 mb-4">
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-text-muted">Fear & Greed</span>
-          <span style={{ color: report.signals.fearGreed.value < 30 ? '#22c55e' : report.signals.fearGreed.value > 70 ? '#ef4444' : '#8b5cf6' }}>
+          <span style={{ color: report.signals.fearGreed.value < 30 ? '#22c55e' : report.signals.fearGreed.value > 70 ? '#ef4444' : '#00E5FF' }}>
             {report.signals.fearGreed.value} ({report.signals.fearGreed.classification})
           </span>
         </div>
@@ -109,7 +109,7 @@ export const SentimentPanelTWA = ({ report, loading }: SentimentPanelTWAProps) =
         {Object.entries(report.signals.rsi).map(([token, rsi]) => (
           <div key={token} className="flex items-center justify-between text-xs font-mono">
             <span className="text-text-muted">{token} RSI</span>
-            <span style={{ color: rsi.value < 30 ? '#22c55e' : rsi.value > 70 ? '#ef4444' : '#8b5cf6' }}>
+            <span style={{ color: rsi.value < 30 ? '#22c55e' : rsi.value > 70 ? '#ef4444' : '#00E5FF' }}>
               {rsi.value.toFixed(0)} ({rsi.signal})
             </span>
           </div>
@@ -117,7 +117,7 @@ export const SentimentPanelTWA = ({ report, loading }: SentimentPanelTWAProps) =
 
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-text-muted">Polymarket</span>
-          <span style={{ color: report.signals.polymarket.bias === 'bullish' ? '#22c55e' : report.signals.polymarket.bias === 'bearish' ? '#ef4444' : '#8b5cf6' }}>
+          <span style={{ color: report.signals.polymarket.bias === 'bullish' ? '#22c55e' : report.signals.polymarket.bias === 'bearish' ? '#ef4444' : '#00E5FF' }}>
             {report.signals.polymarket.bias} ({report.signals.polymarket.conviction}%)
           </span>
         </div>
@@ -148,7 +148,7 @@ export const SentimentPanelTWA = ({ report, loading }: SentimentPanelTWAProps) =
           <div className="text-text-muted text-[10px] font-mono tracking-wider uppercase mb-2">RECOMMENDATIONS</div>
           <div className="space-y-2">
             {report.recommendations.map(rec => {
-              const actionColor = ACTION_COLORS[rec.action] || '#8b5cf6';
+              const actionColor = ACTION_COLORS[rec.action] || '#00E5FF';
               return (
                 <div key={rec.token} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

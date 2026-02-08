@@ -8,10 +8,10 @@
   --bg-void: #050508;
   --bg-card: #0a0a12;
   --bg-inner: #08080e;
-  --cursed: #8b5cf6;
-  --cursed-light: #a78bfa;
-  --cursed-dim: #6d28d9;
-  --shadow-purple: #6d28d9;
+  --cursed: #00E5FF;
+  --cursed-light: #67EFFF;
+  --cursed-dim: #00B4D8;
+  --shadow-purple: #00B4D8;
   --text-primary: #f0edf5;
   --text-secondary: #787580;
 }
@@ -44,7 +44,7 @@ body::before {
 /* Cursed card - the core UI element */
 .cursed-card {
   background: var(--bg-card);
-  border: 1px solid rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.12);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
@@ -62,7 +62,7 @@ body::before {
 }
 
 .cursed-card:hover {
-  border-color: rgba(139, 92, 246, 0.25);
+  border-color: rgba(0, 229, 255, 0.25);
 }
 
 /* Violet gradient text */
@@ -90,9 +90,9 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(139, 92, 246, 0.3) 20%,
-    rgba(139, 92, 246, 0.5) 50%,
-    rgba(139, 92, 246, 0.3) 80%,
+    rgba(0, 229, 255, 0.3) 20%,
+    rgba(0, 229, 255, 0.5) 50%,
+    rgba(0, 229, 255, 0.3) 80%,
     transparent 100%
   );
 }
@@ -107,12 +107,12 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(0, 229, 255, 0.3);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(0, 229, 255, 0.5);
 }
 
 /* Range inputs */
@@ -132,7 +132,7 @@ input[type='range']::-webkit-slider-thumb {
   background: var(--cursed);
   cursor: pointer;
   border: 2px solid var(--bg-void);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
 }
 
 input[type='range']::-moz-range-thumb {
@@ -142,7 +142,7 @@ input[type='range']::-moz-range-thumb {
   cursor: pointer;
   border: 2px solid var(--bg-void);
   border-radius: 0;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
 }
 
 /* Cursed energy bar animation */
@@ -247,7 +247,7 @@ input[type='range']::-moz-range-thumb {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.08);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.08);
   background: var(--bg-void);
   z-index: 10;
 }
@@ -268,7 +268,7 @@ input[type='range']::-moz-range-thumb {
   align-items: center;
   justify-content: space-around;
   background: var(--bg-void);
-  border-top: 1px solid rgba(139, 92, 246, 0.08);
+  border-top: 1px solid rgba(0, 229, 255, 0.08);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
 }
@@ -298,7 +298,7 @@ input[type='range']::-moz-range-thumb {
   left: 25%;
   right: 25%;
   height: 2px;
-  background: #8b5cf6;
+  background: #00E5FF;
   border-radius: 0 0 2px 2px;
 }
 

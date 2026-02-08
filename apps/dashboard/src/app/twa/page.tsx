@@ -103,7 +103,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         <span
           className="font-display text-3xl tracking-[0.3em]"
           style={{
-            background: 'linear-gradient(135deg, #6d28d9, #8b5cf6, #a78bfa)',
+            background: 'linear-gradient(135deg, #00B4D8, #00E5FF, #67EFFF)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -128,7 +128,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         onClick={onLogin}
         className="px-8 py-3 rounded-sm font-mono text-sm font-bold tracking-wider uppercase transition-all"
         style={{
-          background: 'linear-gradient(135deg, #6d28d9, #8b5cf6)',
+          background: 'linear-gradient(135deg, #00B4D8, #00E5FF)',
           color: '#050508',
         }}
       >
@@ -306,7 +306,7 @@ function TWADashboard() {
               <div className="px-3 pt-3">
                 <div
                   className="cursed-card p-4 relative overflow-hidden"
-                  style={{ borderColor: '#8b5cf640' }}
+                  style={{ borderColor: '#00E5FF40' }}
                 >
                   <button
                     onClick={() => setShowWelcome(false)}
@@ -380,8 +380,8 @@ function TWADashboard() {
                     <span
                       className="text-[9px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
                       style={{
-                        color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#8b5cf6',
-                        background: sentiment.direction.includes('buy') ? '#22c55e12' : sentiment.direction.includes('sell') ? '#ef444412' : '#8b5cf612',
+                        color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#00E5FF',
+                        background: sentiment.direction.includes('buy') ? '#22c55e12' : sentiment.direction.includes('sell') ? '#ef444412' : '#00E5FF12',
                       }}
                     >
                       {sentiment.direction.replace('_', ' ')}
@@ -394,7 +394,7 @@ function TWADashboard() {
                           <span className="text-[10px] font-mono font-bold">{r.token}</span>
                           <span
                             className="text-[8px] font-mono uppercase"
-                            style={{ color: r.action.includes('buy') ? '#22c55e' : r.action.includes('sell') ? '#ef4444' : '#8b5cf6' }}
+                            style={{ color: r.action.includes('buy') ? '#22c55e' : r.action.includes('sell') ? '#ef4444' : '#00E5FF' }}
                           >
                             {r.action.replace('_', ' ')}
                           </span>
@@ -460,7 +460,7 @@ function TWADashboard() {
                     <span className="text-text-muted">Overall Bias</span>
                     <span style={{
                       color: polymarket.sentimentSummary.overallBias === 'bullish' ? '#22c55e' :
-                             polymarket.sentimentSummary.overallBias === 'bearish' ? '#ef4444' : '#8b5cf6'
+                             polymarket.sentimentSummary.overallBias === 'bearish' ? '#ef4444' : '#00E5FF'
                     }}>
                       {polymarket.sentimentSummary.overallBias.toUpperCase()}
                     </span>
@@ -473,7 +473,7 @@ function TWADashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono font-bold" style={{
-                            color: market.probability > 0.6 ? '#22c55e' : market.probability < 0.4 ? '#ef4444' : '#8b5cf6'
+                            color: market.probability > 0.6 ? '#22c55e' : market.probability < 0.4 ? '#ef4444' : '#00E5FF'
                           }}>
                             {(market.probability * 100).toFixed(0)}% YES
                           </span>
@@ -484,8 +484,8 @@ function TWADashboard() {
                         <span
                           className="text-[8px] font-mono tracking-wider uppercase px-1 py-0.5 rounded-sm"
                           style={{
-                            color: market.relevance === 'high' ? '#8b5cf6' : '#504a60',
-                            background: market.relevance === 'high' ? '#8b5cf612' : 'transparent',
+                            color: market.relevance === 'high' ? '#00E5FF' : '#504a60',
+                            background: market.relevance === 'high' ? '#00E5FF12' : 'transparent',
                           }}
                         >
                           {market.relevance}
@@ -511,7 +511,7 @@ function TWADashboard() {
           <span
             className="font-display text-base tracking-[0.2em]"
             style={{
-              background: 'linear-gradient(135deg, #6d28d9, #8b5cf6, #a78bfa)',
+              background: 'linear-gradient(135deg, #00B4D8, #00E5FF, #67EFFF)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -523,8 +523,8 @@ function TWADashboard() {
             <span
               className="text-[8px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded-sm"
               style={{
-                color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#8b5cf6',
-                background: sentiment.direction.includes('buy') ? '#22c55e10' : sentiment.direction.includes('sell') ? '#ef444410' : '#8b5cf610',
+                color: sentiment.direction.includes('buy') ? '#22c55e' : sentiment.direction.includes('sell') ? '#ef4444' : '#00E5FF',
+                background: sentiment.direction.includes('buy') ? '#22c55e10' : sentiment.direction.includes('sell') ? '#ef444410' : '#00E5FF10',
               }}
             >
               {sentiment.direction.replace('_', ' ')}
@@ -575,7 +575,7 @@ function TWADashboard() {
               onClick={() => setActiveTab(tab.id)}
               className="twa-tab"
               style={{
-                color: isActive ? '#8b5cf6' : '#504a60',
+                color: isActive ? '#00E5FF' : '#504a60',
               }}
             >
               <span className="text-lg leading-none">{tab.icon}</span>
