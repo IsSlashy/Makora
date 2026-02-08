@@ -1169,96 +1169,79 @@ bot.on('message:text', async (ctx) => {
     registerUserChat(ctx.from.id, ctx.chat.id);
   }
 
-  // ── Direct action parsing (runs FIRST — faster and more reliable than LLM) ──
+  // ── Direct action parsing (tool executes FIRST, then LLM formats response) ──
   const lower = text.toLowerCase().trim();
   const toolCtx = await getToolCtx();
+  let directToolName: string | null = null;
+  let directToolInput: Record<string, unknown> = {};
 
   // Shield: "shield 1 sol", "shield 50%", "shield all"
   const shieldMatch = lower.match(/^shield\s+(?:(\d+(?:\.\d+)?)\s*(?:sol)?|(\d+)%|all)$/);
   if (shieldMatch) {
-    const input: Record<string, unknown> = {};
-    if (shieldMatch[1]) input.amount_sol = parseFloat(shieldMatch[1]);
-    else if (shieldMatch[2]) input.percent_of_wallet = parseInt(shieldMatch[2]);
-    const result = await executeTool('shield_sol', input, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+    directToolName = 'shield_sol';
+    if (shieldMatch[1]) directToolInput.amount_sol = parseFloat(shieldMatch[1]);
+    else if (shieldMatch[2]) directToolInput.percent_of_wallet = parseInt(shieldMatch[2]);
   }
 
   // Unshield: "unshield 1 sol", "unshield 50%", "unshield all"
-  const unshieldMatch = lower.match(/^unshield\s+(?:(\d+(?:\.\d+)?)\s*(?:sol)?|(\d+)%|all)$/);
-  if (unshieldMatch) {
-    const input: Record<string, unknown> = {};
-    if (unshieldMatch[1]) input.amount_sol = parseFloat(unshieldMatch[1]);
-    else if (unshieldMatch[2]) input.percent_of_vault = parseInt(unshieldMatch[2]);
-    const result = await executeTool('unshield_sol', input, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName) {
+    const unshieldMatch = lower.match(/^unshield\s+(?:(\d+(?:\.\d+)?)\s*(?:sol)?|(\d+)%|all)$/);
+    if (unshieldMatch) {
+      directToolName = 'unshield_sol';
+      if (unshieldMatch[1]) directToolInput.amount_sol = parseFloat(unshieldMatch[1]);
+      else if (unshieldMatch[2]) directToolInput.percent_of_vault = parseInt(unshieldMatch[2]);
+    }
   }
 
   // Swap: "swap 1 sol usdc", "swap 0.5 sol to usdc", "buy 1 sol usdc"
-  const swapMatch = lower.match(/^(?:swap|buy|sell|convert)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+|for\s+|en\s+|->?\s*)?(\w+)$/);
-  if (swapMatch) {
-    const amount = parseFloat(swapMatch[1]);
-    const from = swapMatch[2].toUpperCase();
-    const to = swapMatch[3].toUpperCase();
-    const result = await executeTool('swap_tokens', { from_token: from, to_token: to, amount }, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName) {
+    const swapMatch = lower.match(/^(?:swap|buy|sell|convert)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+|for\s+|en\s+|->?\s*)?(\w+)$/);
+    if (swapMatch) {
+      directToolName = 'swap_tokens';
+      directToolInput = { from_token: swapMatch[2].toUpperCase(), to_token: swapMatch[3].toUpperCase(), amount: parseFloat(swapMatch[1]) };
+    }
   }
 
   // Vault: "vault", "my vault"
-  if (/^(?:my\s+)?vault$/i.test(lower)) {
-    const result = await executeTool('get_vault', {}, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName && /^(?:my\s+)?vault$/i.test(lower)) {
+    directToolName = 'get_vault';
   }
 
   // Portfolio: "portfolio", "my portfolio", "balance", "solde"
-  if (/^(?:my\s+)?(?:portfolio|balance|wallet|solde)$/i.test(lower)) {
-    const result = await executeTool('get_portfolio', {}, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName && /^(?:my\s+)?(?:portfolio|balance|wallet|solde)$/i.test(lower)) {
+    directToolName = 'get_portfolio';
   }
 
   // Positions: "positions", "my positions"
-  if (/^(?:my\s+)?positions?$/i.test(lower)) {
-    const result = await executeTool('get_positions', {}, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName && /^(?:my\s+)?positions?$/i.test(lower)) {
+    directToolName = 'get_positions';
   }
 
   // Open position: "long sol 5x", "short btc 10x", "open long sol"
-  const posMatch = lower.match(/^(?:open\s+)?(long|short)\s+(sol|eth|btc)(?:\s+(\d+)x)?(?:\s+(\d+)%)?$/);
-  if (posMatch) {
-    const side = posMatch[1];
-    const asset = posMatch[2].toUpperCase();
-    const leverage = posMatch[3] ? parseInt(posMatch[3]) : 5;
-    const pct = posMatch[4] ? parseInt(posMatch[4]) : 25;
-    const result = await executeTool('open_position', {
-      market: `${asset}-PERP`,
-      side,
-      leverage,
-      percent_of_vault: pct,
-    }, toolCtx);
-    await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    return;
+  if (!directToolName) {
+    const posMatch = lower.match(/^(?:open\s+)?(long|short)\s+(sol|eth|btc)(?:\s+(\d+)x)?(?:\s+(\d+)%)?$/);
+    if (posMatch) {
+      directToolName = 'open_position';
+      directToolInput = {
+        market: `${posMatch[2].toUpperCase()}-PERP`,
+        side: posMatch[1],
+        leverage: posMatch[3] ? parseInt(posMatch[3]) : 5,
+        percent_of_vault: posMatch[4] ? parseInt(posMatch[4]) : 25,
+      };
+    }
   }
 
   // Close position: "close sol", "close btc", "close all"
-  const closeMatch = lower.match(/^close\s+(sol|eth|btc|all)$/);
-  if (closeMatch) {
-    if (closeMatch[1] === 'all') {
-      const result = await executeTool('close_all_positions', {}, toolCtx);
-      await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
-    } else {
-      const result = await executeTool('close_position', { market: `${closeMatch[1].toUpperCase()}-PERP` }, toolCtx);
-      await safeReply(ctx, result, { reply_markup: mainMenuKeyboard() });
+  if (!directToolName) {
+    const closeMatch = lower.match(/^close\s+(sol|eth|btc|all)$/);
+    if (closeMatch) {
+      directToolName = closeMatch[1] === 'all' ? 'close_all_positions' : 'close_position';
+      if (closeMatch[1] !== 'all') directToolInput = { market: `${closeMatch[1].toUpperCase()}-PERP` };
     }
-    return;
   }
 
   // News: "news", "headlines", "latest news"
-  if (/^(?:latest\s+)?(?:news|headlines)$/i.test(lower)) {
+  if (!directToolName && /^(?:latest\s+)?(?:news|headlines)$/i.test(lower)) {
     try {
       const feed = await fetchCryptoNews();
       if (feed.articles.length === 0) {
@@ -1270,6 +1253,39 @@ bot.on('message:text', async (ctx) => {
     } catch (err) {
       await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
     }
+    return;
+  }
+
+  // ── Execute matched tool + format with LLM ──
+  if (directToolName) {
+    const toolResult = await executeTool(directToolName, directToolInput, toolCtx);
+
+    // Try to get LLM to format the response naturally
+    if (llmConfig) {
+      try {
+        const formatPrompt = `The user said: "${text}"\n\nI executed the tool "${directToolName}" and got this result:\n\n${toolResult}\n\nRespond naturally in a short Telegram message. Include the key data from the result. Use Markdown. Be concise and friendly. If there's an error, explain clearly what to do.`;
+        const result = await callLLMWithTools(
+          llmConfig,
+          formatPrompt,
+          ctx.session,
+          connection,
+          wallet,
+        );
+        if (result) {
+          pushChatHistory(ctx.session, 'user', text);
+          pushChatHistory(ctx.session, 'assistant', result.content);
+          await safeReply(ctx, result.content, { reply_markup: mainMenuKeyboard() });
+          return;
+        }
+      } catch {
+        // LLM failed (rate limit, etc) — fall through to raw result
+      }
+    }
+
+    // Fallback: send raw tool result
+    pushChatHistory(ctx.session, 'user', text);
+    pushChatHistory(ctx.session, 'assistant', toolResult);
+    await safeReply(ctx, toolResult, { reply_markup: mainMenuKeyboard() });
     return;
   }
 
