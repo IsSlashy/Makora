@@ -138,6 +138,17 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       <span className="text-[9px] font-mono text-text-muted">
         Powered by Privy — email, phone, or Telegram login
       </span>
+
+      {/* Anonmesh branding */}
+      <a
+        href="https://x.com/anon0mesh"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 text-[10px] font-mono text-text-muted hover:text-cursed transition-colors mt-2"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <span>@anon0mesh</span>
+      </a>
     </div>
   );
 }
@@ -530,6 +541,15 @@ function TWADashboard() {
               {sentiment.direction.replace('_', ' ')}
             </span>
           )}
+          <a
+            href="https://x.com/anon0mesh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[8px] font-mono text-text-muted hover:text-cursed transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            @anon0mesh
+          </a>
         </div>
         <div className="flex items-center gap-2">
           {walletAddress && (
