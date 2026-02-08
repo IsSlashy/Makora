@@ -40,7 +40,7 @@ export const Header = ({ onSettingsOpen, llmModel, sentimentBias, tradingMode, o
                 src="/wheel.png"
                 alt="Makora"
                 className="w-8 h-8 invert opacity-80"
-                style={{ filter: 'invert(1) sepia(1) saturate(3) hue-rotate(10deg) brightness(0.85)' }}
+                style={{ filter: 'invert(1) sepia(1) saturate(3) hue-rotate(230deg) brightness(0.85)' }}
               />
               <h1 className="font-display text-2xl tracking-[0.3em] text-cursed-gradient">
                 MAKORA
