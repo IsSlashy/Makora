@@ -147,6 +147,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 function TWADashboard() {
   const { walletAddress, userId, authenticated, loading, login, logout, displayName } = useTWAWallet();
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const [showWelcome, setShowWelcome] = useState(false);
+  const prevAuthRef = useRef(false);
+
+  // Show welcome banner on first login during this session
+  useEffect(() => {
+    if (authenticated && !prevAuthRef.current) {
+      setShowWelcome(true);
+      const timer = setTimeout(() => setShowWelcome(false), 8000);
+      return () => clearTimeout(timer);
+    }
+    prevAuthRef.current = authenticated;
+  }, [authenticated]);
 
   // Data state
   const [positionData, setPositionData] = useState<PositionSnapshot | null>(null);
@@ -258,6 +270,30 @@ function TWADashboard() {
       case 'home':
         return (
           <>
+            {/* Welcome banner after first login */}
+            {showWelcome && (
+              <div className="px-3 pt-3">
+                <div
+                  className="cursed-card p-4 relative overflow-hidden"
+                  style={{ borderColor: '#d4a82940' }}
+                >
+                  <button
+                    onClick={() => setShowWelcome(false)}
+                    className="absolute top-2 right-3 text-text-muted text-xs hover:text-cursed"
+                  >
+                    x
+                  </button>
+                  <div className="text-[11px] font-mono font-bold text-cursed mb-1">
+                    Wallet Connected
+                  </div>
+                  <div className="text-[10px] font-mono text-text-muted leading-relaxed">
+                    {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Ready'}
+                    {' '} — Go back to the chat and tell Makora what you want to do: scan markets, trade, or invest.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Wheel */}
             <TheWheelTWA
               walletAddress={walletAddress}
