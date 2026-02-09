@@ -294,14 +294,22 @@ function TWADashboard() {
   }, []);
 
   // Fetch vault state from dashboard API (synced from bot)
+  // Check both user-specific and 'default' key (bot may use either)
   const fetchVault = useCallback(async () => {
     try {
-      const uid = userId || 'default';
-      const res = await fetch(`/api/vault?userId=${uid}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVaultData(data);
+      // Try user-specific first, then fallback to 'default'
+      for (const uid of [userId, 'default'].filter(Boolean)) {
+        const res = await fetch(`/api/vault?userId=${uid}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.balanceSol > 0) {
+            setVaultData(data);
+            return;
+          }
+        }
       }
+      // No vault data found
+      setVaultData({ balanceSol: 0, totalShielded: 0, totalUnshielded: 0 });
     } catch { /* silent */ }
   }, [userId]);
 
