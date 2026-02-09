@@ -1,7 +1,7 @@
 'use client';
 
-import { usePrivy } from '@privy-io/react-auth';
-import { useMemo } from 'react';
+import { usePrivy, useLoginWithTelegram } from '@privy-io/react-auth';
+import { useCallback, useMemo } from 'react';
 
 export interface MakoraUser {
   /** Privy user ID (e.g., 'did:privy:...') */
@@ -20,13 +20,37 @@ export interface MakoraUser {
   logout: () => Promise<void>;
 }
 
+/** Detect if running inside Telegram WebApp */
+function isTelegramWebApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  const tg = (window as any).Telegram?.WebApp;
+  // Check if the TWA SDK is loaded and we have platform info (present even when initData is empty)
+  return !!(tg && (tg.platform || tg.initData || tg.version));
+}
+
 /**
  * Combines Privy auth + embedded wallet into a single user context.
  * Uses user.linkedAccounts to find the Solana embedded wallet
  * (useWallets() only returns EVM wallets).
+ *
+ * Inside Telegram WebApp, uses useLoginWithTelegram for seamless
+ * auth (no popup needed — uses Telegram initData).
  */
 export function useUser(): MakoraUser {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, authenticated, user, login: privyLogin, logout } = usePrivy();
+  const { login: telegramLogin } = useLoginWithTelegram();
+
+  // In TWA context, use Telegram login (no popup). Otherwise, use generic login.
+  const login = useCallback(() => {
+    if (isTelegramWebApp()) {
+      telegramLogin().catch((err) => {
+        console.warn('[useUser] Telegram login failed, falling back to generic:', err);
+        privyLogin();
+      });
+    } else {
+      privyLogin();
+    }
+  }, [telegramLogin, privyLogin]);
 
   return useMemo(() => {
     // Find the Solana embedded wallet from linkedAccounts
