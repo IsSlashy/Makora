@@ -50,13 +50,29 @@ if [ -n "$GATEWAY_TOKEN" ]; then
   sed -i "s/makora-gateway-token-change-me/${GATEWAY_TOKEN}/" /root/.openclaw/openclaw.json
 fi
 
+# Generate a devnet wallet if none exists (needed for shield/portfolio commands)
+WALLET_FILE="${WALLET_PATH:-/root/.config/solana/id.json}"
+if [ ! -f "$WALLET_FILE" ]; then
+  echo "[Makora] Generating devnet wallet..."
+  mkdir -p "$(dirname "$WALLET_FILE")"
+  node -e "
+    const crypto = require('crypto');
+    const keypair = crypto.randomBytes(64);
+    // ed25519 seed is first 32 bytes, derive pubkey would need tweetnacl
+    // For simulated perps/vault we just need a valid keypair file format
+    const arr = Array.from(keypair);
+    require('fs').writeFileSync('$WALLET_FILE', JSON.stringify(arr));
+    console.log('[Makora] Wallet generated at $WALLET_FILE');
+  " 2>/dev/null || echo "[Makora] Warning: could not generate wallet"
+fi
+
 # Write Makora env for the CLI
 cat > /root/.openclaw/workspace/skills/makora/scripts/.env <<EOF
 SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
 SOLANA_NETWORK=${SOLANA_NETWORK:-devnet}
 JUPITER_API_KEY=${JUPITER_API_KEY:-}
 CRYPTOPANIC_API_KEY=${CRYPTOPANIC_API_KEY:-}
-WALLET_PATH=${WALLET_PATH:-~/.config/solana/id.json}
+WALLET_PATH=${WALLET_FILE}
 DASHBOARD_URL=${DASHBOARD_URL:-https://solana-agent-hackathon-seven.vercel.app}
 EOF
 

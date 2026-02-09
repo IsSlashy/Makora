@@ -461,18 +461,23 @@ async function main() {
 
     case 'portfolio': {
       const w = loadWallet();
-      if (!w) { console.log(JSON.stringify({ error: 'Wallet not configured. Set WALLET_PATH.' })); break; }
-      const [balance, prices] = await Promise.all([getBalance(w.publicKey), fetchPrices()]);
+      const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
+      let balance = 0;
+      let walletAddress = 'not-configured';
+      if (w) {
+        walletAddress = w.publicKey;
+        try { balance = await getBalance(w.publicKey); } catch {}
+      }
       const vault = getVault();
       const positions = getPositions();
       const totalCollateral = positions.reduce((s, p) => s + p.collateralUsd, 0);
       const totalPnl = positions.reduce((s, p) => s + (p.unrealizedPnl || 0), 0);
 
       console.log(JSON.stringify({
-        wallet: { address: w.publicKey, balanceSol: balance, balanceUsd: balance * solPrice },
-        vault: { balanceSol: vault.balanceSol, balanceUsd: vault.balanceSol * solPrice },
-        total: { sol: balance + vault.balanceSol, usd: (balance + vault.balanceSol) * solPrice },
+        wallet: { address: walletAddress, balanceSol: balance, balanceUsd: (balance * solPrice).toFixed(2) },
+        vault: { balanceSol: vault.balanceSol, balanceUsd: (vault.balanceSol * solPrice).toFixed(2) },
+        total: { sol: balance + vault.balanceSol, usd: ((balance + vault.balanceSol) * solPrice).toFixed(2) },
         solPrice,
         positions: { count: positions.length, totalCollateralUsd: totalCollateral, unrealizedPnlUsd: totalPnl },
         timestamp: new Date().toISOString(),
@@ -498,24 +503,16 @@ async function main() {
     case 'shield': {
       const amount = parseFloat(args[0]);
       if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: shield <amount_sol>' })); break; }
-      const w = loadWallet();
-      if (!w) { console.log(JSON.stringify({ error: 'Wallet not configured.' })); break; }
-      const balance = await getBalance(w.publicKey);
-      const reserve = 0.01;
-      if (amount > balance - reserve) {
-        console.log(JSON.stringify({ error: `Insufficient balance. Have ${balance.toFixed(4)} SOL, need ${amount} + ${reserve} reserve.` }));
-        break;
-      }
       const vault = shieldSol(amount);
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
       console.log(JSON.stringify({
         success: true,
         shielded: amount,
-        shieldedUsd: amount * solPrice,
+        shieldedUsd: (amount * solPrice).toFixed(2),
         vaultBalance: vault.balanceSol,
-        vaultBalanceUsd: vault.balanceSol * solPrice,
-        walletRemaining: balance - amount,
+        vaultBalanceUsd: (vault.balanceSol * solPrice).toFixed(2),
+        note: 'Simulated ZK shield — demo mode',
         timestamp: new Date().toISOString(),
       }));
       break;
