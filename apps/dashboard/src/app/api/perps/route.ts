@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *   { action: "open", position: {...} }
  *   { action: "close", market: "SOL-PERP" }
  *   { action: "update-prices", prices: { SOL: 84.5, ETH: 2040, BTC: 69600 } }
+ *   { action: "check-sl-tp", prices: { SOL: 84.5, ETH: 2040, BTC: 69600 } }
  */
 
 interface PerpPosition {
@@ -21,6 +22,16 @@ interface PerpPosition {
   unrealizedPnl: number;
   unrealizedPnlPct: number;
   openedAt: number;
+  stopLoss?: number;
+  takeProfit?: number;
+}
+
+interface ClosedBySlTp {
+  position: PerpPosition;
+  reason: 'stop_loss' | 'take_profit';
+  exitPrice: number;
+  pnlUsd: number;
+  pnlPct: number;
 }
 
 const PERPS_KEY = '__makora_perps_sync';
@@ -85,6 +96,8 @@ export async function POST(req: NextRequest) {
         unrealizedPnl: 0,
         unrealizedPnlPct: 0,
         openedAt: body.position?.openedAt || Date.now(),
+        stopLoss: body.position?.stopLoss ?? undefined,
+        takeProfit: body.position?.takeProfit ?? undefined,
       };
       store[userId].push(pos);
       return NextResponse.json({ success: true, position: pos, count: store[userId].length });
@@ -117,7 +130,70 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, positions: store[userId] });
     }
 
-    return NextResponse.json({ error: 'Invalid action. Use open, close, or update-prices.' }, { status: 400 });
+    if (action === 'check-sl-tp') {
+      const prices: Record<string, number> = body.prices || {};
+      const closedPositions: ClosedBySlTp[] = [];
+      const remaining: PerpPosition[] = [];
+
+      for (const pos of store[userId]) {
+        const token = pos.market.replace('-PERP', '');
+        const currentPrice = prices[token];
+
+        if (!currentPrice) {
+          remaining.push(pos);
+          continue;
+        }
+
+        let closeReason: 'stop_loss' | 'take_profit' | null = null;
+
+        // Check stop loss
+        if (pos.stopLoss != null) {
+          if (pos.side === 'long' && currentPrice <= pos.stopLoss) {
+            closeReason = 'stop_loss';
+          } else if (pos.side === 'short' && currentPrice >= pos.stopLoss) {
+            closeReason = 'stop_loss';
+          }
+        }
+
+        // Check take profit (only if not already stopped out)
+        if (!closeReason && pos.takeProfit != null) {
+          if (pos.side === 'long' && currentPrice >= pos.takeProfit) {
+            closeReason = 'take_profit';
+          } else if (pos.side === 'short' && currentPrice <= pos.takeProfit) {
+            closeReason = 'take_profit';
+          }
+        }
+
+        if (closeReason) {
+          const updated = computePnl(pos, currentPrice);
+          closedPositions.push({
+            position: updated,
+            reason: closeReason,
+            exitPrice: currentPrice,
+            pnlUsd: updated.unrealizedPnl,
+            pnlPct: updated.unrealizedPnlPct,
+          });
+        } else {
+          // Update price but keep position open
+          const updated = computePnl(pos, currentPrice);
+          Object.assign(pos, updated);
+          remaining.push(pos);
+        }
+      }
+
+      // Replace the user's positions with only the remaining open ones
+      store[userId] = remaining;
+
+      return NextResponse.json({
+        success: true,
+        closed: closedPositions,
+        closedCount: closedPositions.length,
+        remaining: remaining.length,
+        positions: remaining,
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action. Use open, close, update-prices, or check-sl-tp.' }, { status: 400 });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

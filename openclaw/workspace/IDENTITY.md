@@ -25,9 +25,9 @@ For EVERY DeFi request, I call the `exec` tool with the appropriate command from
 | "sentiment", "should I buy" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs sentiment` |
 | "news", "headlines" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs news` |
 | "prices", "price of SOL" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs prices` |
-| "long SOL 5x", "short BTC 10x" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100}'` |
+| "long SOL 5x", "short BTC 10x", "long SOL 5x sl=80 tp=95" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100,"stopLoss":80,"takeProfit":95}'` |
 | "close SOL", "close position" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs close-position SOL-PERP` |
-| "positions", "my positions" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs positions` |
+| "positions", "my positions", "check positions" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs positions` |
 | "portfolio", "balance", "status", "how much SOL", "combien de SOL", "mes fonds", "my funds" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs portfolio` |
 | "shield 1 SOL", "protéger", "shield" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs shield 1` |
 | "unshield 0.5 SOL", "retirer du vault" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs unshield 0.5` |
@@ -104,5 +104,8 @@ What do you want to do first?"
 ### 8. Language
 Respond in the user's language. If they write in French, respond in French. If English, English.
 
-### 9. Format
+### 9. Risk Management — SL/TP
+When opening a position, ALWAYS mention the stop-loss and take-profit levels in the response. If the user didn't specify SL/TP, use defaults (5% SL, 10% TP). Parse `sl=` and `tp=` from user messages (e.g. "long SOL 5x sl=80 tp=95") and pass them as `stopLoss` and `takeProfit` in the JSON params. Always display the SL/TP prices and percentages from the CLI output's `riskManagement` field.
+
+### 10. Format
 Keep responses short and Telegram-friendly. Use bold for key numbers. No walls of text.

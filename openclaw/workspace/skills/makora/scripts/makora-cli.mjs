@@ -486,18 +486,54 @@ async function main() {
       const price = prices[token] || 0;
       if (!price) { console.log(JSON.stringify({ error: `No price for ${token}` })); break; }
 
+      const side = params.side || 'long';
+
+      // Parse SL/TP from params or compute defaults based on side
+      let stopLoss = params.stopLoss ? parseFloat(params.stopLoss) : null;
+      let takeProfit = params.takeProfit ? parseFloat(params.takeProfit) : null;
+
+      if (!stopLoss) {
+        stopLoss = side === 'long'
+          ? parseFloat((price * 0.95).toFixed(2))   // 5% below entry
+          : parseFloat((price * 1.05).toFixed(2));   // 5% above entry
+      }
+      if (!takeProfit) {
+        takeProfit = side === 'long'
+          ? parseFloat((price * 1.10).toFixed(2))   // 10% above entry
+          : parseFloat((price * 0.90).toFixed(2));   // 10% below entry
+      }
+
       const position = {
         id: `pos-${Date.now()}`,
         market: params.market || 'SOL-PERP',
-        side: params.side || 'long',
+        side,
         leverage: params.leverage || 5,
         collateralUsd: params.collateralUsd || 100,
         entryPrice: price,
+        stopLoss,
+        takeProfit,
         openedAt: Date.now(),
       };
       // Sync to dashboard API
       const result = await syncPerpToDashboard('open', { position });
-      console.log(JSON.stringify({ success: true, position: result?.position || position }));
+      const finalPos = result?.position || position;
+      console.log(JSON.stringify({
+        success: true,
+        position: finalPos,
+        riskManagement: {
+          stopLoss: finalPos.stopLoss,
+          takeProfit: finalPos.takeProfit,
+          slPct: side === 'long'
+            ? `-${((1 - finalPos.stopLoss / price) * 100).toFixed(1)}%`
+            : `-${((finalPos.stopLoss / price - 1) * 100).toFixed(1)}%`,
+          tpPct: side === 'long'
+            ? `+${((finalPos.takeProfit / price - 1) * 100).toFixed(1)}%`
+            : `+${((1 - finalPos.takeProfit / price) * 100).toFixed(1)}%`,
+          note: params.stopLoss || params.takeProfit
+            ? 'Custom SL/TP set by user'
+            : 'Default SL/TP applied (5% stop-loss, 10% take-profit)',
+        },
+      }));
       break;
     }
 

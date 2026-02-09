@@ -74,7 +74,15 @@ JUPITER_API_KEY=${JUPITER_API_KEY:-}
 CRYPTOPANIC_API_KEY=${CRYPTOPANIC_API_KEY:-}
 WALLET_PATH=${WALLET_FILE}
 DASHBOARD_URL=${DASHBOARD_URL:-https://solana-agent-hackathon-seven.vercel.app}
+TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
 EOF
+
+# Start the price monitor in background (SL/TP checking, notifications)
+echo "[Makora] Starting price monitor (background)..."
+node /root/.openclaw/workspace/skills/makora/scripts/price-monitor.mjs &
+MONITOR_PID=$!
+echo "[Makora] Price monitor started (PID: $MONITOR_PID)"
 
 echo "[Makora] Starting OpenClaw gateway on port ${PORT:-18789}..."
 echo "[Makora] Model: openai/gpt-4o"

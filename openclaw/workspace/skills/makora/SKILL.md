@@ -58,7 +58,7 @@ node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs <command> [a
 
 | Command | Description | When to use |
 |---------|-------------|-------------|
-| `open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100}'` | Open a leveraged perp position | User says "long SOL", "short BTC 10x", "open a position" |
+| `open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100,"stopLoss":80,"takeProfit":95}'` | Open a leveraged perp position with optional SL/TP | User says "long SOL", "short BTC 10x", "long SOL 5x sl=80 tp=95" |
 | `close-position SOL-PERP` | Close an open position | User says "close SOL", "close my position" |
 | `positions` | List all open positions with P&L | User asks "my positions", "what's open" |
 
@@ -117,6 +117,20 @@ The news module scores headlines using keyword analysis:
 - **Perps are simulated** (demo mode) but use real Jupiter prices
 - Always show the entry price and position details after opening
 - Always show P&L when closing
+- **SL/TP:** Always mention stop-loss and take-profit levels when opening a position. If the user didn't specify, defaults are applied automatically (5% SL, 10% TP).
+- Parse `sl=` and `tp=` from natural language (e.g. "long SOL 5x sl=80 tp=95") and pass as `stopLoss`/`takeProfit` in the JSON params.
+
+## Automatic Risk Management
+
+Positions have built-in stop-loss and take-profit protection:
+
+- **Default SL/TP:** If the user does not specify, the CLI sets:
+  - **Long positions:** SL = entry price * 0.95 (5% below), TP = entry price * 1.10 (10% above)
+  - **Short positions:** SL = entry price * 1.05 (5% above), TP = entry price * 0.90 (10% below)
+- **Custom SL/TP:** Users can override defaults with `sl=<price>` and `tp=<price>` syntax
+- **Price monitor:** Checks prices every 30 seconds against SL/TP levels
+- **Auto-close:** Positions are automatically closed when SL or TP is hit, with a Telegram notification sent to the user
+- **Learning system:** Makora adjusts default SL/TP percentages over time based on trade history and market volatility — winning trades widen TP targets, losing trades tighten SL levels
 
 ## ZK Vault
 
@@ -144,7 +158,10 @@ Makora continuously monitors:
 → Run `scan`, present the score, top signals, 3 headlines, and give a clear BUY/SELL/HOLD recommendation
 
 **User:** "Long SOL 10x"
-→ Run `open-position '{"market":"SOL-PERP","side":"long","leverage":10,"collateralUsd":100}'`
+→ Run `open-position '{"market":"SOL-PERP","side":"long","leverage":10,"collateralUsd":100}'` — defaults: SL at -5%, TP at +10%
+
+**User:** "Long SOL 5x sl=80 tp=95"
+→ Run `open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100,"stopLoss":80,"takeProfit":95}'` — custom SL/TP
 
 **User:** "What's in the news?"
 → Run `news`, show top 5 headlines with [+]/[-]/[=] icons and the overall bias
