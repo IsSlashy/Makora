@@ -227,6 +227,7 @@ function TWADashboard() {
   const [positionData, setPositionData] = useState<PositionSnapshot | null>(null);
   const [sentiment, setSentiment] = useState<SentimentReport | null>(null);
   const [polymarket, setPolymarket] = useState<PolymarketData | null>(null);
+  const [vaultData, setVaultData] = useState<{ balanceSol: number; totalShielded: number; totalUnshielded: number } | null>(null);
   const [loadingState, setLoadingState] = useState({ positions: true, sentiment: true, polymarket: true });
 
   // Decision tick: incremented whenever positions or sentiment change
@@ -292,13 +293,25 @@ function TWADashboard() {
     setLoadingState(prev => ({ ...prev, polymarket: false }));
   }, []);
 
+  // Fetch vault state from dashboard API (synced from bot)
+  const fetchVault = useCallback(async () => {
+    try {
+      const uid = userId || 'default';
+      const res = await fetch(`/api/vault?userId=${uid}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVaultData(data);
+      }
+    } catch { /* silent */ }
+  }, [userId]);
+
   // Initial fetch — tick once when first data loads
   useEffect(() => {
     if (!authenticated) return;
-    Promise.all([fetchPositions(), fetchSentiment(), fetchPolymarket()]).then(() => {
+    Promise.all([fetchPositions(), fetchSentiment(), fetchPolymarket(), fetchVault()]).then(() => {
       setDecisionTick(1); // Initial load = first tick
     });
-  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket]);
+  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket, fetchVault]);
 
   // Polling
   useEffect(() => {
@@ -306,12 +319,14 @@ function TWADashboard() {
     const posInterval = setInterval(fetchPositions, 5000);
     const sentInterval = setInterval(fetchSentiment, 60000);
     const polyInterval = setInterval(fetchPolymarket, 60000);
+    const vaultInterval = setInterval(fetchVault, 10000);
     return () => {
       clearInterval(posInterval);
       clearInterval(sentInterval);
       clearInterval(polyInterval);
+      clearInterval(vaultInterval);
     };
-  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket]);
+  }, [authenticated, fetchPositions, fetchSentiment, fetchPolymarket, fetchVault]);
 
   // ─── Loading state ─────────────────────────────────────────────────────
   if (loading) {
@@ -472,6 +487,24 @@ function TWADashboard() {
               totalValueSol={positionData?.totalValueSol ?? 0}
               loading={loadingState.positions}
             />
+
+            {/* ZK Vault Card */}
+            {(vaultData && vaultData.balanceSol > 0) && (
+              <div className="cursed-card p-4">
+                <div className="section-title mb-3">ZK SHIELDED VAULT</div>
+                <div className="flex items-baseline gap-2 mb-3">
+                  <span className="text-xl font-bold font-mono" style={{ color: '#00E5FF' }}>
+                    {vaultData.balanceSol.toFixed(4)}
+                  </span>
+                  <span className="text-text-muted text-xs font-mono">SOL shielded</span>
+                </div>
+                <div className="flex gap-4 text-xs font-mono text-text-muted">
+                  <span>Total shielded: {vaultData.totalShielded.toFixed(4)}</span>
+                  <span>Total unshielded: {vaultData.totalUnshielded.toFixed(4)}</span>
+                </div>
+              </div>
+            )}
+
             <PositionsPanelTWA
               positions={positionData?.perpPositions ?? []}
               loading={loadingState.positions}

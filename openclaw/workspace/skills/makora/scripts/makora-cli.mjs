@@ -44,6 +44,20 @@ loadEnv(resolve(scriptDir, '.env'));
 const PROJECT_ROOT = process.env.MAKORA_PROJECT_ROOT || 'P:\\solana-agent-hackathon';
 loadEnv(resolve(PROJECT_ROOT, 'apps', 'telegram', '.env'));
 
+const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://solana-agent-hackathon-seven.vercel.app';
+
+/** Sync vault action to dashboard API so the TWA can display vault balance */
+async function syncVaultToDashboard(action, amount) {
+  try {
+    await fetch(`${DASHBOARD_URL}/api/vault`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'default', action, amount }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch { /* silent — dashboard sync is best-effort */ }
+}
+
 // ─── Standalone implementations (use same APIs as our modules) ──────────────
 
 async function fetchPrices() {
@@ -506,6 +520,8 @@ async function main() {
       const vault = shieldSol(amount);
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
+      // Sync vault state to dashboard API
+      await syncVaultToDashboard('shield', amount);
       console.log(JSON.stringify({
         success: true,
         shielded: amount,
@@ -523,6 +539,8 @@ async function main() {
       if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: unshield <amount_sol>' })); break; }
       const result = unshieldSol(amount);
       if (result.error) { console.log(JSON.stringify({ error: result.error })); break; }
+      // Sync vault state to dashboard API
+      await syncVaultToDashboard('unshield', amount);
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
       console.log(JSON.stringify({
