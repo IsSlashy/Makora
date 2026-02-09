@@ -14,6 +14,7 @@ interface PortfolioCardTWAProps {
   allocation: Array<{ symbol: string; pct: number }>;
   totalValueSol: number;
   loading?: boolean;
+  vaultBalanceSol?: number;
 }
 
 export const PortfolioCardTWA = ({
@@ -22,7 +23,17 @@ export const PortfolioCardTWA = ({
   allocation,
   totalValueSol,
   loading,
+  vaultBalanceSol = 0,
 }: PortfolioCardTWAProps) => {
+  // Subtract vault balance from available SOL
+  const availableSol = Math.max(0, totalValueSol - vaultBalanceSol);
+  const adjustedPositions = positions.map(p => {
+    if (p.symbol === 'SOL') {
+      const adjustedAmount = Math.max(0, p.uiAmount - vaultBalanceSol);
+      return { ...p, uiAmount: adjustedAmount };
+    }
+    return p;
+  });
   if (loading) {
     return (
       <div className="cursed-card p-4">
@@ -36,22 +47,28 @@ export const PortfolioCardTWA = ({
     <div className="cursed-card p-4">
       <div className="section-title mb-3">PORTFOLIO</div>
 
-      {/* Total value */}
-      <div className="flex items-baseline gap-2 mb-4">
+      {/* Available balance (excludes vault) */}
+      <div className="flex items-baseline gap-2 mb-1">
         <span className="text-2xl font-bold font-mono text-cursed-gradient" style={{
           background: 'linear-gradient(135deg, #00B4D8 0%, #00E5FF 40%, #67EFFF 60%, #00E5FF 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
         }}>
-          {totalValueSol.toFixed(4)}
+          {availableSol.toFixed(4)}
         </span>
-        <span className="text-text-muted text-xs font-mono">SOL</span>
+        <span className="text-text-muted text-xs font-mono">SOL available</span>
       </div>
+      {vaultBalanceSol > 0 && (
+        <div className="text-[10px] font-mono text-text-muted mb-4">
+          + {vaultBalanceSol.toFixed(4)} SOL in ZK vault = {totalValueSol.toFixed(4)} SOL total
+        </div>
+      )}
+      {vaultBalanceSol === 0 && <div className="mb-3" />}
 
       {/* Token balances */}
       <div className="space-y-2">
-        {positions.map(pos => {
+        {adjustedPositions.map(pos => {
           const alloc = allocation.find(a => a.symbol === pos.symbol);
           const pct = alloc?.pct ?? 0;
 

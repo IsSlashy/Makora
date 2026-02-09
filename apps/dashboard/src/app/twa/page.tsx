@@ -542,6 +542,7 @@ function TWADashboard() {
               allocation={positionData?.allocation ?? []}
               totalValueSol={positionData?.totalValueSol ?? 0}
               loading={loadingState.positions}
+              vaultBalanceSol={vaultData?.balanceSol ?? 0}
             />
 
             {/* ZK Vault Card — always visible */}
