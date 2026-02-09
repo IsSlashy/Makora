@@ -1281,6 +1281,45 @@ bot.on('message:text', async (ctx) => {
     }
   }
 
+  // Scan: "scan", "market scan", "scan market"
+  if (!directToolName && /^(?:market\s+)?scan(?:\s+(?:market|the\s+market))?$/i.test(lower)) {
+    await ctx.reply('Running market scan...');
+    try {
+      const message = await runSingleScan({ bot, connection, wallet, llmConfig });
+      if (message.length <= 4000) {
+        await ctx.reply(message, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }).catch(() =>
+          ctx.reply(message, { reply_markup: mainMenuKeyboard(ctx.chat.id) })
+        );
+      } else {
+        const chunks = splitMessage(message, 4000);
+        for (const chunk of chunks) {
+          await ctx.reply(chunk, { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }).catch(() =>
+            ctx.reply(chunk, { reply_markup: mainMenuKeyboard(ctx.chat.id) })
+          );
+        }
+      }
+    } catch (err) {
+      await ctx.reply(`Scan error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return;
+  }
+
+  // Sentiment: "sentiment", "market sentiment"
+  if (!directToolName && /^(?:market\s+)?sentiment$/i.test(lower)) {
+    await ctx.reply('Analyzing sentiment...');
+    try {
+      const report = await analyzeSentiment();
+      const msg = `*Market Sentiment*\n\n` +
+        `Direction: *${report.direction.toUpperCase()}*\n` +
+        `Score: *${report.overallScore}/100*\n\n` +
+        report.signals.map((s: any) => `${s.source}: ${s.signal} (${s.score})`).join('\n');
+      await safeReply(ctx, msg, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
+    } catch (err) {
+      await ctx.reply(`Sentiment error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return;
+  }
+
   // News: "news", "headlines", "latest news"
   if (!directToolName && /^(?:latest\s+)?(?:news|headlines)$/i.test(lower)) {
     try {
