@@ -1130,8 +1130,43 @@ bot.on('message:text', async (ctx) => {
 
   const text = ctx.message.text;
 
-  // Skip if it's a command
-  if (text.startsWith('/')) return;
+  // Fallback command handling — bot.command() should catch these first, but
+  // some Telegram clients/versions may not send bot_command entities, causing
+  // the message to fall through to this handler instead.
+  if (text.startsWith('/')) {
+    const cmd = text.split(/\s|@/)[0].toLowerCase();
+    if (cmd === '/start') {
+      if (ctx.from) {
+        registerUserChat(ctx.from.id, ctx.chat.id);
+        setTwaChatId(ctx.chat.id);
+      }
+      await ctx.reply(
+        `*Makora — Autonomous DeFi Trading Agent* \u{1F988}\n\n` +
+        `Talk to me in natural language or use the buttons below.\n\n` +
+        `*Try:*\n` +
+        `"Long SOL 5x"\n` +
+        `"Scan the market"\n` +
+        `"Shield 1 SOL"`,
+        { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }
+      );
+      await ctx.reply('\u{1F4F1} Open the full dashboard:', {
+        reply_markup: miniAppKeyboard(wallet.publicKey.toBase58(), ctx.chat.id),
+      });
+      return;
+    }
+    if (cmd === '/app') {
+      if (ctx.from) {
+        registerUserChat(ctx.from.id, ctx.chat.id);
+        setTwaChatId(ctx.chat.id);
+      }
+      await ctx.reply('Open the Makora dashboard:', {
+        reply_markup: miniAppKeyboard(wallet.publicKey.toBase58(), ctx.chat.id),
+      });
+      return;
+    }
+    // Unknown command — ignore
+    return;
+  }
 
   // ── Auto-detect API key paste ──
   const trimmed = text.trim();
@@ -1326,8 +1361,23 @@ bot.on('message:text', async (ctx) => {
         }
         return;
       }
+
+      // LLM returned null — API error
+      await ctx.reply(
+        `LLM temporarily unavailable. Try again or use direct commands:\n` +
+        `- "long sol 5x" / "short btc 10x"\n` +
+        `- "shield 1 sol" / "vault"\n` +
+        `- "scan" / "sentiment"`,
+        { reply_markup: mainMenuKeyboard(ctx.chat.id) }
+      );
+      return;
     } catch (err) {
       console.error('[LLM] Error:', err);
+      await ctx.reply(
+        `LLM error. Try again or use direct commands.`,
+        { reply_markup: mainMenuKeyboard(ctx.chat.id) }
+      );
+      return;
     }
   }
 
