@@ -252,34 +252,30 @@ function TWADashboard() {
         const data: PositionSnapshot = await res.json();
 
         // Also fetch bot-synced perp positions from /api/perps
+        // Check BOTH user-specific AND 'default' userId (bot uses 'default')
         try {
-          const uid = userId || 'default';
-          const perpsRes = await fetch(`/api/perps?userId=${uid}`);
-          if (!perpsRes.ok) {
-            const defaultRes = await fetch('/api/perps?userId=default');
-            if (defaultRes.ok) {
-              const botPerps = await defaultRes.json();
-              if (botPerps.positions?.length > 0) {
-                data.perpPositions = [...(data.perpPositions || []), ...botPerps.positions];
-                data.perpSummary = {
-                  count: data.perpPositions.length,
-                  totalCollateral: (data.perpSummary?.totalCollateral || 0) + (botPerps.summary?.totalCollateral || 0),
-                  totalExposure: (data.perpSummary?.totalExposure || 0) + (botPerps.summary?.totalExposure || 0),
-                  totalUnrealizedPnl: (data.perpSummary?.totalUnrealizedPnl || 0) + (botPerps.summary?.totalUnrealizedPnl || 0),
-                };
+          const uidsToCheck = userId && userId !== 'default' ? [userId, 'default'] : ['default'];
+          for (const uid of uidsToCheck) {
+            try {
+              const perpsRes = await fetch(`/api/perps?userId=${uid}`);
+              if (perpsRes.ok) {
+                const botPerps = await perpsRes.json();
+                if (botPerps.positions?.length > 0) {
+                  // Avoid duplicates by checking IDs
+                  const existingIds = new Set((data.perpPositions || []).map((p: PerpPosition) => p.id));
+                  const newPositions = botPerps.positions.filter((p: PerpPosition) => !existingIds.has(p.id));
+                  if (newPositions.length > 0) {
+                    data.perpPositions = [...(data.perpPositions || []), ...newPositions];
+                    data.perpSummary = {
+                      count: data.perpPositions.length,
+                      totalCollateral: data.perpPositions.reduce((s: number, p: PerpPosition) => s + p.collateralUsd, 0),
+                      totalExposure: data.perpPositions.reduce((s: number, p: PerpPosition) => s + p.collateralUsd * p.leverage, 0),
+                      totalUnrealizedPnl: data.perpPositions.reduce((s: number, p: PerpPosition) => s + (p.unrealizedPnl || 0), 0),
+                    };
+                  }
+                }
               }
-            }
-          } else {
-            const botPerps = await perpsRes.json();
-            if (botPerps.positions?.length > 0) {
-              data.perpPositions = [...(data.perpPositions || []), ...botPerps.positions];
-              data.perpSummary = {
-                count: data.perpPositions.length,
-                totalCollateral: (data.perpSummary?.totalCollateral || 0) + (botPerps.summary?.totalCollateral || 0),
-                totalExposure: (data.perpSummary?.totalExposure || 0) + (botPerps.summary?.totalExposure || 0),
-                totalUnrealizedPnl: (data.perpSummary?.totalUnrealizedPnl || 0) + (botPerps.summary?.totalUnrealizedPnl || 0),
-              };
-            }
+            } catch { /* silent per-uid fetch */ }
           }
         } catch { /* silent — bot perps fetch is best-effort */ }
 
