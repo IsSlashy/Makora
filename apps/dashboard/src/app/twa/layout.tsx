@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import '../globals.css';
 
+// Prevent static pre-rendering — PrivyProvider requires browser APIs
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
