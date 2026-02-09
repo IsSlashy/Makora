@@ -21,6 +21,10 @@ RUN mkdir -p /root/.openclaw/workspace/skills/makora/scripts \
 COPY openclaw.json /root/.openclaw/openclaw.json
 COPY workspace/ /root/.openclaw/workspace/
 
+# Make skill bins executable
+RUN chmod +x /root/.openclaw/workspace/skills/makora/bins/* 2>/dev/null || true
+RUN chmod +x /root/.openclaw/workspace/skills/makora/scripts/*.mjs 2>/dev/null || true
+
 # Write .env from Railway env vars at runtime
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -1,0 +1,3 @@
+#!/bin/bash
+# Makora CLI wrapper — auto-discovered by OpenClaw via skills/makora/bins/
+exec node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs "$@"
