@@ -83,15 +83,20 @@ export function miniAppKeyboard(walletPubkey?: string, chatId?: number): InlineK
  * Row 1: Core market actions
  * Row 2: Trading actions
  * Row 3: Dashboard (webApp) + Settings
+ *
+ * @param chatId - Optional per-user chatId to embed in the Dashboard URL.
+ *                 When provided, overrides the module-level _twaUrl for this keyboard instance.
  */
-export function mainMenuKeyboard(): Keyboard {
+export function mainMenuKeyboard(chatId?: number): Keyboard {
   const kb = new Keyboard()
     .text('\u{1F4CA} Status').text('\u{1F4C8} Scan').text('\u{1F9E0} Sentiment').row()
     .text('\u{1F4BC} Positions').text('\u{1F916} Auto').text('\u{1F3AF} Strategy').row()
     .text('\u{1F4F0} News');
 
-  if (_twaUrl) {
-    kb.webApp('\u{1F4F1} Dashboard', _twaUrl);
+  // Prefer per-user chatId URL, fall back to module-level _twaUrl
+  const dashUrl = chatId ? `${DASHBOARD_URL}/twa?chatId=${chatId}` : _twaUrl;
+  if (dashUrl) {
+    kb.webApp('\u{1F4F1} Dashboard', dashUrl);
   }
 
   kb.text('\u{2699}\uFE0F Settings');

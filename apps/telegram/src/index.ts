@@ -256,7 +256,7 @@ bot.command('start', async (ctx) => {
     `"Long SOL 5x"\n` +
     `"Scan the market"\n` +
     `"Shield 1 SOL"`,
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }
   );
 
   // Dashboard mini-app button
@@ -268,7 +268,10 @@ bot.command('start', async (ctx) => {
 // /menu removed — persistent keyboard is always visible
 
 bot.command('app', async (ctx) => {
-  if (ctx.from) registerUserChat(ctx.from.id, ctx.chat.id);
+  if (ctx.from) {
+    registerUserChat(ctx.from.id, ctx.chat.id);
+    setTwaChatId(ctx.chat.id);
+  }
   await ctx.reply('Open the Makora dashboard:', {
     reply_markup: miniAppKeyboard(wallet.publicKey.toBase58(), ctx.chat.id),
   });
@@ -1121,7 +1124,7 @@ bot.hears(/^\u{1F4F0} News$/u, async (ctx) => {
 
 bot.on('message:text', async (ctx) => {
   if (!agent) {
-    await ctx.reply('Agent not initialized. Please wait...', { reply_markup: mainMenuKeyboard() });
+    await ctx.reply('Agent not initialized. Please wait...', { reply_markup: mainMenuKeyboard(ctx.chat.id) });
     return;
   }
 
@@ -1140,7 +1143,7 @@ bot.on('message:text', async (ctx) => {
     ctx.session.pendingLLMProvider = undefined;
     await ctx.reply(
       `LLM *enabled*: ${provider}\nModel: default\n\n_Try: "What's my portfolio?"_`,
-      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }
     );
     return;
   }
@@ -1151,7 +1154,7 @@ bot.on('message:text', async (ctx) => {
     ctx.session.pendingLLMProvider = undefined;
     await ctx.reply(
       `LLM *enabled*: anthropic (auto-detected)\nModel: default\n\n_Try: "What's my portfolio?"_`,
-      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }
     );
     return;
   }
@@ -1161,7 +1164,7 @@ bot.on('message:text', async (ctx) => {
     ctx.session.pendingLLMProvider = undefined;
     await ctx.reply(
       `LLM *enabled*: openai (auto-detected)\nModel: default\n\n_Try: "What's my portfolio?"_`,
-      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+      { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(ctx.chat.id) }
     );
     return;
   }
@@ -1252,7 +1255,7 @@ bot.on('message:text', async (ctx) => {
         return;
       }
       const msg = formatNewsForDisplay(feed);
-      await safeReply(ctx, msg, { reply_markup: mainMenuKeyboard() });
+      await safeReply(ctx, msg, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
     } catch (err) {
       await ctx.reply(`News error: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -1277,7 +1280,7 @@ bot.on('message:text', async (ctx) => {
         if (result) {
           pushChatHistory(ctx.session, 'user', text);
           pushChatHistory(ctx.session, 'assistant', result.content);
-          await safeReply(ctx, result.content, { reply_markup: mainMenuKeyboard() });
+          await safeReply(ctx, result.content, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
           return;
         }
       } catch {
@@ -1288,7 +1291,7 @@ bot.on('message:text', async (ctx) => {
     // Fallback: send raw tool result
     pushChatHistory(ctx.session, 'user', text);
     pushChatHistory(ctx.session, 'assistant', toolResult);
-    await safeReply(ctx, toolResult, { reply_markup: mainMenuKeyboard() });
+    await safeReply(ctx, toolResult, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
     return;
   }
 
@@ -1308,7 +1311,7 @@ bot.on('message:text', async (ctx) => {
         pushChatHistory(ctx.session, 'assistant', result.content);
 
         const content = result.content;
-        const kb = mainMenuKeyboard();
+        const kb = mainMenuKeyboard(ctx.chat.id);
         if (content.length <= 4000) {
           await ctx.reply(content, { parse_mode: 'Markdown', reply_markup: kb }).catch(() =>
             ctx.reply(content, { reply_markup: kb })
@@ -1341,15 +1344,15 @@ bot.on('message:text', async (ctx) => {
         `- "long sol 5x" / "short btc 10x"\n` +
         `- "close sol" / "close all"\n\n` +
         `${llmConfig ? '' : 'Tip: Set LLM API key in Settings for intelligent conversations.'}`,
-        { reply_markup: mainMenuKeyboard() }
+        { reply_markup: mainMenuKeyboard(ctx.chat.id) }
       );
       return;
     }
 
     const response = await agent.executeCommand(text);
-    await ctx.reply(`Agent: ${response}`, { reply_markup: mainMenuKeyboard() });
+    await ctx.reply(`Agent: ${response}`, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
   } catch (err) {
-    await ctx.reply(`Error: ${err instanceof Error ? err.message : String(err)}`, { reply_markup: mainMenuKeyboard() });
+    await ctx.reply(`Error: ${err instanceof Error ? err.message : String(err)}`, { reply_markup: mainMenuKeyboard(ctx.chat.id) });
   }
 });
 

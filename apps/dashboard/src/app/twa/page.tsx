@@ -173,6 +173,9 @@ function TWADashboard() {
     prevAuthRef.current = authenticated;
   }, [authenticated]);
 
+  // Track whether bot was notified (for UI feedback)
+  const [botNotified, setBotNotified] = useState<boolean | null>(null);
+
   // Notify Telegram bot when wallet becomes available (separate from welcome banner)
   useEffect(() => {
     if (!authenticated || !walletAddress || notifiedRef.current) return;
@@ -180,10 +183,30 @@ function TWADashboard() {
 
     const tgWebApp = (window as any).Telegram?.WebApp;
     const tgUser = tgWebApp?.initDataUnsafe?.user;
-    // Try Telegram WebApp context first, then URL param as fallback
+
+    // Parse initData raw string as additional fallback (some TG clients
+    // populate initData but leave initDataUnsafe empty)
+    let initDataUserId: number | null = null;
+    try {
+      const raw = tgWebApp?.initData;
+      if (raw && typeof raw === 'string') {
+        const params = new URLSearchParams(raw);
+        const userJson = params.get('user');
+        if (userJson) {
+          const parsed = JSON.parse(userJson);
+          if (parsed?.id) initDataUserId = Number(parsed.id);
+        }
+        if (!initDataUserId) {
+          const chatIdParam = params.get('chat_id');
+          if (chatIdParam) initDataUserId = Number(chatIdParam);
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
+    // Try Telegram WebApp context first, then initData, then URL param as fallback
     const urlChatId = new URLSearchParams(window.location.search).get('chatId');
-    const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id || (urlChatId ? Number(urlChatId) : null);
-    console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, urlChatId, webApp: !!tgWebApp, wallet: walletAddress.slice(0, 8) });
+    const chatId = tgUser?.id || tgWebApp?.initDataUnsafe?.chat?.id || initDataUserId || (urlChatId ? Number(urlChatId) : null);
+    console.log('[TWA] notify check:', { chatId, tgUser: !!tgUser, initDataUserId, urlChatId, webApp: !!tgWebApp, wallet: walletAddress.slice(0, 8) });
 
     if (chatId) {
       fetch('/api/twa/notify', {
@@ -192,10 +215,11 @@ function TWADashboard() {
         body: JSON.stringify({ telegramUserId: chatId, walletAddress }),
       })
         .then(r => r.json())
-        .then(d => console.log('[TWA] notify result:', d))
-        .catch(e => console.error('[TWA] notify error:', e));
+        .then(d => { console.log('[TWA] notify result:', d); setBotNotified(d.ok === true); })
+        .catch(e => { console.error('[TWA] notify error:', e); setBotNotified(false); });
     } else {
       console.warn('[TWA] No Telegram chatId found — not opened from Telegram?');
+      setBotNotified(false);
     }
   }, [authenticated, walletAddress]);
 
@@ -330,7 +354,11 @@ function TWADashboard() {
                   </div>
                   <div className="text-[10px] font-mono text-text-muted leading-relaxed">
                     {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Ready'}
-                    {' '} — Go back to the chat and tell Makora what you want to do: scan markets, trade, or invest.
+                    {botNotified === true
+                      ? ' — Check the chat, Makora is ready to trade!'
+                      : botNotified === false
+                        ? ' — Go back to the chat and type /start to link your wallet, then reopen the Dashboard.'
+                        : ' — Linking to Makora...'}
                   </div>
                 </div>
               </div>
