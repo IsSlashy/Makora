@@ -247,6 +247,39 @@ function TWADashboard() {
       const res = await fetch(`/api/agent/positions?${params}`);
       if (res.ok) {
         const data: PositionSnapshot = await res.json();
+
+        // Also fetch bot-synced perp positions from /api/perps
+        try {
+          const uid = userId || 'default';
+          const perpsRes = await fetch(`/api/perps?userId=${uid}`);
+          if (!perpsRes.ok) {
+            const defaultRes = await fetch('/api/perps?userId=default');
+            if (defaultRes.ok) {
+              const botPerps = await defaultRes.json();
+              if (botPerps.positions?.length > 0) {
+                data.perpPositions = [...(data.perpPositions || []), ...botPerps.positions];
+                data.perpSummary = {
+                  count: data.perpPositions.length,
+                  totalCollateral: (data.perpSummary?.totalCollateral || 0) + (botPerps.summary?.totalCollateral || 0),
+                  totalExposure: (data.perpSummary?.totalExposure || 0) + (botPerps.summary?.totalExposure || 0),
+                  totalUnrealizedPnl: (data.perpSummary?.totalUnrealizedPnl || 0) + (botPerps.summary?.totalUnrealizedPnl || 0),
+                };
+              }
+            }
+          } else {
+            const botPerps = await perpsRes.json();
+            if (botPerps.positions?.length > 0) {
+              data.perpPositions = [...(data.perpPositions || []), ...botPerps.positions];
+              data.perpSummary = {
+                count: data.perpPositions.length,
+                totalCollateral: (data.perpSummary?.totalCollateral || 0) + (botPerps.summary?.totalCollateral || 0),
+                totalExposure: (data.perpSummary?.totalExposure || 0) + (botPerps.summary?.totalExposure || 0),
+                totalUnrealizedPnl: (data.perpSummary?.totalUnrealizedPnl || 0) + (botPerps.summary?.totalUnrealizedPnl || 0),
+              };
+            }
+          }
+        } catch { /* silent — bot perps fetch is best-effort */ }
+
         setPositionData(data);
 
         // Tick on position count change (new position opened/closed = decision)

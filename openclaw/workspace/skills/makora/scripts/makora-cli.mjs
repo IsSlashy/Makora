@@ -66,6 +66,31 @@ async function syncVaultToDashboard(action, amount) {
   return null;
 }
 
+/** Sync perp position to dashboard API */
+async function syncPerpToDashboard(action, data) {
+  try {
+    const res = await fetch(`${DASHBOARD_URL}/api/perps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'default', action, ...data }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) return await res.json();
+  } catch { /* silent */ }
+  return null;
+}
+
+/** Fetch perp positions from dashboard API */
+async function fetchPerpsFromDashboard() {
+  try {
+    const res = await fetch(`${DASHBOARD_URL}/api/perps?userId=default`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) return await res.json();
+  } catch { /* silent */ }
+  return null;
+}
+
 /** Fetch current vault state from dashboard API */
 async function fetchVaultFromDashboard() {
   try {
@@ -440,8 +465,17 @@ async function main() {
     }
 
     case 'positions': {
-      const positions = getPositions();
-      console.log(JSON.stringify({ positions, count: positions.length }));
+      // Fetch from dashboard API (source of truth)
+      const apiPerps = await fetchPerpsFromDashboard();
+      if (apiPerps) {
+        // Update P&L with live prices
+        const prices = await fetchPrices();
+        await syncPerpToDashboard('update-prices', { prices });
+        const updated = await fetchPerpsFromDashboard();
+        console.log(JSON.stringify(updated || apiPerps));
+      } else {
+        console.log(JSON.stringify({ positions: [], count: 0, summary: { totalCollateral: 0, totalExposure: 0, totalUnrealizedPnl: 0 } }));
+      }
       break;
     }
 
@@ -452,29 +486,37 @@ async function main() {
       const price = prices[token] || 0;
       if (!price) { console.log(JSON.stringify({ error: `No price for ${token}` })); break; }
 
-      const pos = openPosition({
+      const position = {
+        id: `pos-${Date.now()}`,
         market: params.market || 'SOL-PERP',
         side: params.side || 'long',
         leverage: params.leverage || 5,
         collateralUsd: params.collateralUsd || 100,
         entryPrice: price,
-      });
-      console.log(JSON.stringify({ success: true, position: pos }));
+        openedAt: Date.now(),
+      };
+      // Sync to dashboard API
+      const result = await syncPerpToDashboard('open', { position });
+      console.log(JSON.stringify({ success: true, position: result?.position || position }));
       break;
     }
 
     case 'close-position': {
       const market = args[0] || 'SOL-PERP';
-      const pos = closePosition(market);
-      if (!pos) { console.log(JSON.stringify({ error: `No open position for ${market}` })); break; }
       const prices = await fetchPrices();
       const token = market.replace('-PERP', '');
-      const exitPrice = prices[token] || pos.entryPrice;
-      const pnlPct = pos.side === 'long'
-        ? ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100 * pos.leverage
-        : ((pos.entryPrice - exitPrice) / pos.entryPrice) * 100 * pos.leverage;
-      const pnlUsd = (pnlPct / 100) * pos.collateralUsd;
-      console.log(JSON.stringify({ success: true, closed: { ...pos, exitPrice, pnlPct: pnlPct.toFixed(2), pnlUsd: pnlUsd.toFixed(2) } }));
+      const exitPrice = prices[token] || 0;
+      // Close via dashboard API
+      const result = await syncPerpToDashboard('close', { market, exitPrice });
+      if (result?.error) {
+        console.log(JSON.stringify({ error: result.error }));
+        break;
+      }
+      if (result?.closed) {
+        console.log(JSON.stringify({ success: true, closed: result.closed }));
+      } else {
+        console.log(JSON.stringify({ error: `No open position for ${market}` }));
+      }
       break;
     }
 
