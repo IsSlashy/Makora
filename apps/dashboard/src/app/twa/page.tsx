@@ -496,22 +496,25 @@ function TWADashboard() {
               loading={loadingState.positions}
             />
 
-            {/* ZK Vault Card */}
-            {(vaultData && vaultData.balanceSol > 0) && (
-              <div className="cursed-card p-4">
-                <div className="section-title mb-3">ZK SHIELDED VAULT</div>
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-xl font-bold font-mono" style={{ color: '#00E5FF' }}>
-                    {vaultData.balanceSol.toFixed(4)}
-                  </span>
-                  <span className="text-text-muted text-xs font-mono">SOL shielded</span>
-                </div>
-                <div className="flex gap-4 text-xs font-mono text-text-muted">
-                  <span>Total shielded: {vaultData.totalShielded.toFixed(4)}</span>
-                  <span>Total unshielded: {vaultData.totalUnshielded.toFixed(4)}</span>
-                </div>
+            {/* ZK Vault Card — always visible */}
+            <div className="cursed-card p-4">
+              <div className="section-title mb-3">ZK SHIELDED VAULT</div>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-xl font-bold font-mono" style={{ color: '#00E5FF' }}>
+                  {(vaultData?.balanceSol ?? 0).toFixed(4)}
+                </span>
+                <span className="text-text-muted text-xs font-mono">SOL shielded</span>
               </div>
-            )}
+              <div className="flex gap-4 text-xs font-mono text-text-muted">
+                <span>Total shielded: {(vaultData?.totalShielded ?? 0).toFixed(4)}</span>
+                <span>Total unshielded: {(vaultData?.totalUnshielded ?? 0).toFixed(4)}</span>
+              </div>
+              {(vaultData?.balanceSol ?? 0) === 0 && (
+                <div className="text-text-muted text-[10px] font-mono mt-2">
+                  Use &quot;shield X SOL&quot; in chat to protect your funds
+                </div>
+              )}
+            </div>
 
             <PositionsPanelTWA
               positions={positionData?.perpPositions ?? []}

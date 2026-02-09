@@ -46,16 +46,35 @@ loadEnv(resolve(PROJECT_ROOT, 'apps', 'telegram', '.env'));
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://solana-agent-hackathon-seven.vercel.app';
 
-/** Sync vault action to dashboard API so the TWA can display vault balance */
+/**
+ * Sync vault action to dashboard API and return the API's accumulated balance.
+ * The API is the source of truth (globalThis resets per CLI process).
+ */
 async function syncVaultToDashboard(action, amount) {
   try {
-    await fetch(`${DASHBOARD_URL}/api/vault`, {
+    const res = await fetch(`${DASHBOARD_URL}/api/vault`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: 'default', action, amount }),
       signal: AbortSignal.timeout(5000),
     });
-  } catch { /* silent — dashboard sync is best-effort */ }
+    if (res.ok) {
+      const data = await res.json();
+      return data.vault || null; // { balanceSol, totalShielded, totalUnshielded }
+    }
+  } catch { /* silent */ }
+  return null;
+}
+
+/** Fetch current vault state from dashboard API */
+async function fetchVaultFromDashboard() {
+  try {
+    const res = await fetch(`${DASHBOARD_URL}/api/vault?userId=default`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) return await res.json();
+  } catch { /* silent */ }
+  return null;
 }
 
 // ─── Standalone implementations (use same APIs as our modules) ──────────────
@@ -500,15 +519,16 @@ async function main() {
     }
 
     case 'vault': {
-      const vault = getVault();
+      // Fetch real vault state from dashboard API (source of truth)
+      const apiVault = await fetchVaultFromDashboard();
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
+      const bal = apiVault?.balanceSol ?? 0;
       console.log(JSON.stringify({
-        balanceSol: vault.balanceSol,
-        balanceUsd: vault.balanceSol * solPrice,
-        totalShieldedSol: vault.totalShielded,
-        totalUnshieldedSol: vault.totalUnshielded,
-        history: vault.history.slice(-5),
+        balanceSol: bal,
+        balanceUsd: (bal * solPrice).toFixed(2),
+        totalShieldedSol: apiVault?.totalShielded ?? 0,
+        totalUnshieldedSol: apiVault?.totalUnshielded ?? 0,
         timestamp: new Date().toISOString(),
       }));
       break;
@@ -517,17 +537,17 @@ async function main() {
     case 'shield': {
       const amount = parseFloat(args[0]);
       if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: shield <amount_sol>' })); break; }
-      const vault = shieldSol(amount);
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
-      // Sync vault state to dashboard API
-      await syncVaultToDashboard('shield', amount);
+      // Sync to dashboard API — use API response as source of truth
+      const apiVault = await syncVaultToDashboard('shield', amount);
+      const totalBalance = apiVault?.balanceSol ?? amount;
       console.log(JSON.stringify({
         success: true,
         shielded: amount,
         shieldedUsd: (amount * solPrice).toFixed(2),
-        vaultBalance: vault.balanceSol,
-        vaultBalanceUsd: (vault.balanceSol * solPrice).toFixed(2),
+        vaultBalance: totalBalance,
+        vaultBalanceUsd: (totalBalance * solPrice).toFixed(2),
         note: 'Simulated ZK shield — demo mode',
         timestamp: new Date().toISOString(),
       }));
@@ -537,18 +557,23 @@ async function main() {
     case 'unshield': {
       const amount = parseFloat(args[0]);
       if (!amount || amount <= 0) { console.log(JSON.stringify({ error: 'Usage: unshield <amount_sol>' })); break; }
-      const result = unshieldSol(amount);
-      if (result.error) { console.log(JSON.stringify({ error: result.error })); break; }
-      // Sync vault state to dashboard API
-      await syncVaultToDashboard('unshield', amount);
+      // Check API vault balance first
+      const currentVault = await fetchVaultFromDashboard();
+      if (currentVault && amount > currentVault.balanceSol) {
+        console.log(JSON.stringify({ error: `Vault has only ${currentVault.balanceSol.toFixed(4)} SOL` }));
+        break;
+      }
+      // Sync to dashboard API — use API response as source of truth
+      const apiVault = await syncVaultToDashboard('unshield', amount);
       const prices = await fetchPrices();
       const solPrice = prices.SOL || 0;
+      const remaining = apiVault?.balanceSol ?? 0;
       console.log(JSON.stringify({
         success: true,
         unshielded: amount,
-        unshieldedUsd: amount * solPrice,
-        vaultRemaining: result.balanceSol,
-        vaultRemainingUsd: result.balanceSol * solPrice,
+        unshieldedUsd: (amount * solPrice).toFixed(2),
+        vaultRemaining: remaining,
+        vaultRemainingUsd: (remaining * solPrice).toFixed(2),
         timestamp: new Date().toISOString(),
       }));
       break;
