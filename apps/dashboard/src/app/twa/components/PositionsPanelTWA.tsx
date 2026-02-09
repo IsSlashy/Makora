@@ -11,6 +11,8 @@ interface PerpPosition {
   unrealizedPnl?: number;
   unrealizedPnlPct?: number;
   openedAt: number;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 interface PositionsPanelTWAProps {
@@ -89,6 +91,28 @@ export const PositionsPanelTWA = ({ positions, loading }: PositionsPanelTWAProps
                   </span>
                 </div>
               </div>
+
+              {/* SL / TP levels */}
+              {(pos.stopLoss != null || pos.takeProfit != null) && (
+                <div className="mt-1.5 flex items-center gap-3 text-[9px] font-mono">
+                  {pos.stopLoss != null && (
+                    <span className="flex items-center gap-1">
+                      <span className="uppercase tracking-wider text-text-muted">SL</span>
+                      <span style={{ color: '#ef4444' }}>${pos.stopLoss.toFixed(2)}</span>
+                    </span>
+                  )}
+                  {pos.takeProfit != null && (
+                    <span className="flex items-center gap-1">
+                      <span className="uppercase tracking-wider text-text-muted">TP</span>
+                      <span style={{ color: '#22c55e' }}>${pos.takeProfit.toFixed(2)}</span>
+                    </span>
+                  )}
+                  <span className="ml-auto px-1.5 py-0.5 rounded-sm text-[8px] uppercase tracking-wider"
+                    style={{ color: '#00E5FF', background: '#00E5FF10' }}>
+                    Auto-managed
+                  </span>
+                </div>
+              )}
 
               {/* Collateral */}
               <div className="mt-1 text-[10px] font-mono text-text-muted">

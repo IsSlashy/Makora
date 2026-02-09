@@ -7,6 +7,7 @@ import { SentimentPanelTWA } from './components/SentimentPanelTWA';
 import { PortfolioCardTWA } from './components/PortfolioCardTWA';
 import { PositionsPanelTWA } from './components/PositionsPanelTWA';
 import { AgentPanelTWA } from './components/AgentPanelTWA';
+import { TradeHistoryTWA } from './components/TradeHistoryTWA';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,8 @@ interface PerpPosition {
   unrealizedPnl?: number;
   unrealizedPnlPct?: number;
   openedAt: number;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 interface PositionSnapshot {
@@ -442,23 +445,39 @@ function TWADashboard() {
                     const pnl = pos.unrealizedPnlPct ?? 0;
                     const isProfit = pnl >= 0;
                     return (
-                      <div key={pos.id} className="flex items-center justify-between py-1 border-t border-cursed/5">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded-sm"
-                            style={{
-                              color: pos.side === 'long' ? '#22c55e' : '#ef4444',
-                              background: pos.side === 'long' ? '#22c55e12' : '#ef444412',
-                            }}
-                          >
-                            {pos.side}
+                      <div key={pos.id} className="py-1 border-t border-cursed/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded-sm"
+                              style={{
+                                color: pos.side === 'long' ? '#22c55e' : '#ef4444',
+                                background: pos.side === 'long' ? '#22c55e12' : '#ef444412',
+                              }}
+                            >
+                              {pos.side}
+                            </span>
+                            <span className="text-[11px] font-mono font-bold">{pos.market}</span>
+                            <span className="text-[9px] font-mono text-text-muted">{pos.leverage}x</span>
+                          </div>
+                          <span className="text-[11px] font-mono font-bold" style={{ color: isProfit ? '#22c55e' : '#ef4444' }}>
+                            {isProfit ? '+' : ''}{pnl.toFixed(2)}%
                           </span>
-                          <span className="text-[11px] font-mono font-bold">{pos.market}</span>
-                          <span className="text-[9px] font-mono text-text-muted">{pos.leverage}x</span>
                         </div>
-                        <span className="text-[11px] font-mono font-bold" style={{ color: isProfit ? '#22c55e' : '#ef4444' }}>
-                          {isProfit ? '+' : ''}{pnl.toFixed(2)}%
-                        </span>
+                        {(pos.stopLoss != null || pos.takeProfit != null) && (
+                          <div className="flex items-center gap-2 mt-0.5 ml-[calc(8px+0.375rem)]">
+                            {pos.stopLoss != null && (
+                              <span className="text-[8px] font-mono" style={{ color: '#ef4444' }}>
+                                SL ${pos.stopLoss.toFixed(2)}
+                              </span>
+                            )}
+                            {pos.takeProfit != null && (
+                              <span className="text-[8px] font-mono" style={{ color: '#22c55e' }}>
+                                TP ${pos.takeProfit.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -553,6 +572,8 @@ function TWADashboard() {
               positions={positionData?.perpPositions ?? []}
               loading={loadingState.positions}
             />
+
+            <TradeHistoryTWA userId={userId || undefined} />
           </div>
         );
 
