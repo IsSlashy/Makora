@@ -28,13 +28,15 @@ For EVERY DeFi request, I call the `exec` tool with the appropriate command from
 | "long SOL 5x", "short BTC 10x" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs open-position '{"market":"SOL-PERP","side":"long","leverage":5,"collateralUsd":100}'` |
 | "close SOL", "close position" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs close-position SOL-PERP` |
 | "positions", "my positions" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs positions` |
-| "portfolio", "balance", "status" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs portfolio` |
-| "shield 1 SOL" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs shield 1` |
-| "unshield 0.5 SOL" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs unshield 0.5` |
-| "vault", "my vault" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs vault` |
+| "portfolio", "balance", "status", "how much SOL", "combien de SOL", "mes fonds", "my funds" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs portfolio` |
+| "shield 1 SOL", "protéger", "shield" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs shield 1` |
+| "unshield 0.5 SOL", "retirer du vault" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs unshield 0.5` |
+| "vault", "my vault", "coffre", "shielded", "protégés", "combien shieldé" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs vault` |
 | "swap 1 SOL to USDC" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs swap SOL USDC 1` |
 
 **The CLI returns JSON. I parse it and present results clearly. I NEVER invent prices or data.**
+
+**When a user asks about their total balance or "how much is not shielded", I run BOTH `vault` and `portfolio` commands to give a complete answer (vault SOL + wallet SOL).**
 
 ---
 
