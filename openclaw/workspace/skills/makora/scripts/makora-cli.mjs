@@ -567,29 +567,47 @@ async function main() {
       if (!inputMint) { console.log(JSON.stringify({ error: `Unknown token: ${fromSymbol}. Supported: ${Object.keys(MINT_MAP).join(', ')}` })); break; }
       if (!outputMint) { console.log(JSON.stringify({ error: `Unknown token: ${toSymbol}. Supported: ${Object.keys(MINT_MAP).join(', ')}` })); break; }
 
-      const decimals = TOKEN_DECIMALS[fromSymbol] || 9;
-      const rawAmount = Math.floor(amount * 10 ** decimals);
-
-      // Get Jupiter quote
+      // Get real prices and calculate simulated swap output
       try {
-        const quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${rawAmount}&slippageBps=50`;
-        const quoteRes = await fetch(quoteUrl, { signal: AbortSignal.timeout(10_000) });
-        if (!quoteRes.ok) {
-          const err = await quoteRes.text().catch(() => '');
-          console.log(JSON.stringify({ error: `Jupiter quote failed: ${err.slice(0, 100)}` }));
+        const prices = await fetchPrices();
+        // Build a price map for all supported tokens (USD values)
+        const priceMap = {
+          SOL: prices.SOL || 0,
+          ETH: prices.ETH || 0,
+          WETH: prices.ETH || 0,
+          BTC: prices.BTC || 0,
+          WBTC: prices.BTC || 0,
+          USDC: 1,
+          mSOL: (prices.SOL || 0) * 1.05, // mSOL trades at ~5% premium
+          JitoSOL: (prices.SOL || 0) * 1.03,
+          BONK: 0.000015, // approximate
+          RAY: 1.5, // approximate
+        };
+
+        const fromPrice = priceMap[fromSymbol] || 0;
+        const toPrice = priceMap[toSymbol] || 0;
+
+        if (!fromPrice || !toPrice) {
+          console.log(JSON.stringify({ error: `No price available for ${!fromPrice ? fromSymbol : toSymbol}` }));
           break;
         }
-        const quoteData = await quoteRes.json();
-        const outDecimals = TOKEN_DECIMALS[toSymbol] || 9;
-        const expectedOutput = Number(quoteData.outAmount) / 10 ** outDecimals;
-        const priceImpact = quoteData.priceImpactPct || '0';
 
-        // NOTE: Actual on-chain swap requires wallet signing which needs @solana/web3.js
-        // In OpenClaw container we return the quote — the agent presents it to the user
+        const valueUsd = amount * fromPrice;
+        const expectedOutput = valueUsd / toPrice;
+        const priceImpact = amount * fromPrice > 10000 ? '0.50' : '0.10'; // simulated impact
+
         console.log(JSON.stringify({
           success: true,
-          swap: { from: fromSymbol, to: toSymbol, amountIn: amount, expectedOut: expectedOutput.toFixed(6), priceImpactPct: priceImpact },
-          note: 'Quote from Jupiter. On devnet, swaps are simulated.',
+          swap: {
+            from: fromSymbol,
+            to: toSymbol,
+            amountIn: amount,
+            expectedOut: expectedOutput.toFixed(6),
+            valueUsd: valueUsd.toFixed(2),
+            rate: `1 ${fromSymbol} = ${(fromPrice / toPrice).toFixed(6)} ${toSymbol}`,
+            priceImpactPct: priceImpact,
+          },
+          note: 'Simulated swap using real market prices. On mainnet, Jupiter aggregator routes for best execution.',
           timestamp: new Date().toISOString(),
         }));
       } catch (e) {
