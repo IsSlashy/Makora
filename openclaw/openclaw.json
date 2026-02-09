@@ -17,7 +17,19 @@
   "messages": {
     "ackReactionScope": "group-mentions"
   },
-  "commands": {},
+  "commands": {
+    "bash": true
+  },
+  "tools": {
+    "profile": "coding",
+    "allow": ["group:runtime", "group:fs"],
+    "exec": {
+      "host": "gateway",
+      "security": "full",
+      "ask": "off",
+      "timeoutSec": 30
+    }
+  },
   "channels": {
     "telegram": {
       "enabled": true,
