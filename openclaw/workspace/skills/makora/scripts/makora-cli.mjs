@@ -104,13 +104,14 @@ async function fetchVaultFromDashboard() {
 
 // ─── Standalone implementations (use same APIs as our modules) ──────────────
 
-async function fetchPrices() {
-  // Try Jupiter with API key first
+async function fetchPricesOnce() {
+  const JUP_IDS = 'So11111111111111111111111111111111111111112,7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs,3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh';
+
+  // Source 1: Jupiter with API key
   const jupKey = process.env.JUPITER_API_KEY;
   if (jupKey) {
     try {
-      const ids = 'So11111111111111111111111111111111111111112,7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs,3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh';
-      const res = await fetch(`https://api.jup.ag/price/v2?ids=${ids}`, {
+      const res = await fetch(`https://api.jup.ag/price/v2?ids=${JUP_IDS}`, {
         headers: { 'x-api-key': jupKey },
         signal: AbortSignal.timeout(5000),
       });
@@ -127,7 +128,24 @@ async function fetchPrices() {
     } catch {}
   }
 
-  // Fallback: CoinGecko
+  // Source 2: Jupiter without API key (public, rate-limited)
+  try {
+    const res = await fetch(`https://api.jup.ag/price/v2?ids=${JUP_IDS}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const prices = {};
+      for (const [mint, info] of Object.entries(data.data || {})) {
+        if (mint.startsWith('So111')) prices.SOL = parseFloat(info.price);
+        if (mint.startsWith('7vfCX')) prices.ETH = parseFloat(info.price);
+        if (mint.startsWith('3NZ9J')) prices.BTC = parseFloat(info.price);
+      }
+      if (prices.SOL) return prices;
+    }
+  } catch {}
+
+  // Source 3: CoinGecko
   try {
     const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,bitcoin&vs_currencies=usd', {
       signal: AbortSignal.timeout(5000),
@@ -142,6 +160,16 @@ async function fetchPrices() {
   } catch {
     return { SOL: 0, ETH: 0, BTC: 0 };
   }
+}
+
+async function fetchPrices() {
+  // Try up to 2 times with a 1s delay between attempts
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const prices = await fetchPricesOnce();
+    if (prices.SOL > 0) return prices;
+    if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+  }
+  return { SOL: 0, ETH: 0, BTC: 0 };
 }
 
 async function fetchFearGreed() {

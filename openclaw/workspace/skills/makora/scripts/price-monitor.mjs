@@ -43,7 +43,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const USER_ID = process.env.MONITOR_USER_ID || 'default';
 
-const PRICE_CHECK_INTERVAL_MS = 30_000;       // 30 seconds
+const PRICE_CHECK_INTERVAL_MS = 60_000;       // 60 seconds (was 30s, relaxed to avoid CoinGecko rate limits)
 const LEARNING_INTERVAL_MS = 10 * 60_000;     // 10 minutes
 const FETCH_TIMEOUT_MS = 5_000;               // 5 second timeout on all fetches
 
@@ -84,11 +84,28 @@ async function postJson(url, body) {
 
 // ─── Core Functions ───────────────────────────────────────────────────────────
 
+const JUP_IDS = 'So11111111111111111111111111111111111111112,7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs,3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh';
+
 /**
- * Fetch current SOL/ETH/BTC prices from CoinGecko.
+ * Fetch current SOL/ETH/BTC prices. Tries Jupiter first, then CoinGecko.
  * Returns { SOL: number, ETH: number, BTC: number } or null on failure.
  */
 async function fetchPrices() {
+  // Source 1: Jupiter (public, no key needed)
+  try {
+    const data = await fetchJson(`https://api.jup.ag/price/v2?ids=${JUP_IDS}`);
+    const prices = {};
+    for (const [mint, info] of Object.entries(data.data || {})) {
+      if (mint.startsWith('So111')) prices.SOL = parseFloat(info.price);
+      if (mint.startsWith('7vfCX')) prices.ETH = parseFloat(info.price);
+      if (mint.startsWith('3NZ9J')) prices.BTC = parseFloat(info.price);
+    }
+    if (prices.SOL > 0) return prices;
+  } catch (err) {
+    logError('fetchPrices/jupiter', err);
+  }
+
+  // Source 2: CoinGecko
   try {
     const data = await fetchJson(COINGECKO_URL);
     const prices = {
@@ -97,7 +114,6 @@ async function fetchPrices() {
       BTC: data.bitcoin?.usd ?? null,
     };
 
-    // Ensure we got at least one valid price
     if (prices.SOL == null && prices.ETH == null && prices.BTC == null) {
       logError('fetchPrices', 'All prices returned null');
       return null;
@@ -105,7 +121,7 @@ async function fetchPrices() {
 
     return prices;
   } catch (err) {
-    logError('fetchPrices', err);
+    logError('fetchPrices/coingecko', err);
     return null;
   }
 }
