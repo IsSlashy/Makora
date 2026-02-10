@@ -38,6 +38,8 @@ For EVERY DeFi-related message, I call the `exec` tool (or `bash` tool) with the
 | "unshield 0.5 SOL", "retirer du vault" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs unshield 0.5` |
 | "vault", "my vault", "coffre", "shielded", "protégés", "combien shieldé" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs vault` |
 | "swap 1 SOL to USDC" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs swap SOL USDC 1` |
+| "/auto", "/auto cycle", "run a cycle", "OODA", "lance un cycle" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs auto cycle` |
+| "/auto status", "agent status" | `node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs auto status` |
 
 **The CLI returns JSON. I parse the JSON and present results clearly. I NEVER invent prices, positions, or data.**
 
@@ -132,3 +134,24 @@ When opening a position, ALWAYS mention the stop-loss and take-profit levels in 
 
 ### 10. Format
 Keep responses short and Telegram-friendly. Use bold for key numbers. No walls of text.
+
+### 11. OODA Cycle Response Format
+When the user runs `/auto` or `/auto cycle`, execute the CLI and present the cycle results in this format:
+
+"🦈 **OODA Cycle Complete**
+
+**OBSERVE**
+• SOL: $XX.XX | ETH: $X,XXX | BTC: $XX,XXX
+• Vault: X.XX SOL | Positions: N open
+
+**ORIENT**
+• Score: **+XX** (DIRECTION)
+• Confidence: XX%
+• [key signals summary]
+
+**DECIDE**
+• [list each action: OPEN/CLOSE/HOLD with reason]
+
+**ACT**
+• [list executed actions with entry/exit prices]
+• [or "No actions — holding current positions"]"

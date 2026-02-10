@@ -16,6 +16,7 @@
  *   shield        - Shield SOL into vault
  *   unshield      - Unshield SOL from vault
  *   scan          - Full market scan (sentiment + news + recommendations)
+ *   auto [cycle|status] - Run OODA cycle or check status
  *   health        - Agent health status
  */
 
@@ -685,6 +686,149 @@ async function main() {
       break;
     }
 
+    case 'auto': {
+      const subCommand = args[0] || 'cycle';
+
+      if (subCommand === 'status') {
+        const positions = getPositions();
+        const apiPerps = await fetchPerpsFromDashboard();
+        const apiVault = await fetchVaultFromDashboard();
+        const openCount = apiPerps?.positions?.length ?? positions.length;
+        console.log(JSON.stringify({
+          oodaStatus: openCount > 0 ? 'ACTIVE' : 'IDLE',
+          openPositions: openCount,
+          vaultBalanceSol: apiVault?.balanceSol ?? 0,
+          timestamp: new Date().toISOString(),
+        }));
+        break;
+      }
+
+      // OODA Cycle: OBSERVE → ORIENT → DECIDE → ACT
+      const phases = [];
+
+      // ── OBSERVE ──
+      const [prices, fg, tvl, dex, news, apiPerps2, apiVault2] = await Promise.all([
+        fetchPrices(), fetchFearGreed(), fetchSolanaTVL(), fetchDEXVolume(),
+        fetchCryptoNews(), fetchPerpsFromDashboard(), fetchVaultFromDashboard(),
+      ]);
+      const w = loadWallet();
+      let walletBal = 0;
+      if (w) { try { walletBal = await getBalance(w.publicKey); } catch {} }
+      const vaultBal = apiVault2?.balanceSol ?? 0;
+      const openPositions = apiPerps2?.positions || [];
+
+      phases.push({
+        phase: 'OBSERVE',
+        data: {
+          prices,
+          walletSol: walletBal,
+          vaultSol: vaultBal,
+          openPositions: openPositions.length,
+          fearGreed: fg,
+        },
+      });
+
+      // ── ORIENT ──
+      let score = 0;
+      if (fg.value < 25) score += 25; else if (fg.value < 45) score += 12;
+      else if (fg.value > 75) score -= 25; else if (fg.value > 55) score -= 12;
+      if (tvl.change24hPct > 5) score += 10; else if (tvl.change24hPct > 2) score += 5;
+      else if (tvl.change24hPct < -5) score -= 10; else if (tvl.change24hPct < -2) score -= 5;
+      if (dex.change24hPct > 10) score += 10; else if (dex.change24hPct > 5) score += 5;
+      else if (dex.change24hPct < -10) score -= 10; else if (dex.change24hPct < -5) score -= 5;
+      if (news.articles.length >= 3) {
+        if (news.aggregateSentiment > 40) score += 10; else if (news.aggregateSentiment > 15) score += 5;
+        else if (news.aggregateSentiment < -40) score -= 10; else if (news.aggregateSentiment < -15) score -= 5;
+      }
+      score = Math.max(-100, Math.min(100, score));
+      const direction = score >= 50 ? 'STRONG_BUY' : score >= 20 ? 'BUY' : score <= -50 ? 'STRONG_SELL' : score <= -20 ? 'SELL' : 'NEUTRAL';
+      const confidence = Math.min(100, Math.round(Math.abs(score) * 1.2 + 30));
+
+      phases.push({
+        phase: 'ORIENT',
+        analysis: { score, direction, confidence,
+          signals: { fearGreed: fg.value, tvlChange: tvl.change24hPct, dexVolumeChange: dex.change24hPct, newsSentiment: news.aggregateSentiment },
+          topHeadlines: news.articles.slice(0, 3).map(a => `[${a.sentiment === 'positive' ? '+' : a.sentiment === 'negative' ? '-' : '='}] ${a.title}`),
+        },
+      });
+
+      // ── DECIDE ──
+      const actions = [];
+
+      // Check existing positions for SL/TP or close signals
+      for (const pos of openPositions) {
+        const token = (pos.market || 'SOL-PERP').replace('-PERP', '');
+        const currentPrice = prices[token] || pos.currentPrice || pos.entryPrice;
+        const pnlPct = pos.side === 'long'
+          ? ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100
+          : ((pos.entryPrice - currentPrice) / pos.entryPrice) * 100;
+
+        // Close if: big loss, or score contradicts position, or take-profit hit
+        if (pnlPct <= -8) {
+          actions.push({ type: 'CLOSE', market: pos.market, reason: `Stop-loss: ${pnlPct.toFixed(1)}% loss`, pnlPct });
+        } else if (pnlPct >= 12) {
+          actions.push({ type: 'CLOSE', market: pos.market, reason: `Take-profit: +${pnlPct.toFixed(1)}%`, pnlPct });
+        } else if (pos.side === 'long' && score <= -30) {
+          actions.push({ type: 'CLOSE', market: pos.market, reason: `Bearish reversal (score: ${score})`, pnlPct });
+        } else if (pos.side === 'short' && score >= 30) {
+          actions.push({ type: 'CLOSE', market: pos.market, reason: `Bullish reversal (score: ${score})`, pnlPct });
+        }
+      }
+
+      // Open new position if strong signal and vault has funds
+      if (vaultBal >= 0.05 && openPositions.length < 3) {
+        if (score >= 30) {
+          actions.push({ type: 'OPEN', market: 'SOL-PERP', side: 'long', leverage: 5, reason: `Bullish signal (score: ${score})` });
+        } else if (score <= -30) {
+          actions.push({ type: 'OPEN', market: 'SOL-PERP', side: 'short', leverage: 5, reason: `Bearish signal (score: ${score})` });
+        }
+      }
+
+      if (actions.length === 0) {
+        actions.push({ type: 'HOLD', reason: `No clear signal (score: ${score}, direction: ${direction})` });
+      }
+
+      phases.push({ phase: 'DECIDE', actions });
+
+      // ── ACT ──
+      const executed = [];
+      for (const action of actions) {
+        if (action.type === 'CLOSE') {
+          const exitPrice = prices[(action.market || 'SOL-PERP').replace('-PERP', '')] || 0;
+          const result = await syncPerpToDashboard('close', { market: action.market, exitPrice });
+          executed.push({ ...action, executed: !!result?.closed, result: result?.closed || result?.error || 'failed' });
+        } else if (action.type === 'OPEN') {
+          const token = (action.market || 'SOL-PERP').replace('-PERP', '');
+          const entryPrice = prices[token] || 0;
+          if (entryPrice > 0) {
+            const sl = action.side === 'long' ? parseFloat((entryPrice * 0.95).toFixed(2)) : parseFloat((entryPrice * 1.05).toFixed(2));
+            const tp = action.side === 'long' ? parseFloat((entryPrice * 1.10).toFixed(2)) : parseFloat((entryPrice * 0.90).toFixed(2));
+            const position = { id: `pos-${Date.now()}`, market: action.market, side: action.side, leverage: action.leverage, collateralUsd: 100, entryPrice, stopLoss: sl, takeProfit: tp, openedAt: Date.now() };
+            const result = await syncPerpToDashboard('open', { position });
+            executed.push({ ...action, executed: true, entryPrice, stopLoss: sl, takeProfit: tp, result: result?.position || position });
+          }
+        } else {
+          executed.push({ ...action, executed: false });
+        }
+      }
+
+      phases.push({ phase: 'ACT', executed });
+
+      console.log(JSON.stringify({
+        oodaCycle: true,
+        score, direction, confidence,
+        phases,
+        summary: {
+          actionsProposed: actions.length,
+          actionsExecuted: executed.filter(e => e.executed).length,
+          currentPositions: openPositions.length,
+          vaultSol: vaultBal,
+        },
+        timestamp: new Date().toISOString(),
+      }));
+      break;
+    }
+
     case 'swap': {
       const fromSymbol = (args[0] || '').toUpperCase();
       const toSymbol = (args[1] || '').toUpperCase();
@@ -750,7 +894,7 @@ async function main() {
     default:
       console.log(JSON.stringify({
         error: `Unknown command: ${command}`,
-        available: ['prices', 'sentiment', 'news', 'scan', 'positions', 'open-position', 'close-position', 'portfolio', 'vault', 'shield', 'unshield', 'swap', 'health'],
+        available: ['prices', 'sentiment', 'news', 'scan', 'positions', 'open-position', 'close-position', 'portfolio', 'vault', 'shield', 'unshield', 'swap', 'auto', 'health'],
       }));
   }
 }

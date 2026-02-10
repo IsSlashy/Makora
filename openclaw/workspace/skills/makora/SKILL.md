@@ -79,6 +79,20 @@ node /root/.openclaw/workspace/skills/makora/scripts/makora-cli.mjs <command> [a
 
 **Supported tokens:** SOL, USDC, mSOL, BONK, JitoSOL, RAY, WBTC, WETH
 
+### OODA Autonomous Loop
+
+| Command | Description | When to use |
+|---------|-------------|-------------|
+| `auto cycle` | Run a full OODA cycle: OBSERVE (prices, positions, vault) → ORIENT (7-signal analysis) → DECIDE (open/close/hold) → ACT (execute decisions) | User says "/auto", "/auto cycle", "run a cycle", "OODA cycle" |
+| `auto status` | Check current OODA loop status (active positions, vault balance) | User says "/auto status", "agent status" |
+
+**OODA cycle behavior:**
+- OBSERVE: Fetches live prices, wallet balance, vault balance, open positions
+- ORIENT: Runs 7-signal sentiment analysis (Fear & Greed, TVL, DEX volume, news)
+- DECIDE: Evaluates open positions for SL/TP triggers, considers opening new positions based on score
+- ACT: Executes closing positions at risk, opens new positions if signal is strong (score >= 30 or <= -30)
+- Returns full cycle report with all phases and actions taken
+
 ## Market Intelligence
 
 Makora analyzes **7 signals** to produce a composite score from -100 (extreme bearish) to +100 (extreme bullish):
@@ -186,3 +200,9 @@ Makora continuously monitors:
 
 **User:** "Check my vault"
 → Run `vault`, show vault balance and recent shield/unshield history
+
+**User:** "/auto" or "/auto cycle"
+→ Run `auto cycle`, present the full OODA cycle: what was observed (prices, positions), analysis (score, direction), decisions made, and actions executed. Format each phase clearly.
+
+**User:** "/auto status"
+→ Run `auto status`, show current agent state (active/idle, open positions count, vault balance)
